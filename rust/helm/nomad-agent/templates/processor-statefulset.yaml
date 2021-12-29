@@ -1,0 +1,118 @@
+{{- if .Values.nomad.processor.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "nomad-agent.fullname" . }}-processor
+  labels:
+    {{- include "nomad-agent.labels" . | nindent 4 }}
+    app.kubernetes.io/component: processor
+spec:
+  selector:
+    matchLabels:
+      {{- include "nomad-agent.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: processor
+  replicas: 1 
+  serviceName: {{ include "nomad-agent.fullname" . }}-processor
+  template:
+    metadata:
+      annotations:
+        checksum/configmap: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.nomad.processor.podAnnotations }}
+        {{ toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "nomad-agent.labels" . | nindent 8 }}
+        app.kubernetes.io/component: processor
+        {{- with .Values.podCommonLabels }}
+        {{ toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.nomad.processor.podLabels }}
+        {{ toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      terminationGracePeriodSeconds: 10
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+      - name: agent
+        securityContext:
+          {{- toYaml .Values.securityContext | nindent 10 }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        command: ["./processor"]
+        envFrom:
+        - configMapRef:
+            name: {{ include "nomad-agent.fullname" . }}
+        env: 
+          {{- if .Values.nomad.processor.pollingInterval }}
+          - name: OPT_PROCESSOR_INTERVAL
+            value: {{ .Values.nomad.processor.pollingInterval | quote }}
+          {{- end }}
+          {{- range .Values.nomad.processor.transactionSigners }}
+          {{- if .hexKey }}
+          - name: OPT_BASE_SIGNERS_{{ .name | upper }}_KEY
+            value: {{ .hexKey }}
+          {{- else }}
+          - name: OPT_BASE_SIGNERS_{{ .name | upper }}_TYPE
+            value: "aws"
+          - name: OPT_BASE_SIGNERS_{{ .name | upper }}_ID
+            value: {{ .aws.keyId }}
+          - name: OPT_BASE_SIGNERS_{{ .name | upper }}_REGION
+            value: {{ .aws.region }}
+          {{- end }}
+          {{- end }}
+          {{- if .Values.nomad.tracing.uri }}
+          - name: OPT_BASE_TRACING_JAEGER_NAME
+            value: {{ include "nomad-agent.fullname" . }}-processor
+          {{- end }}
+          {{- if .Values.nomad.processor.s3Proofs.bucket }}
+          - name: OPT_PROCESSOR_S3_BUCKET
+            value: {{ .Values.nomad.processor.s3Proofs.bucket | quote }}
+          {{- end }}
+          {{- if .Values.nomad.processor.s3Proofs.region }}
+          - name: OPT_PROCESSOR_S3_REGION
+            value: {{ .Values.nomad.processor.s3Proofs.region | quote }}
+          {{- end }}
+        resources:
+          {{- toYaml .Values.nomad.processor.resources | nindent 10 }}
+        volumeMounts:
+        - name: state
+          mountPath: {{ .Values.nomad.dbPath }}
+        ports: 
+        - name: metrics
+          containerPort: {{ .Values.nomad.metrics.port }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  volumeClaimTemplates:
+  - metadata:
+      name: state
+    spec:
+      storageClassName: {{ .Values.storage.storageClass }}
+      accessModes: [ {{ .Values.storage.accessModes }} ]
+      {{- if .Values.nomad.processor.storage.snapshot.enabled }}
+      dataSource:
+        name: {{ .Values.nomad.processor.storage.snapshot.name }}
+        kind: VolumeSnapshot
+        apiGroup: snapshot.storage.k8s.io
+      {{- end }}
+      resources:
+        requests:
+          storage: {{ .Values.nomad.processor.storage.size }}
+{{- end }}

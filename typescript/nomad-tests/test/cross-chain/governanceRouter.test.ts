@@ -1,0 +1,453 @@
+import { ethers, nomad } from 'hardhat';
+import { expect } from 'chai';
+
+import { updateReplica, formatCall, formatNomadMessage } from './utils';
+import { increaseTimestampBy, UpgradeTestHelpers } from '../utils';
+import { getTestDeploy } from '../testChain';
+import { Updater } from 'lib/core';
+import { Address, Signer } from 'lib/types';
+import { CoreDeploy as Deploy } from '@nomad-xyz/deploy/dist/src/core/CoreDeploy';
+import {
+  deployNChains,
+  deployUnenrolledReplica,
+} from '@nomad-xyz/deploy/dist/src/core';
+import * as contracts from '@nomad-xyz/contracts/dist/core';
+
+const helpers = require('../../../../vectors/proof.json');
+
+const governorDomain = 1000;
+const nonGovernorDomain = 2000;
+const thirdDomain = 3000;
+
+/*
+ * Deploy the full Nomad suite on two chains
+ */
+describe('GovernanceRouter', async () => {
+  let deploys: Deploy[] = [];
+
+  let signer: Signer,
+    secondGovernorSigner: Signer,
+    thirdRouter: Signer,
+    governorRouter: contracts.TestGovernanceRouter,
+    governorHome: contracts.Home,
+    governorReplicaOnNonGovernorChain: contracts.TestReplica,
+    nonGovernorRouter: contracts.TestGovernanceRouter,
+    nonGovernorReplicaOnGovernorChain: contracts.TestReplica,
+    firstGovernor: Address,
+    secondGovernor: Address,
+    updater: Updater;
+
+  async function expectGovernor(
+    governanceRouter: contracts.TestGovernanceRouter,
+    expectedGovernorDomain: number,
+    expectedGovernor: Address,
+  ) {
+    expect(await governanceRouter.governorDomain()).to.equal(
+      expectedGovernorDomain,
+    );
+    expect(await governanceRouter.governor()).to.equal(expectedGovernor);
+  }
+
+  before(async () => {
+    [thirdRouter, signer, secondGovernorSigner] = await ethers.getSigners();
+    updater = await Updater.fromSigner(signer, governorDomain);
+  });
+
+  beforeEach(async () => {
+    // reset deploys
+    deploys[0] = await getTestDeploy(governorDomain, updater.address, []);
+    deploys[1] = await getTestDeploy(nonGovernorDomain, updater.address, []);
+    deploys[2] = await getTestDeploy(thirdDomain, updater.address, []);
+
+    // deploy the entire Nomad suite on two chains
+    await deployNChains([deploys[0], deploys[1]]);
+
+    // get both governanceRouters
+    governorRouter = deploys[0].contracts.governance
+      ?.proxy! as contracts.TestGovernanceRouter;
+    nonGovernorRouter = deploys[1].contracts.governance
+      ?.proxy! as contracts.TestGovernanceRouter;
+
+    firstGovernor = await governorRouter.governor();
+    secondGovernor = await secondGovernorSigner.getAddress();
+
+    governorHome = deploys[0].contracts.home?.proxy!;
+
+    governorReplicaOnNonGovernorChain = deploys[1].contracts.replicas[
+      governorDomain
+    ].proxy! as contracts.TestReplica;
+    nonGovernorReplicaOnGovernorChain = deploys[0].contracts.replicas[
+      nonGovernorDomain
+    ].proxy! as contracts.TestReplica;
+  });
+
+  // NB: must be first test for message proof
+  it('Sends cross-chain message to upgrade contract', async () => {
+    const nullRoot = '0x' + '00'.repeat(32);
+
+    const deploy = deploys[1];
+    const upgradeUtils = new UpgradeTestHelpers();
+
+    // get upgradeBeaconController
+    const upgradeBeaconController = deploy.contracts.upgradeBeaconController!;
+
+    const mysteryMath = await upgradeUtils.deployMysteryMathUpgradeSetup(
+      deploy,
+      signer,
+      false,
+    );
+
+    // expect results before upgrade
+    await upgradeUtils.expectMysteryMathV1(mysteryMath.proxy);
+
+    // Deploy Implementation 2
+    const factory2 = new contracts.MysteryMathV2__factory(signer);
+    const implementation2 = await factory2.deploy();
+
+    // Format nomad call message
+    const call = await formatCall(upgradeBeaconController, 'upgrade', [
+      mysteryMath.beacon.address,
+      implementation2.address,
+    ]);
+
+    const committedRoot = await governorHome.committedRoot();
+    expect(committedRoot).to.equal(nullRoot);
+
+    // dispatch call on local governorRouter
+    let tx = await governorRouter.callRemote(nonGovernorDomain, [call]);
+    let receipt = await tx.wait(0);
+    let leaf = receipt.events?.[0].topics[1];
+
+    expect(leaf).to.equal(helpers.proof.leaf);
+
+    const [, latestRoot] = await governorHome.suggestUpdate();
+    expect(latestRoot).to.equal(helpers.root);
+
+    const { signature } = await updater.signUpdate(committedRoot, latestRoot);
+
+    await expect(governorHome.update(committedRoot, latestRoot, signature))
+      .to.emit(governorHome, 'Update')
+      .withArgs(governorDomain, committedRoot, latestRoot, signature);
+
+    expect(await governorHome.committedRoot()).to.equal(latestRoot);
+    expect(await governorHome.queueContains(latestRoot)).to.be.false;
+
+    await updateReplica(
+      { oldRoot: committedRoot, newRoot: latestRoot, signature },
+      governorReplicaOnNonGovernorChain,
+    );
+
+    // Increase time enough for both updates to be confirmable
+    const optimisticSeconds = deploy.config.optimisticSeconds;
+    await increaseTimestampBy(deploy.chain.provider, optimisticSeconds * 3);
+
+    // after confirming, committedRoot should be equal to the last submitted update
+    expect(await governorReplicaOnNonGovernorChain.committedRoot()).to.equal(
+      latestRoot,
+    );
+
+    const callMessage = nomad.governance.formatCalls([call]);
+
+    const nonce = await governorHome.nonces(nonGovernorDomain);
+    const nomadMessage = nomad.formatMessage(
+      governorDomain,
+      governorRouter.address,
+      nonce - 1,
+      nonGovernorDomain,
+      nonGovernorRouter.address,
+      callMessage,
+    );
+
+    expect(ethers.utils.keccak256(nomadMessage)).to.equal(leaf);
+
+    const { path, index } = helpers.proof;
+    await governorReplicaOnNonGovernorChain.proveAndProcess(
+      nomadMessage,
+      path,
+      index,
+    );
+
+    // test implementation was upgraded
+    await upgradeUtils.expectMysteryMathV2(mysteryMath.proxy);
+  });
+
+  it('Rejects message from unenrolled replica', async () => {
+    await deployUnenrolledReplica(deploys[1], deploys[2]);
+
+    const unenrolledReplica = deploys[1].contracts.replicas[thirdDomain]
+      .proxy! as contracts.TestReplica;
+
+    // Create TransferGovernor message
+    const transferGovernorMessage = nomad.governance.formatTransferGovernor(
+      thirdDomain,
+      nomad.ethersAddressToBytes32(secondGovernor),
+    );
+
+    const nomadMessage = await formatNomadMessage(
+      unenrolledReplica,
+      governorRouter,
+      nonGovernorRouter,
+      transferGovernorMessage,
+    );
+
+    // Expect replica processing to fail when nonGovernorRouter reverts in handle
+    let success = await unenrolledReplica.callStatic.testProcess(nomadMessage);
+    expect(success).to.be.false;
+  });
+
+  it('Rejects message not from governor router', async () => {
+    // Create TransferGovernor message
+    const transferGovernorMessage = nomad.governance.formatTransferGovernor(
+      nonGovernorDomain,
+      nomad.ethersAddressToBytes32(nonGovernorRouter.address),
+    );
+
+    const nomadMessage = await formatNomadMessage(
+      governorReplicaOnNonGovernorChain,
+      nonGovernorRouter,
+      governorRouter,
+      transferGovernorMessage,
+    );
+
+    // Set message status to MessageStatus.Pending
+    await nonGovernorReplicaOnGovernorChain.setMessagePending(nomadMessage);
+
+    // Expect replica processing to fail when nonGovernorRouter reverts in handle
+    let success =
+      await nonGovernorReplicaOnGovernorChain.callStatic.testProcess(
+        nomadMessage,
+      );
+    expect(success).to.be.false;
+  });
+
+  it('Accepts a valid transfer governor message', async () => {
+    // Enroll router for new domain (in real setting this would
+    // be executed with an Nomad message sent to the nonGovernorRouter)
+    await nonGovernorRouter.testSetRouter(
+      thirdDomain,
+      nomad.ethersAddressToBytes32(thirdRouter.address),
+    );
+
+    // Create TransferGovernor message
+    const transferGovernorMessage = nomad.governance.formatTransferGovernor(
+      thirdDomain,
+      nomad.ethersAddressToBytes32(thirdRouter.address),
+    );
+
+    const nomadMessage = await formatNomadMessage(
+      governorReplicaOnNonGovernorChain,
+      governorRouter,
+      nonGovernorRouter,
+      transferGovernorMessage,
+    );
+
+    // Expect successful tx on static call
+    let success = await governorReplicaOnNonGovernorChain.callStatic.process(
+      nomadMessage,
+    );
+    expect(success).to.be.true;
+
+    await governorReplicaOnNonGovernorChain.process(nomadMessage);
+    await expectGovernor(
+      nonGovernorRouter,
+      thirdDomain,
+      ethers.constants.AddressZero,
+    );
+  });
+
+  it('Accepts valid set router message', async () => {
+    // Create address for router to enroll and domain for router
+    const [router] = await ethers.getSigners();
+
+    // Create SetRouter message
+    const setRouterMessage = nomad.governance.formatSetRouter(
+      thirdDomain,
+      nomad.ethersAddressToBytes32(router.address),
+    );
+
+    const nomadMessage = await formatNomadMessage(
+      governorReplicaOnNonGovernorChain,
+      governorRouter,
+      nonGovernorRouter,
+      setRouterMessage,
+    );
+
+    // Expect successful tx
+    let success = await governorReplicaOnNonGovernorChain.callStatic.process(
+      nomadMessage,
+    );
+    expect(success).to.be.true;
+
+    // Expect new router to be registered for domain and for new domain to be
+    // in domains array
+    await governorReplicaOnNonGovernorChain.process(nomadMessage);
+    expect(await nonGovernorRouter.routers(thirdDomain)).to.equal(
+      nomad.ethersAddressToBytes32(router.address),
+    );
+    expect(await nonGovernorRouter.containsDomain(thirdDomain)).to.be.true;
+  });
+
+  it('Accepts valid call messages', async () => {
+    // const TestRecipient = await nomad.deployImplementation('TestRecipient');
+    const testRecipientFactory = new contracts.TestRecipient__factory(signer);
+    const TestRecipient = await testRecipientFactory.deploy();
+
+    // Format nomad call message
+    const arg = 'String!';
+    const call = await formatCall(TestRecipient, 'receiveString', [arg]);
+
+    // Create Call message to test recipient that calls receiveString
+    const callMessage = nomad.governance.formatCalls([call, call]);
+
+    const nomadMessage = await formatNomadMessage(
+      governorReplicaOnNonGovernorChain,
+      governorRouter,
+      nonGovernorRouter,
+      callMessage,
+    );
+
+    // Expect successful tx
+    let success =
+      await governorReplicaOnNonGovernorChain.callStatic.testProcess(
+        nomadMessage,
+      );
+
+    expect(success).to.be.true;
+  });
+
+  it('Transfers governorship', async () => {
+    // Transfer governor on current governor chain
+    // get root on governor chain before transferring governor
+    const committedRoot = await governorHome.committedRoot();
+
+    // Governor HAS NOT been transferred on original governor domain
+    await expectGovernor(governorRouter, governorDomain, firstGovernor);
+    // Governor HAS NOT been transferred on original non-governor domain
+    await expectGovernor(
+      nonGovernorRouter,
+      governorDomain,
+      ethers.constants.AddressZero,
+    );
+
+    // transfer governorship to nonGovernorRouter
+    await governorRouter.transferGovernor(nonGovernorDomain, secondGovernor);
+
+    // Governor HAS been transferred on original governor domain
+    await expectGovernor(
+      governorRouter,
+      nonGovernorDomain,
+      ethers.constants.AddressZero,
+    );
+    // Governor HAS NOT been transferred on original non-governor domain
+    await expectGovernor(
+      nonGovernorRouter,
+      governorDomain,
+      ethers.constants.AddressZero,
+    );
+
+    // get new root and signed update
+    const newRoot = await governorHome.queueEnd();
+
+    const { signature } = await updater.signUpdate(committedRoot, newRoot);
+
+    // update governor chain home
+    await governorHome.update(committedRoot, newRoot, signature);
+
+    const transferGovernorMessage = nomad.governance.formatTransferGovernor(
+      nonGovernorDomain,
+      nomad.ethersAddressToBytes32(secondGovernor),
+    );
+
+    const nomadMessage = await formatNomadMessage(
+      governorReplicaOnNonGovernorChain,
+      governorRouter,
+      nonGovernorRouter,
+      transferGovernorMessage,
+    );
+
+    // Set current root on replica
+    await governorReplicaOnNonGovernorChain.setCommittedRoot(newRoot);
+
+    // Governor HAS been transferred on original governor domain
+    await expectGovernor(
+      governorRouter,
+      nonGovernorDomain,
+      ethers.constants.AddressZero,
+    );
+    // Governor HAS NOT been transferred on original non-governor domain
+    await expectGovernor(
+      nonGovernorRouter,
+      governorDomain,
+      ethers.constants.AddressZero,
+    );
+
+    // Process transfer governor message on Replica
+    await governorReplicaOnNonGovernorChain.process(nomadMessage);
+
+    // Governor HAS been transferred on original governor domain
+    await expectGovernor(
+      governorRouter,
+      nonGovernorDomain,
+      ethers.constants.AddressZero,
+    );
+    // Governor HAS been transferred on original non-governor domain
+    await expectGovernor(nonGovernorRouter, nonGovernorDomain, secondGovernor);
+  });
+
+  it('Upgrades using GovernanceRouter call', async () => {
+    const upgradeUtils = new UpgradeTestHelpers();
+    const deploy = deploys[0];
+
+    const mysteryMath = await upgradeUtils.deployMysteryMathUpgradeSetup(
+      deploy,
+      signer,
+    );
+
+    const upgradeBeaconController = deploy.contracts.upgradeBeaconController!;
+
+    // expect results before upgrade
+    await upgradeUtils.expectMysteryMathV1(mysteryMath.proxy);
+
+    // Deploy Implementation 2
+    const v2Factory = new contracts.MysteryMathV2__factory(signer);
+    const implementation = await v2Factory.deploy();
+
+    // Format nomad call message
+    const call = await formatCall(upgradeBeaconController, 'upgrade', [
+      mysteryMath.beacon.address,
+      implementation.address,
+    ]);
+
+    // dispatch call on local governorRouter
+    await expect(governorRouter.callLocal([call])).to.emit(
+      upgradeBeaconController,
+      'BeaconUpgraded',
+    );
+
+    // test implementation was upgraded
+    await upgradeUtils.expectMysteryMathV2(mysteryMath.proxy);
+  });
+
+  it('Calls UpdaterManager to change the Updater on Home', async () => {
+    const [newUpdater] = await ethers.getSigners();
+    const updaterManager = deploys[0].contracts.updaterManager!;
+
+    // check current Updater address on Home
+    let currentUpdaterAddr = await governorHome.updater();
+    expect(currentUpdaterAddr).to.equal(deploys[0].config.updater);
+
+    // format nomad call message
+    const call = await formatCall(updaterManager, 'setUpdater', [
+      newUpdater.address,
+    ]);
+
+    await expect(governorRouter.callLocal([call])).to.emit(
+      governorHome,
+      'NewUpdater',
+    );
+
+    // check for new updater
+    currentUpdaterAddr = await governorHome.updater();
+    expect(currentUpdaterAddr).to.equal(newUpdater.address);
+  });
+});

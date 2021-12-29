@@ -1,0 +1,44 @@
+{
+  "name": "local-environment",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "agents_build": "pushd ../../rust && ./build.sh latest && popd",
+    "agents_stop_running": "docker ps --filter name=_agent --filter status=running -aq | xargs docker stop",
+    "agents_stop": "docker ps --filter name=_agent -aq | xargs docker rm --force",
+    "agents_clean": "pushd ../../rust && rm -rf config/16* ; rm -rf *db ; popd",
+    "hardhat_build": "pushd hardhat && docker build -t hardhat . && popd",
+    "hardhat_stop": "docker ps --filter name=_net -aq | xargs docker rm --force",
+    "typechain_build": "pushd ../../typescript/typechain && npm i && npm run build && npm link && popd && npm link @nomad-xyz/contracts",
+    "deploy_build": "pushd ../../typescript/nomad-deploy && npm i && npm link @nomad-xyz/contracts && npm run build && npm link && popd && npm link @nomad-xyz/deploy",
+    "nomad_tests_build_and_link": "pushd ../../typescript/nomad-tests && npm i && npm link && popd && npm link @nomad-xyz/test",
+    "nomad_tests_build": "pushd ../../typescript/nomad-tests && npm i && popd",
+    "sdk_build": "pushd ../../typescript/nomad-provider && npm i && npm run build && npm link && popd && npm link @nomad-xyz/sdk",
+    "cleanup": "npm run hardhat_stop && npm run agents_stop && npm run agents_clean",
+    "build_libraries": "npm run typechain_build && npm run deploy_build && npm run sdk_build && npm run nomad_tests_build_and_link",
+    "build": "npm i && npm run hardhat_build && npm run nomad_tests_build && npm run agents_build",
+    "test": "npx ts-node tests/sendTokensCase.ts"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@nomad-xyz/contracts": "^1.0.1",
+    "@nomad-xyz/deploy": "^0.1.1",
+    "@nomad-xyz/sdk": "^0.1.6",
+    "@nomad-xyz/test": "file:/../../typescript/nomad-tests",
+    "@nomiclabs/hardhat-ethers": "^2.0.2",
+    "@types/dockerode": "^3.3.0",
+    "chai": "^4.3.4",
+    "dockerode": "^3.3.1",
+    "ethers": "^5.5.1",
+    "hardhat": "^2.6.8",
+    "keccak": "^3.0.2",
+    "secp256k1": "^4.0.2",
+    "solc": "^0.8.10",
+    "ts-node": "^10.4.0"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.3.0"
+  }
+}

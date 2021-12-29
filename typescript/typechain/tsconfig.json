@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "outDir": "./dist/",
+    "rootDir": "./",
+    "forceConsistentCasingInFileNames": false
+  },
+  "exclude": [
+    "./node_modules/",
+    "./dist/",
+    "./core/hardhat.d.ts",
+    "./bridge/hardhat.d.ts"
+  ],
+  "extends": "../tsconfig.package.json",
+  "include": [
+    "./index.ts",
+    "./core/*.ts",
+    "./bridge/*.ts",
+    "./core/factories/*.ts",
+    "./bridge/factories/*.ts"
+  ]
+}

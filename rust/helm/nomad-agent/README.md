@@ -1,0 +1,44 @@
+# nomad-agent
+
+![Version: 0.1.0](https://img.shields.io/badge/Version-0.1.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.1.0](https://img.shields.io/badge/AppVersion-0.1.0-informational?style=flat-square)
+
+A Helm Chart that encapsulates the deployment of the Nomad Rust Agent(s)
+
+## Values
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| affinity | object | `{}` |  |
+| fullnameOverride | string | `""` |  |
+| image.pullPolicy | string | `"Always"` |  |
+| image.repository | string | `"gcr.io/nomad-xyz/nomad-agent"` |  |
+| image.tag | string | `"latest"` |  |
+| imagePullSecrets | list | `[]` |  |
+| nameOverride | string | `""` |  |
+| nodeSelector | object | `{}` |  |
+| nomad | object | `{"aws":null,"baseConfig":"base.json","dbPath":"/usr/share/nomad","homeChain":{"address":null,"connectionType":null,"connectionUrl":null,"domain":null,"name":"kovan","rpcStyle":null},"kathy":{"chatGenConfig":{"destination":null,"message":null,"recipient":null,"type":null},"enabled":false,"messageInterval":null,"podAnnotations":{},"podLabels":{},"resources":{},"storage":{"size":"10Gi","snapshot":{"enabled":false,"name":""}},"transactionSigners":[{"aws":{"keyId":"","region":""},"hexKey":"","name":"kovan"},{"aws":{"keyId":"","region":""},"hexKey":"","name":"alfajores"}]},"metrics":{"port":9090},"processor":{"enabled":false,"podAnnotations":{},"podLabels":{},"pollingInterval":null,"resources":{},"storage":{"size":"10Gi","snapshot":{"enabled":false,"name":""}},"transactionSigners":[{"aws":{"keyId":"","region":""},"hexKey":"","name":"kovan"},{"aws":{"keyId":"","region":""},"hexKey":"","name":"alfajores"}]},"relayer":{"enabled":false,"podAnnotations":{},"podLabels":{},"pollingInterval":null,"resources":{},"storage":{"size":"10Gi","snapshot":{"enabled":false,"name":""}},"transactionSigners":[{"aws":{"keyId":"","region":""},"hexKey":"","name":"kovan"},{"aws":{"keyId":"","region":""},"hexKey":"","name":"alfajores"}]},"replicaChains":[{"address":null,"connectionType":null,"connectionUrl":null,"domain":null,"name":"alfajores","rpcStyle":null}],"runEnv":"default","rustBacktrace":"full","tracing":{"format":"json","level":"info","uri":""},"updater":{"attestationSigner":{"aws":{"keyId":"","region":""},"hexKey":""},"enabled":false,"podAnnotations":{},"podLabels":{},"pollingInterval":null,"resources":{},"storage":{"size":"10Gi","snapshot":{"enabled":false,"name":""}},"transactionSigners":[{"aws":{"keyId":"","region":""},"hexKey":"","name":"kovan"},{"aws":{"keyId":"","region":""},"hexKey":"","name":"alfajores"}],"updatePause":null}}` | Nomad Overrides By Default, Nomad Agents load the config baked into the Docker Image Pass values here in order to override the values in the config Note: For successful operation, one _must_ pass signer keys as       they are not baked into the image for security reasons. |
+| nomad.homeChain.address | string | `nil` | The contract address for the home contract |
+| nomad.homeChain.connectionUrl | string | `nil` | Connection string pointing to an RPC endpoint for the home chain |
+| nomad.homeChain.domain | string | `nil` | The hard-coded domain corresponding to this blockchain |
+| nomad.homeChain.rpcStyle | string | `nil` | RPC Style |
+| nomad.kathy.chatGenConfig | object | `{"destination":null,"message":null,"recipient":null,"type":null}` | Configuration for Kathy's message generation code |
+| nomad.replicaChains | list | `[{"address":null,"connectionType":null,"connectionUrl":null,"domain":null,"name":"alfajores","rpcStyle":null}]` | Replica chain overrides, a sequence |
+| nomad.replicaChains[0].address | string | `nil` | The contract address for the replica contract |
+| nomad.replicaChains[0].connectionUrl | string | `nil` | Connection string pointing to an RPC endpoint for the replica chain |
+| nomad.updater.attestationSigner | object | `{"aws":{"keyId":"","region":""},"hexKey":""}` | Specialized key used by updater and watcher used to sign attestations, separate from updater.transactionSigners |
+| nomad.updater.pollingInterval | string | `nil` | How long to wait between checking for updates |
+| nomad.updater.transactionSigners | list | `[{"aws":{"keyId":"","region":""},"hexKey":"","name":"kovan"},{"aws":{"keyId":"","region":""},"hexKey":"","name":"alfajores"}]` | Transaction Signing keys for home and replica(s) |
+| podAnnotations | object | `{}` |  |
+| podCommonLabels | object | `{}` |  |
+| podSecurityContext.fsGroup | int | `2000` |  |
+| resources | object | `{}` |  |
+| securityContext | object | `{}` |  |
+| serviceAccount.annotations | object | `{}` |  |
+| serviceAccount.create | bool | `true` |  |
+| serviceAccount.name | string | `""` |  |
+| storage.accessModes | string | `"ReadWriteOnce"` |  |
+| storage.storageClass | string | `"standard"` |  |
+| tolerations | list | `[]` |  |
+
+----------------------------------------------
+Autogenerated from chart metadata using [helm-docs v1.5.0](https://github.com/norwoodj/helm-docs/releases/v1.5.0)

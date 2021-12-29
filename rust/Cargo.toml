@@ -1,0 +1,18 @@
+cargo-features = ["edition2021"]
+
+[workspace]
+
+members = [
+    "nomad-core",
+    "nomad-base",
+    "nomad-test",
+    "chains/nomad-ethereum",
+    "agents/kathy",
+    "agents/updater",
+    "agents/relayer",
+    "agents/watcher",
+    "agents/processor",
+    "tools/kms-cli",
+    "tools/nomad-cli",
+    "tools/balance-exporter"
+]

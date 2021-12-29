@@ -1,0 +1,1 @@
+docker push gcr.io/nomad-xyz/nomad-agent:$1

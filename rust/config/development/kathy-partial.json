@@ -1,0 +1,8 @@
+{
+  "interval": "240",
+  "chat": {
+    "message": "static message",
+    "recipient": "0xabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcd",
+    "type": "static"
+  }
+}
