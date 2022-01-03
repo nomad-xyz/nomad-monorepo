@@ -1,0 +1,44 @@
+{
+  "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.0.2",
+    "@nomiclabs/hardhat-waffle": "^2.0.1",
+    "@typechain/ethers-v5": "^7.0.0",
+    "@types/chai": "^4.2.18",
+    "@types/mocha": "^8.2.2",
+    "chai": "^4.3.4",
+    "ethereum-waffle": "^3.3.0",
+    "ethers": "^5.4.7",
+    "hardhat": "^2.6.8",
+    "mkdirp": "^1.0.4",
+    "prettier": "2.3.0",
+    "ts-node": "^10.0.0",
+    "tsconfig-paths": "^3.12.0",
+    "typechain": "^5.0.0",
+    "typescript": "^4.3.2"
+  },
+  "dependencies": {
+    "@nomad-xyz/contract-interfaces": "file:../typechain",
+    "@nomad-xyz/deploy": "file:../nomad-deploy",
+    "@nomad-xyz/sdk": "file:../nomad-sdk",
+    "@types/node": "^15.14.7",
+    "dotenv": "^10.0.0",
+    "ethers": "^5.4.7"
+  },
+  "name": "@nomad-xyz/test",
+  "version": "1.0.0",
+  "description": "Nomad typescript tests and tools",
+  "main": "index.ts",
+  "scripts": {
+    "check": "tsc --noEmit",
+    "prettier": "prettier --write ./test ./lib",
+    "test": "npm run relink-all && hardhat test",
+    "testNoCompile": "hardhat test",
+    "relink-all": "npm run relink-contracts && npm run relink-sdk && npm run prepare-deploy && npm run relink-deploy",
+    "prepare-deploy": "cd ../nomad-deploy && npm run relink-all && cd ../nomad-tests",
+    "relink-contracts": "cd ../typechain && npm run build && npm link && cd ../nomad-tests && npm link @nomad-xyz/contract-interfaces",
+    "relink-sdk": "cd ../nomad-sdk && npm run build && npm link && cd ../nomad-tests && npm link @nomad-xyz/sdk",
+    "relink-deploy": "cd ../nomad-deploy && npm run build && npm link && cd ../nomad-tests && npm link @nomad-xyz/deploy"
+  },
+  "author": "Illusory Systems Inc.",
+  "license": "Apache 2.0"
+}

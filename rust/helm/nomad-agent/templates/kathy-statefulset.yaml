@@ -1,0 +1,110 @@
+{{- if .Values.nomad.kathy.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "nomad-agent.fullname" . }}-kathy
+  labels:
+    {{- include "nomad-agent.labels" . | nindent 4 }}
+    app.kubernetes.io/component: kathy
+spec:
+  selector:
+    matchLabels:
+      {{- include "nomad-agent.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: kathy
+  replicas: 1 
+  serviceName: {{ include "nomad-agent.fullname" . }}-kathy
+  template:
+    metadata:
+      annotations:
+        checksum/configmap: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.nomad.kathy.podAnnotations }}
+        {{ toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "nomad-agent.labels" . | nindent 8 }}
+        app.kubernetes.io/component: kathy
+        {{- with .Values.podCommonLabels }}
+        {{ toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.nomad.kathy.podLabels }}
+        {{ toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      terminationGracePeriodSeconds: 10
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+      - name: {{ .Chart.Name }}
+        securityContext:
+          {{- toYaml .Values.securityContext | nindent 10 }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        command: ["./kathy"]
+        envFrom:
+        - configMapRef:
+            name: {{ include "nomad-agent.fullname" . }}
+        env: 
+          {{- if .Values.nomad.kathy.messageInterval }}
+          - name: OPT_KATHY_INTERVAL
+            value: {{ .Values.nomad.kathy.messageInterval | quote }}
+          {{- end }}
+          {{- range .Values.nomad.kathy.transactionSigners }}
+          {{- if .hexKey }}
+          - name: OPT_BASE_SIGNERS_{{ .name | upper }}_KEY
+            value: {{ .hexKey }}
+          {{- else }}
+          - name: OPT_BASE_SIGNERS_{{ .name | upper }}_TYPE
+            value: "aws"
+          - name: OPT_BASE_SIGNERS_{{ .name | upper }}_ID
+            value: {{ .aws.keyId }}
+          - name: OPT_BASE_SIGNERS_{{ .name | upper }}_REGION
+            value: {{ .aws.region }}
+          {{- end }}
+          {{- end }}
+          {{- if .Values.nomad.tracing.uri }}
+          - name: OPT_BASE_TRACING_JAEGER_NAME
+            value: {{ include "nomad-agent.fullname" . }}-kathy
+          {{- end }}
+        resources:
+          {{- toYaml .Values.nomad.kathy.resources | nindent 10 }}
+        volumeMounts:
+        - name: state
+          mountPath: {{ .Values.nomad.dbPath }}
+        ports: 
+        - name: metrics
+          containerPort: {{ .Values.nomad.metrics.port }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  volumeClaimTemplates:
+  - metadata:
+      name: state
+    spec:
+      storageClassName: {{ .Values.storage.storageClass }}
+      accessModes: [ {{ .Values.storage.accessModes }} ]
+      {{- if .Values.nomad.kathy.storage.snapshot.enabled }}
+      dataSource:
+        name: {{ .Values.nomad.kathy.storage.snapshot.name }}
+        kind: VolumeSnapshot
+        apiGroup: snapshot.storage.k8s.io
+      {{- end }}
+      resources:
+        requests:
+          storage: {{ .Values.nomad.kathy.storage.size }}
+{{- end }}

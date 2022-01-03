@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "outDir": "./dist/",
+    "rootDir": "./",
+    "resolveJsonModule": true,
+    "forceConsistentCasingInFileNames": false,
+    "baseUrl": ".",
+    "paths": {
+      "lib/*": ["./lib/*"]
+    }
+  },
+  "exclude": ["./node_modules/", "./dist/"],
+  "extends": "../tsconfig.package.json",
+  "include": [
+    "./lib/*.ts",
+    "./test/*.ts",
+    "./test/bridge/*.ts",
+    "./test/cross-chain/*.ts"
+  ]
+}

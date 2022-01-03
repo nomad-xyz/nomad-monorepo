@@ -1,0 +1,12 @@
+[
+  {
+    "domain": 2000,
+    "signature": {
+      "r": "0xcad359be65dd175099684fdc7a67a68e39968358cfa6aaafcd673ed4027dd922",
+      "s": "0x4c6c2a628f9761bd5284f2ed5927b4c7df00ae30dbcb1c826ea442f37b468ae8",
+      "v": 27
+    },
+    "signer": "0x19e7e376e7c213b7e7e7e46cc70a5dd086daff2a",
+    "updater": "0x1563915e194d8cfba1943570603f7606a3115508"
+  }
+]

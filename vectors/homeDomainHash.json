@@ -1,0 +1,14 @@
+[
+  {
+    "expectedDomainHash": "0xc0bb4ca4c9587c3b8d2e173ce75d916cd2cc904a7a4ccac5b23ae6de1f3ad5e4",
+    "homeDomain": 1
+  },
+  {
+    "expectedDomainHash": "0xfc7cb132ceaf0b84133c8af285f30872f83c01a18ad1262a167f9bbcdede25c9",
+    "homeDomain": 2
+  },
+  {
+    "expectedDomainHash": "0x411ac048efb190144d9cb0cca4bc29af53094facf25f07e9510c9a34d24a8bea",
+    "homeDomain": 3
+  }
+]
