@@ -1,0 +1,173 @@
+name: Solidity
+
+on:
+  # Triggers the workflow on push or pull request events but only for the main branch
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      # Save caches individually
+      - name: Core Cache
+        id: core-cache
+        uses: actions/cache@v2
+        with:
+          path: ./solidity/nomad-core/node_modules
+          key: ${{ runner.os }}-core-cache-${{ hashFiles('solidity/nomad-core/package-lock.json') }}
+
+      - name: XApps Cache
+        id: xapps-cache
+        uses: actions/cache@v2
+        with:
+          path: ./solidity/nomad-xapps/node_modules
+          key: ${{ runner.os }}-xapps-cache-${{ hashFiles('solidity/nomad-xapps/package-lock.json') }}
+
+      - name: Tests Cache
+        id: tests-cache
+        uses: actions/cache@v2
+        with:
+          path: ./typescript/nomad-tests/node_modules
+          key: ${{ runner.os }}-tests-cache-${{ hashFiles('typescript/nomad-tests/package-lock.json') }}
+
+      - name: Deploy Cache
+        id: deploy-cache
+        uses: actions/cache@v2
+        with:
+          path: ./typescript/nomad-deploy/node_modules
+          key: ${{ runner.os }}-deploy-cache-${{ hashFiles('typescript/nomad-deploy/package-lock.json') }}
+
+      - name: Typechain Cache
+        id: typechain-cache
+        uses: actions/cache@v2
+        with:
+          path: ./typescript/typechain/node_modules
+          key: ${{ runner.os }}-typechain-cache-${{ hashFiles('typescript/typechain/package-lock.json') }}
+
+      - name: Multi-Provider Cache
+        id: provider-cache
+        uses: actions/cache@v2
+        with:
+          path: ./typescript/nomad-sdk/node_modules
+          key: ${{ runner.os }}-provider-cache-${{ hashFiles('typescript/nomad-sdk/package-lock.json') }}
+
+      # Install separately depending on cache hit
+      - name: Install Core
+        if: steps.core-cache.outputs.cache-hit != 'true'
+        run: cd ./solidity/nomad-core && npm i
+
+      - name: Install XApps
+        if: steps.xapps-cache.outputs.cache-hit != 'true'
+        run: cd ./solidity/nomad-xapps && npm i
+
+      - name: Install Tests
+        if: steps.tests-cache.outputs.cache-hit != 'true'
+        run: cd ./typescript/nomad-tests && npm i
+
+      - name: Install Deploy
+        if: steps.deploy-cache.outputs.cache-hit != 'true'
+        run: cd ./typescript/nomad-deploy && npm i
+
+      - name: Install Typechain
+        if: steps.typechain-cache.outputs.cache-hit != 'true'
+        run: cd ./typescript/typechain && npm i
+
+      - name: Install Multi-Provider
+        if: steps.provider-cache.outputs.cache-hit != 'true'
+        run: cd ./typescript/nomad-sdk && npm i
+
+  lint:
+    runs-on: ubuntu-latest
+    needs: [install]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      # Get cache for Core and XApps
+      - name: Core Cache
+        id: core-cache
+        uses: actions/cache@v2
+        with:
+          path: ./solidity/nomad-core/node_modules
+          key: ${{ runner.os }}-core-cache-${{ hashFiles('solidity/nomad-core/package-lock.json') }}
+
+      - name: XApps Cache
+        id: xapps-cache
+        uses: actions/cache@v2
+        with:
+          path: ./solidity/nomad-xapps/node_modules
+          key: ${{ runner.os }}-xapps-cache-${{ hashFiles('solidity/nomad-xapps/package-lock.json') }}
+
+      # Lint
+      - name: Lint
+        run: |
+          cd ./solidity/nomad-core
+          npm run lint
+          cd ../nomad-xapps
+          npm run lint
+
+  test:
+    env:
+      ETHERSCAN_API_KEY: ""
+
+    runs-on: ubuntu-latest
+    needs: [install]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      # Get caches
+      - name: Core Cache
+        id: core-cache
+        uses: actions/cache@v2
+        with:
+          path: ./solidity/nomad-core/node_modules
+          key: ${{ runner.os }}-core-cache-${{ hashFiles('solidity/nomad-core/package-lock.json') }}
+
+      - name: XApps Cache
+        id: xapps-cache
+        uses: actions/cache@v2
+        with:
+          path: ./solidity/nomad-xapps/node_modules
+          key: ${{ runner.os }}-xapps-cache-${{ hashFiles('solidity/nomad-xapps/package-lock.json') }}
+
+      - name: Tests Cache
+        id: tests-cache
+        uses: actions/cache@v2
+        with:
+          path: ./typescript/nomad-tests/node_modules
+          key: ${{ runner.os }}-tests-cache-${{ hashFiles('typescript/nomad-tests/package-lock.json') }}
+
+      - name: Deploy Cache
+        id: deploy-cache
+        uses: actions/cache@v2
+        with:
+          path: ./typescript/nomad-deploy/node_modules
+          key: ${{ runner.os }}-deploy-cache-${{ hashFiles('typescript/nomad-deploy/package-lock.json') }}
+
+      - name: Typechain Cache
+        id: typechain-cache
+        uses: actions/cache@v2
+        with:
+          path: ./typescript/typechain/node_modules
+          key: ${{ runner.os }}-typechain-cache-${{ hashFiles('typescript/typechain/package-lock.json') }}
+
+      - name: SDK Cache
+        id: sdk-cache
+        uses: actions/cache@v2
+        with:
+          path: ./typescript/nomad-sdk/node_modules
+          key: ${{ runner.os }}-provider-cache-${{ hashFiles('typescript/nomad-sdk/package-lock.json') }}
+
+      # Test
+      # - name: Test
+      #   run: ./scripts/test-solidity.sh

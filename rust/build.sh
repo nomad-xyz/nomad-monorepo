@@ -1,0 +1,1 @@
+docker build -t gcr.io/nomad-xyz/nomad-agent:$1 .

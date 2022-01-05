@@ -1,0 +1,41 @@
+{
+  "name": "@nomad-xyz/xapp-tutorial",
+  "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.0.1",
+    "@nomiclabs/hardhat-etherscan": "^2.1.2",
+    "@nomiclabs/hardhat-waffle": "^2.0.1",
+    "@typechain/ethers-v5": "^7.0.0",
+    "@typechain/hardhat": "^2.0.1",
+    "chai": "^4.3.0",
+    "dotenv": "^10.0.0",
+    "eslint": "^7.20.0",
+    "ethereum-waffle": "^3.2.2",
+    "ethers": "^5.4.4",
+    "hardhat": "^2.6.0",
+    "prettier": "^2.2.1",
+    "prettier-plugin-solidity": "^1.0.0-beta.5",
+    "solhint": "^3.3.2",
+    "solhint-plugin-prettier": "^0.0.5",
+    "solidity-coverage": "^0.7.14",
+    "ts-node": "^10.1.0",
+    "typechain": "^5.0.0",
+    "typescript": "^4.3.5"
+  },
+  "version": "0.0.0",
+  "description": "A cross-chain counter app",
+  "main": " ",
+  "scripts": {
+    "prettier": "prettier --write './contracts'",
+    "compile": "hardhat compile && npm run prettier",
+    "lint": "solhint contracts/*.sol",
+    "example": "npx hardhat run ./scripts/index.ts"
+  },
+  "author": "Luke Tchang",
+  "license": "MIT OR Apache-2.0",
+  "dependencies": {
+    "@nomad-xyz/nomad-sol": "file:../../solidity/nomad-core",
+    "@openzeppelin/contracts": "~3.4.2",
+    "@openzeppelin/contracts-upgradeable": "~3.4.2",
+    "@summa-tx/memview-sol": "^2.0.0"
+  }
+}

@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "nomad-agent.fullname" . }}
+  labels:
+    {{- include "nomad-agent.labels" . | nindent 4 }}
+data:
+  RUN_ENV: {{ .Values.nomad.runEnv | quote }}
+  BASE_CONFIG: {{ .Values.nomad.baseConfig }}
+  {{- if .Values.nomad.aws }}
+  AWS_ACCESS_KEY_ID: {{ .Values.nomad.aws.accessKeyId }}
+  AWS_SECRET_ACCESS_KEY: {{ .Values.nomad.aws.secretAccessKey }}
+  {{- end }}
+  RUST_BACKTRACE: {{ .Values.nomad.rustBacktrace }}
+  OPT_BASE_DB: {{ .Values.nomad.dbPath }}
+  OPT_BASE_TRACING_FMT: {{ .Values.nomad.tracing.format }}
+  OPT_BASE_TRACING_LEVEL: {{ .Values.nomad.tracing.level }}
+  {{- if .Values.nomad.homeChain.connectionUrl }}
+  OPT_BASE_HOME_CONNECTION_URL: {{ .Values.nomad.homeChain.connectionUrl }}
+  {{- end }}
+  {{- if .Values.nomad.homeChain.connectionType }}
+  OPT_BASE_HOME_CONNECTION_TYPE: {{ .Values.nomad.homeChain.connectionType }}
+  {{- end }}
+  {{- range .Values.nomad.replicaChains }}
+  {{- if .connectionUrl }}
+  OPT_BASE_REPLICAS_{{ .name | upper }}_CONNECTION_URL: {{ .connectionUrl }}
+  {{- end }}
+  {{- if .address }}
+  OPT_BASE_REPLICAS_{{ .name | upper }}_ADDRESS: {{ .address }}
+  {{- end }}
+  {{- end }}
+  {{- if .Values.nomad.tracing.uri }}
+  OPT_BASE_TRACING_JAEGER_COLLECTOR_URI: {{ .Values.nomad.tracing.uri }}
+  {{- end }}
+  OPT_BASE_METRICS: {{ .Values.nomad.metrics.port | quote }}
