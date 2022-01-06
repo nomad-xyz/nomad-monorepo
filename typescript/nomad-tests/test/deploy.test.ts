@@ -4,7 +4,7 @@ import { getTestDeploy } from './testChain';
 import { Updater } from 'lib/core';
 import { Signer } from 'lib/types';
 import { CoreContractAddresses } from '@nomad-xyz/deploy/dist/src/chain';
-import { deployBridges } from '@nomad-xyz/deploy/dist/src/bridge';
+import { deployBridgesComplete } from '@nomad-xyz/deploy/dist/src/bridge';
 import { BridgeDeploy } from '@nomad-xyz/deploy/dist/src/bridge/BridgeDeploy';
 import {
   deployTwoChains,
@@ -245,7 +245,7 @@ describe('bridge deploy scripts', async () => {
     );
 
     // deploy bridges
-    await deployBridges([alfajoresDeploy, kovanDeploy]);
+    await deployBridgesComplete([alfajoresDeploy, kovanDeploy]);
   });
 
   it('3-chain bridge', async () => {
@@ -273,6 +273,6 @@ describe('bridge deploy scripts', async () => {
     );
 
     // deploy 3 bridges
-    await deployBridges([alfajoresDeploy, kovanDeploy, rinkebyDeploy]);
+    await deployBridgesComplete([alfajoresDeploy, kovanDeploy, rinkebyDeploy]);
   });
 });
