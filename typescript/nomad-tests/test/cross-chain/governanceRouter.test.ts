@@ -8,7 +8,7 @@ import { Updater } from 'lib/core';
 import { Address, Signer } from 'lib/types';
 import { CoreDeploy as Deploy } from '@nomad-xyz/deploy/dist/src/core/CoreDeploy';
 import {
-  deployNChains,
+  deployHubAndSpoke,
   deployUnenrolledReplica,
 } from '@nomad-xyz/deploy/dist/src/core';
 import * as contracts from '@nomad-xyz/contract-interfaces/dist/core';
@@ -21,7 +21,9 @@ const thirdDomain = 3000;
  * Deploy the full Nomad suite on two chains
  */
 describe('GovernanceRouter', async () => {
-  let deploys: Deploy[] = [];
+  let hub: Deploy;
+  let spoke: Deploy;
+  let extraSpoke: Deploy;
 
   let signer: Signer,
     secondGovernorSigner: Signer,
@@ -53,36 +55,36 @@ describe('GovernanceRouter', async () => {
 
   beforeEach(async () => {
     // reset deploys
-    deploys[0] = await getTestDeploy(governorDomain, updater.address, []);
-    deploys[1] = await getTestDeploy(nonGovernorDomain, updater.address, []);
-    deploys[2] = await getTestDeploy(thirdDomain, updater.address, []);
+    hub = await getTestDeploy(governorDomain, updater.address, []);
+    spoke = await getTestDeploy(nonGovernorDomain, updater.address, []);
+    extraSpoke = await getTestDeploy(thirdDomain, updater.address, []);
 
     // deploy the entire Nomad suite on two chains
-    await deployNChains([deploys[0], deploys[1]]);
+    await deployHubAndSpoke(hub, [spoke, extraSpoke]);
 
     // get both governanceRouters
-    governorRouter = deploys[0].contracts.governance
+    governorRouter = hub.contracts.governance
       ?.proxy! as contracts.TestGovernanceRouter;
-    nonGovernorRouter = deploys[1].contracts.governance
+    nonGovernorRouter = spoke.contracts.governance
       ?.proxy! as contracts.TestGovernanceRouter;
 
     firstGovernor = await governorRouter.governor();
     secondGovernor = await secondGovernorSigner.getAddress();
 
-    governorHome = deploys[0].contracts.home?.proxy!;
+    governorHome = hub.contracts.home?.proxy!;
 
-    governorReplicaOnNonGovernorChain = deploys[1].contracts.replicas[
+    governorReplicaOnNonGovernorChain = spoke.contracts.replicas[
       governorDomain
     ].proxy! as contracts.TestReplica;
-    nonGovernorReplicaOnGovernorChain = deploys[0].contracts.replicas[
+    nonGovernorReplicaOnGovernorChain = hub.contracts.replicas[
       nonGovernorDomain
     ].proxy! as contracts.TestReplica;
   });
 
   it('Rejects message from unenrolled replica', async () => {
-    await deployUnenrolledReplica(deploys[1], deploys[2]);
+    await deployUnenrolledReplica(spoke, extraSpoke);
 
-    const unenrolledReplica = deploys[1].contracts.replicas[thirdDomain]
+    const unenrolledReplica = spoke.contracts.replicas[thirdDomain]
       .proxy! as contracts.TestReplica;
 
     // Create TransferGovernor message
@@ -289,7 +291,7 @@ describe('GovernanceRouter', async () => {
 
   it('Upgrades using GovernanceRouter call', async () => {
     const upgradeUtils = new UpgradeTestHelpers();
-    const deploy = deploys[0];
+    const deploy = hub;
 
     const mysteryMath = await upgradeUtils.deployMysteryMathUpgradeSetup(
       deploy,
@@ -322,11 +324,11 @@ describe('GovernanceRouter', async () => {
 
   it('Calls UpdaterManager to change the Updater on Home', async () => {
     const [newUpdater] = await ethers.getSigners();
-    const updaterManager = deploys[0].contracts.updaterManager!;
+    const updaterManager = hub.contracts.updaterManager!;
 
     // check current Updater address on Home
     let currentUpdaterAddr = await governorHome.updater();
-    expect(currentUpdaterAddr).to.equal(deploys[0].config.updater);
+    expect(currentUpdaterAddr).to.equal(hub.config.updater);
 
     // format nomad call message
     const call = formatCall(updaterManager, 'setUpdater', [newUpdater.address]);

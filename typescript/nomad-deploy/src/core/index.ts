@@ -452,10 +452,10 @@ export async function enrollRemote(local: CoreDeploy, remote: CoreDeploy) {
 /**
  * Transfers governorship to the governing chain's GovernanceRouter.
  *
- * @param gov - The governor chain deploy instance
  * @param non - The non-governor chain deploy instance
+ * @param gov - The governor chain deploy instance
  */
-export async function transferGovernorship(gov: CoreDeploy, non: CoreDeploy) {
+export async function transferGovernorship(non: CoreDeploy, gov: CoreDeploy) {
   log(gov.test, `${non.chain.name}: transferring governorship`);
   let governorAddress = await gov.contracts.governance!.proxy.governor();
   let tx = await non.contracts.governance!.proxy.transferGovernor(
@@ -544,7 +544,7 @@ export async function deployTwoChains(gov: CoreDeploy, non: CoreDeploy) {
     await appointGovernor(gov);
   }
 
-  await transferGovernorship(gov, non);
+  await transferGovernorship(non, gov);
 
   await Promise.all([relinquish(gov), relinquish(non)]);
 
@@ -651,7 +651,7 @@ export async function deployNChains(deploys: CoreDeploy[]) {
 
   await Promise.all(
     nonGovChains.map(async (non) => {
-      await transferGovernorship(govChain, non);
+      await transferGovernorship(non, govChain);
     }),
   );
 
@@ -676,6 +676,132 @@ export async function deployNChains(deploys: CoreDeploy[]) {
   }
 }
 
+
+/**
+ * Deploy the entire suite of Nomad contracts
+ * on each chain within the chainConfigs array
+ * including the upgradable Home, Replicas, and GovernanceRouter
+ * that have been deployed, initialized, and configured
+ * according to the deployNomad script
+ *
+ * @dev The first chain in the array will be the governing chain
+ *
+ * @param deploys - An array of chain deploys
+ */
+export async function deployHubAndSpoke(hub: CoreDeploy, spokes: CoreDeploy[]) {
+  if (!hub) {
+    throw new Error('Must pass hub config');
+  } else if (spokes.length == 0) {
+    throw new Error('Must pass at least one spoke config');
+  }
+
+  const deploys = [hub, ...spokes];
+  const valueArr = deploys.map(function (item) {
+    return item.chain.domain;
+  });
+  const duplicateDomains = valueArr.some(function (item, idx) {
+    return valueArr.indexOf(item) != idx;
+  });
+  if (duplicateDomains) {
+    throw new Error(
+        'You have specified multiple deploys with the same domain. Check your config.',
+    );
+  }
+
+  // there exists any chain marked test
+  const isTestDeploy: boolean = deploys.filter((c) => c.test).length > 0;
+
+  log(isTestDeploy, `Beginning 1 Hub, ${spokes.length} Spoke${spokes.length > 1 ? "s" : ""} deploy process`);
+  log(isTestDeploy, `Deploy env is ${hub.config.environment}`);
+  log(isTestDeploy, `${hub.chain.name} is governing hub`);
+  log(isTestDeploy, `${JSON.stringify(spokes.map(deploy => deploy.chain.name))} ${spokes.length > 1 ? "are spokes" : "is spoke"}`);
+  deploys.forEach((deploy) => {
+    log(
+        isTestDeploy,
+        `Updater for ${deploy.chain.name} Home is ${deploy.config.updater}`,
+    );
+  });
+
+  if(!isTestDeploy && !hub.config.governor) {
+    throw new Error(
+        `Hub has no governor config`,
+    );
+  }
+
+  log(isTestDeploy, 'awaiting provider ready');
+  await Promise.all([
+    deploys.map(async (deploy) => {
+      await deploy.ready();
+    }),
+  ]);
+  log(isTestDeploy, 'done readying');
+
+  // store block numbers for each chain, so that agents know where to start
+  await Promise.all(deploys.map((d) => d.recordFromBlock()));
+
+  // deploy nomad on each chain
+  await Promise.all(
+      deploys.map(async (deploy) => {
+        await deployNomad(deploy);
+      }),
+  );
+
+  // enroll remotes on every chain
+  //
+  //    NB: do not use Promise.all for this block. It introduces a race condition
+  //    which results in multiple replica implementations on the home chain.
+  //
+  for (let spoke of spokes) {
+      log(
+          isTestDeploy,
+          `connecting Spoke ${spoke.chain.name} to Hub ${hub.chain.name}`,
+      );
+      await enrollRemote(spoke, hub);
+      log(
+          isTestDeploy,
+          `connected Spoke ${spoke.chain.name} to Hub ${hub.chain.name}`,
+      );
+
+    log(
+        isTestDeploy,
+        `connecting Hub ${hub.chain.name} to Spoke ${spoke.chain.name}`,
+    );
+    await enrollRemote(hub, spoke);
+    log(
+        isTestDeploy,
+        `connected Hub ${hub.chain.name} to Spoke ${spoke.chain.name}`,
+    );
+  }
+
+  // appoint the configured governance account as governor
+  if (hub.config.governor) {
+    log(isTestDeploy, `appoint governor: ${hub.config.governor.address} at ${hub.config.governor.domain}`);
+    // TODO: governor chain should never transfer to another domain...
+    await appointGovernor(hub);
+  }
+
+  await Promise.all(
+      spokes.map(async (spoke) => {
+        await transferGovernorship(spoke, hub);
+      }),
+  );
+
+  // relinquish control of all chains
+  await Promise.all(deploys.map(relinquish));
+
+  // checks spoke deploys are correct
+  for (let spoke of spokes) {
+    await checkCoreDeploy(spoke, [hub.chain.domain], hub.chain.domain);
+  }
+
+  // check hub deploy is correct
+  await checkCoreDeploy(hub, spokes.map(spoke => spoke.chain.domain), hub.chain.domain);
+
+  // write config outputs
+  if (!isTestDeploy) {
+    writeHubAndSpokeOutput(hub, spokes);
+  }
+}
 /**
  * Deploy the entire suite of Nomad contracts
  * on a single new chain
@@ -742,7 +868,7 @@ export async function deployNewChain(
     await deployUnenrolledReplica(oldDeploy, newDeploy);
   }
 
-  await transferGovernorship(govDeploy, newDeploy);
+  await transferGovernorship(newDeploy, govDeploy);
 
   // relinquish control of all chains
   await relinquish(newDeploy);
@@ -828,6 +954,44 @@ export function writePartials(dir: string) {
   }
 }
 
+function getDirectory(deploy: CoreDeploy) {
+  const environment = deploy.config.environment;
+  let folder;
+  if (environment == "dev") {
+    folder = "development";
+  } else if (environment == "staging") {
+    folder = "staging";
+  } else if (environment == "prod") {
+    folder = "mainnet";
+  }
+  const dir = `../../rust/config/$${folder}`;
+  return dir;
+}
+
+function writeOutput(local: CoreDeploy, remotes: CoreDeploy[], dir: string) {
+  const config = CoreDeploy.buildConfig(local, remotes);
+  const sdk = CoreDeploy.buildSDK(local, remotes);
+  const name = local.chain.name;
+
+  fs.mkdirSync(dir, {recursive: true});
+  fs.writeFileSync(
+      `${dir}/${name}_config.json`,
+      JSON.stringify(config, null, 2),
+  );
+  fs.writeFileSync(
+      `${dir}/${name}_sdk.json`,
+      JSON.stringify(sdk, null, 2),
+  );
+  fs.writeFileSync(
+      `${dir}/${name}_contracts.json`,
+      JSON.stringify(local.contractOutput, null, 2),
+  );
+  fs.writeFileSync(
+      `${dir}/${name}_verification.json`,
+      JSON.stringify(local.verificationInput, null, 2),
+  );
+}
+
 /**
  * Outputs the values for chains that have been deployed.
  *
@@ -835,29 +999,36 @@ export function writePartials(dir: string) {
  */
 export function writeDeployOutput(deploys: CoreDeploy[]) {
   log(deploys[0].test, `Have ${deploys.length} deploys`);
-  const dir = `../../rust/config/${Date.now()}`;
+  const dir = getDirectory(deploys[0]);
   for (const local of deploys) {
     // get remotes
     const remotes = deploys
       .slice()
       .filter((remote) => remote.chain.domain !== local.chain.domain);
 
-    const config = CoreDeploy.buildConfig(local, remotes);
-    const name = local.chain.name;
-
-    fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(
-      `${dir}/${name}_config.json`,
-      JSON.stringify(config, null, 2),
-    );
-    fs.writeFileSync(
-      `${dir}/${name}_contracts.json`,
-      JSON.stringify(local.contractOutput, null, 2),
-    );
-    fs.writeFileSync(
-      `${dir}/${name}_verification.json`,
-      JSON.stringify(local.verificationInput, null, 2),
-    );
+      writeOutput(local, remotes, dir);
   }
+  writePartials(dir);
+}
+
+/**
+ * Outputs the values for chains that have been deployed.
+ *
+ * @param deploys - The array of chain deploys
+ */
+export function writeHubAndSpokeOutput(hub: CoreDeploy, spokes: CoreDeploy[]) {
+  log(hub.test, `Have 1 Hub and ${spokes.length} Spoke deploys`);
+
+  const dir = getDirectory(hub);
+
+  // write spoke outputs
+  for (let spoke of spokes) {
+    writeOutput(spoke, [hub], dir);
+  }
+
+  // write hub output
+  writeOutput(hub, spokes, dir);
+
+  // write partials
   writePartials(dir);
 }

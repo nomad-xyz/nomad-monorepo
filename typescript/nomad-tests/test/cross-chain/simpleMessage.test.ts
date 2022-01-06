@@ -6,11 +6,10 @@ import { getTestDeploy } from '../testChain';
 import { Updater } from 'lib/core';
 import { Update, Signer } from 'lib/types';
 import { CoreDeploy as Deploy } from '@nomad-xyz/deploy/dist/src/core/CoreDeploy';
-import { deployTwoChains } from '@nomad-xyz/deploy/dist/src/core';
+import {deployHubAndSpoke} from '@nomad-xyz/deploy/dist/src/core';
 
-const domains = [1000, 2000];
-const localDomain = domains[0];
-const remoteDomain = domains[1];
+const localDomain = 1000;
+const remoteDomain = 2000;
 
 /*
  * Deploy the full Nomad suite on two chains
@@ -21,9 +20,10 @@ const remoteDomain = domains[1];
  * TODO prove and process messages on Replica
  */
 describe('SimpleCrossChainMessage', async () => {
-  // deploys[0] is the local deploy and governor chain
-  // deploys[1] is the remote deploy
-  let deploys: Deploy[] = [];
+  // hub is the local deploy and governor chain
+  // spoke is the remote deploy
+  let hub: Deploy;
+  let spoke: Deploy;
 
   let randomSigner: Signer, updater: Updater, latestUpdate: Update;
 
@@ -31,17 +31,17 @@ describe('SimpleCrossChainMessage', async () => {
     [randomSigner] = await ethers.getSigners();
     updater = await Updater.fromSigner(randomSigner, localDomain);
 
-    deploys.push(await getTestDeploy(localDomain, updater.address, []));
-    deploys.push(await getTestDeploy(remoteDomain, updater.address, []));
+    hub = await getTestDeploy(localDomain, updater.address, []);
+    spoke = await getTestDeploy(remoteDomain, updater.address, []);
 
-    await deployTwoChains(deploys[0], deploys[1]);
+    await deployHubAndSpoke(hub, [spoke]);
   });
 
   it('All Homes have correct initial state', async () => {
     const nullRoot = '0x' + '00'.repeat(32);
 
     // governorHome has 0 updates
-    const governorHome = deploys[0].contracts.home?.proxy!;
+    const governorHome = hub.contracts.home?.proxy!;
 
     let length = await governorHome.queueLength();
     expect(length).to.equal(0);
@@ -51,7 +51,7 @@ describe('SimpleCrossChainMessage', async () => {
     expect(suggestedNew).to.equal(nullRoot);
 
     // nonGovernorHome has 2 updates
-    const nonGovernorHome = deploys[1].contracts.home?.proxy!;
+    const nonGovernorHome = spoke.contracts.home?.proxy!;
 
     length = await nonGovernorHome.queueLength();
     expect(length).to.equal(1);
@@ -66,7 +66,7 @@ describe('SimpleCrossChainMessage', async () => {
       utils.formatMessage(message, remoteDomain, randomSigner.address),
     );
     const update = await utils.dispatchMessagesAndUpdateHome(
-      deploys[0].contracts.home?.proxy!,
+      hub.contracts.home?.proxy!,
       messages,
       updater,
     );
@@ -77,7 +77,7 @@ describe('SimpleCrossChainMessage', async () => {
   it('Destination Replica Accepts the first update', async () => {
     await utils.updateReplica(
       latestUpdate,
-      deploys[1].contracts.replicas[localDomain].proxy!,
+      spoke.contracts.replicas[localDomain].proxy!,
     );
   });
 
@@ -86,7 +86,7 @@ describe('SimpleCrossChainMessage', async () => {
       utils.formatMessage(message, remoteDomain, randomSigner.address),
     );
     const update = await utils.dispatchMessagesAndUpdateHome(
-      deploys[0].contracts.home?.proxy!,
+      hub.contracts.home?.proxy!,
       messages,
       updater,
     );
@@ -96,12 +96,12 @@ describe('SimpleCrossChainMessage', async () => {
   it('Destination Replica Accepts the second update', async () => {
     await utils.updateReplica(
       latestUpdate,
-      deploys[1].contracts.replicas[localDomain].proxy,
+      spoke.contracts.replicas[localDomain].proxy,
     );
   });
 
   it('Destination Replica shows latest update as the committed root', async () => {
-    const replica = deploys[1].contracts.replicas[localDomain].proxy;
+    const replica = spoke.contracts.replicas[localDomain].proxy;
     const { newRoot } = latestUpdate;
     expect(await replica.committedRoot()).to.equal(newRoot);
   });

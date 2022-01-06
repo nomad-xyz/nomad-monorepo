@@ -8,11 +8,9 @@
   "include": [
     "./config/mainnets/*.ts",
     "./config/testnets/*.ts",
-    "./scripts/alfajoresArbitrum/*.ts",
-    "./scripts/alfajoresKovan/*.ts",
-    "./scripts/fourTestnets/*.ts",
     "./scripts/mainnet/*.ts",
-    "./scripts/threeTestnets/*.ts",
+    "./scripts/development/*.ts",
+    "./scripts/staging/*.ts",
     "./src/*.ts",
     "./src/core/*.ts",
     "./src/bridge/*.ts",

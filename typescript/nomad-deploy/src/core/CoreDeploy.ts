@@ -11,6 +11,7 @@ import { CoreContracts } from './CoreContracts';
 import { Deploy } from '../deploy';
 import { BigNumberish } from '@ethersproject/bignumber';
 import fs from 'fs';
+import {NomadDomain} from "@nomad-xyz/sdk/dist/nomad";
 
 type Address = string;
 
@@ -93,6 +94,26 @@ export class CoreDeploy extends Deploy<CoreContracts> {
       configs.push(CoreDeploy.buildConfig(local, remotes));
     }
     return configs;
+  }
+
+  static buildSDK(local: CoreDeploy, remotes: CoreDeploy[]): NomadDomain {
+    return {
+      name: local.chain.name,
+      id: local.chain.domain,
+      paginate: {
+        from: local.config.fromBlock || 0,
+        blocks: local.chain.config.chunk || 2000,
+      },
+      home: local.contracts.home!.proxy.address,
+      replicas: remotes.map(remote => {
+        return {
+          domain: remote.chain.domain,
+          address: remote.contracts.replicas[local.chain.domain].proxy.address
+        }
+      }),
+      bridgeRouter: "n/a",
+      tokenRegistry: "n/a"
+    };
   }
 
   static buildConfig(local: CoreDeploy, remotes: CoreDeploy[]): RustConfig {
