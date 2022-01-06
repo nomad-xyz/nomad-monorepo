@@ -7,6 +7,7 @@ export interface NomadDomain extends Domain {
   ethHelper?: Address;
   home: Address;
   replicas: ReplicaInfo[];
+  governanceRouter: Address;
 }
 
 export interface ReplicaInfo {

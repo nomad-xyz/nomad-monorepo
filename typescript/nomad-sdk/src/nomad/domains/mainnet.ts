@@ -17,6 +17,7 @@ export const ethereum: NomadDomain = {
       address: '0x7725EadaC5Ee986CAc8317a1d2fB16e59e079E8b',
     },
   ],
+  governanceRouter: 'TODO',
 };
 
 export const polygon: NomadDomain = {
@@ -37,6 +38,7 @@ export const polygon: NomadDomain = {
       address: '0x681Edb6d52138cEa8210060C309230244BcEa61b',
     },
   ],
+  governanceRouter: 'TODO',
 };
 
 export const celo: NomadDomain = {
@@ -52,6 +54,7 @@ export const celo: NomadDomain = {
       address: '0x681Edb6d52138cEa8210060C309230244BcEa61b',
     },
   ],
+  governanceRouter: 'TODO',
 };
 
 export const mainnetDomains = [ethereum, celo, polygon];
