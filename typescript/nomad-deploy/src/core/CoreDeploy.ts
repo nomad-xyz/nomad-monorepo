@@ -12,6 +12,7 @@ import { Deploy } from '../deploy';
 import { BigNumberish } from '@ethersproject/bignumber';
 import fs from 'fs';
 import { NomadDomain } from '@nomad-xyz/sdk/nomad';
+import { ethers } from 'ethers';
 
 type Address = string;
 
@@ -185,21 +186,26 @@ export class ExistingCoreDeploy extends CoreDeploy {
     chain: Chain,
     config: CoreConfig,
     addresses: CoreDeployAddresses,
+    signer?: ethers.Signer,
     test: boolean = false,
   ) {
     super(chain, config, test);
-    this.contracts = CoreContracts.fromAddresses(addresses, chain.provider);
+    this.contracts = CoreContracts.fromAddresses(
+      addresses,
+      signer || chain.provider,
+    );
   }
 
   static withPath(
     chain: Chain,
     config: CoreConfig,
     path: string,
+    signer?: ethers.Signer,
     test: boolean = false,
   ): ExistingCoreDeploy {
     const addresses: CoreDeployAddresses = JSON.parse(
       fs.readFileSync(`${path}/${chain.name}_contracts.json`) as any as string,
     );
-    return new ExistingCoreDeploy(chain, config, addresses, test);
+    return new ExistingCoreDeploy(chain, config, addresses, signer, test);
   }
 }

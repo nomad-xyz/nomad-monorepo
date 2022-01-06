@@ -1,8 +1,8 @@
 import { Nomad, utils, Network } from "../src";
-import type { TokenIdentifier } from "@nomad-xyz/sdk/nomad/tokens";
-import { ERC20 } from "@nomad-xyz/contract-interfaces/dist/bridge/ERC20";
+import type { TokenIdentifier } from "@nomad-xyz/sdk/src/nomad/tokens";
+import { ERC20 } from "@nomad-xyz/contracts/dist/bridge/ERC20";
 import { ethers } from "ethers";
-import { TransferMessage } from "@nomad-xyz/sdk/nomad";
+import { TransferMessage } from "@nomad-xyz/sdk/src/nomad";
 
 //
 /**
@@ -23,7 +23,8 @@ export async function sendTokensAndConfirm(
   to: Network,
   token: TokenIdentifier,
   receiver: string,
-  amounts: ethers.BigNumberish[]
+  amounts: ethers.BigNumberish[],
+  fastLiquidity = false
 ): Promise<[boolean, ERC20]> {
   const ctx = n.getMultiprovider();
 
@@ -33,9 +34,17 @@ export async function sendTokensAndConfirm(
   for (const amountish of amounts) {
     const amount = ethers.BigNumber.from(amountish);
 
-    result = await ctx.send(from.name, to.name, token, amount, receiver, {
-      gasLimit: 10000000,
-    });
+    result = await ctx.send(
+      from.name,
+      to.name,
+      token,
+      amount,
+      receiver,
+      fastLiquidity,
+      {
+        gasLimit: 10000000,
+      }
+    );
 
     amountTotal = amountTotal.add(amount);
 

@@ -165,12 +165,12 @@ export abstract class Network {
   setLocalGovernor(address: string) {
     this.setGovernor({
       address,
-      domain: this.domain
-    })
+      domain: this.domain,
+    });
   }
 
   isGovernor(): boolean {
-    return !!this.governor
+    return !!this.governor;
   }
 
   toString(): string {

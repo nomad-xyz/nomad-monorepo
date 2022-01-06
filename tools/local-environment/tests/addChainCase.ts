@@ -61,11 +61,7 @@ async function setup() {
   n.setSigner(tom, t.signer.processor, "processor"); // Need for home.dispatch
 
   await n.deploy({ injectSigners: true });
-  await n.startAgents([
-    'updater',
-    'relayer',
-    'processor',
-  ]);
+  await n.startAgents(["updater", "relayer", "processor"]);
 
   fs.writeFileSync("/tmp/nomad.json", JSON.stringify(n.toObject()));
 
@@ -116,11 +112,7 @@ async function setupDaffy(n: Nomad) {
   await n.deploy({ injectSigners: true });
 
   await n.stopAllAgents(true);
-  await n.startAgents([
-    'updater',
-    'relayer',
-    'processor',
-  ]);
+  await n.startAgents(["updater", "relayer", "processor"]);
 
   fs.writeFileSync("/tmp/nomad.json", JSON.stringify(n.toObject()));
 
@@ -220,11 +212,13 @@ async function teardown(n: Nomad) {
 (async () => {
   // Normally setup and deploy 2 local networks
   const { tom, jerry, tomActor, jerryActor, n } = await setup();
+  console.log(`Tom and Jerry setup complete`);
 
   let success = false;
   try {
     // Perform incremental deploy of new network daffy
     const { daffy, daffyActor } = await setupDaffy(n);
+    console.log(`Daffy setup complete`);
 
     await sendTokensTriangular(
       tom,

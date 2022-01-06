@@ -5,6 +5,7 @@ import {
   parseFileFromDeploy,
 } from '../verification/readDeployOutput';
 import { Deploy } from '../deploy';
+import { ethers } from 'ethers';
 
 export type BridgeConfig = {
   weth?: string;
@@ -53,9 +54,10 @@ export class ExistingBridgeDeploy extends BridgeDeploy {
     chain: Chain,
     config: BridgeConfig,
     coreDeployPath: string,
-    test: boolean = false,
     addresses?: BridgeContractAddresses,
     coreContracts?: CoreContractAddresses,
+    signer?: ethers.Signer,
+    test: boolean = false,
   ) {
     super(chain, config, coreDeployPath, test, coreContracts);
 
@@ -68,24 +70,29 @@ export class ExistingBridgeDeploy extends BridgeDeploy {
       );
     }
 
-    this.contracts = BridgeContracts.fromAddresses(addresses!, chain.provider);
+    this.contracts = BridgeContracts.fromAddresses(
+      addresses!,
+      signer || chain.provider,
+    );
   }
 
   static withPath(
     chain: Chain,
     config: BridgeConfig,
     addresses: BridgeContractAddresses,
-    test: boolean = false,
     coreDeployPath?: string,
     coreContracts?: CoreContractAddresses,
+    signer?: ethers.Signer,
+    test: boolean = false,
   ): ExistingBridgeDeploy {
     return new ExistingBridgeDeploy(
       chain,
       config,
       coreDeployPath || '/dev/null',
-      test,
       addresses,
       coreContracts,
+      signer,
+      test,
     );
   }
 }

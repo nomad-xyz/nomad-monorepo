@@ -952,6 +952,27 @@ export function getEnrollReplicaCall(
 }
 
 /**
+ * Gets setRouterLocal call from fresh deploy
+ * to existing network. Call
+ * should be delegated to governing router.
+ *
+ * @param gov - gov chain
+ */
+export function getSetRouterLocalCall(
+  newDeploy: CoreDeploy,
+  oldDeploy: CoreDeploy,
+): CallData {
+  const governingRouter = oldDeploy.contracts.governance!.proxy;
+
+  // call to governing router's setRouterLocal at old chain with
+  // details about new chain
+  return formatCall(governingRouter, 'setRouterLocal', [
+    newDeploy.chain.domain,
+    toBytes32(newDeploy.contracts.governance!.proxy.address),
+  ]);
+}
+
+/**
  * Copies the partial configs from the default directory to the specified directory.
  *
  * @param dir - relative path to folder where partial configs will be written

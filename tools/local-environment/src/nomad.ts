@@ -1,6 +1,5 @@
 import fs from "fs";
 
-import { AssertionError, expect } from "chai";
 // Local imports
 import { Network, networkFromObject } from "./network";
 import { Key } from "./key";
@@ -28,40 +27,35 @@ import { getPathToLatestDeploy } from "@nomad-xyz/deploy/src/verification/readDe
 import {
   deployBridges,
   deployNewChainBridge,
-  getEnrollBridgeCall,
 } from "@nomad-xyz/deploy/src/bridge";
-import { CallData } from "@nomad-xyz/deploy/src/utils";
-import {
-  deployNChains,
-  deployNewChain,
-  getEnrollReplicaCall,
-  getEnrollWatchersCall,
-} from "@nomad-xyz/deploy/src/core";
+import { deployNChains, deployNewChain } from "@nomad-xyz/deploy/src/core";
 import { ContractVerificationInput } from "@nomad-xyz/deploy/src/deploy";
+import {
+  addCrossConnection,
+  addConnection,
+} from "@nomad-xyz/deploy/src/incremental";
 import TestBridgeDeploy from "@nomad-xyz/deploy/src/bridge/TestBridgeDeploy";
 import {
   BridgeContractAddresses,
   BridgeContracts,
 } from "@nomad-xyz/deploy/src/bridge/BridgeContracts";
 
-import { NomadContext } from "@nomad-xyz/sdk";
-import { CoreContracts as NomadCoreContracts } from "@nomad-xyz/sdk/nomad/contracts/CoreContracts";
-import { BridgeContracts as NomadBridgeContracts } from "@nomad-xyz/sdk/nomad/contracts/BridgeContracts";
-import type { NomadDomain } from "@nomad-xyz/sdk/nomad/domains/domain";
+import { NomadContext } from "@nomad-xyz/sdk/src";
+import { CoreContracts as NomadCoreContracts } from "@nomad-xyz/sdk/src/nomad/contracts/CoreContracts";
+import { BridgeContracts as NomadBridgeContracts } from "@nomad-xyz/sdk/src/nomad/contracts/BridgeContracts";
+import type { NomadDomain } from "@nomad-xyz/sdk/src/nomad/domains/domain";
 import { CoreContracts } from "@nomad-xyz/deploy/src/core/CoreContracts";
 
 import {
   XAppConnectionManager__factory,
   XAppConnectionManager,
-} from "@nomad-xyz/contract-interfaces/dist/core";
+} from "@nomad-xyz/contract-interfaces/core";
 
 import { Updater } from "@nomad-xyz/test/lib/core";
 import { NonceManager } from "@ethersproject/experimental";
-import { toBytes32 } from "@nomad-xyz/deploy/src/utils";
-import { Waiter, zip } from "./utils";
-import { checkCoreDeploy } from "@nomad-xyz/deploy/src/core/checks";
-import { checkBridgeDeploy } from "@nomad-xyz/deploy/src/bridge/checks";
-import {ethers} from "ethers";
+import { zip } from "./utils";
+import { ethers } from "ethers";
+import { Logger, LogLevel } from "./logger";
 
 export class Nomad {
   id: number;
@@ -74,6 +68,7 @@ export class Nomad {
   private networks: Map<number, Network>;
   private deployArtifacts?: DeployArtifacts;
   private agents: Map<string, Agent>;
+  logger: Logger;
 
   multiprovider?: NomadContext;
 
@@ -89,6 +84,8 @@ export class Nomad {
 
     this.host = host;
     this.addNetwork(host);
+
+    this.logger = new Logger(LogLevel.info);
   }
 
   toObject(): Object {
@@ -148,7 +145,7 @@ export class Nomad {
     });
 
     Array.from(Object.entries(Object(obj)["signers"])).forEach(([n, k]) => {
-      console.log(`Setting signer`, n, k);
+      o.logger.info(`Setting signer`, n, k);
       o.setSigner(parseInt(n), new Key(k as string));
     });
 
@@ -364,13 +361,13 @@ export class Nomad {
       return this.getDomainByName(networkish);
     } else if (typeof networkish === "number") {
       if (!this.networks.has(networkish))
-        console.warn(
+        this.logger.warn(
           `Even though domain-key pair was added to deployers, domain haven't been added to nomad yet!`
         );
       return networkish;
     } else {
       if (!this.networks.has(networkish.domain))
-        console.warn(
+        this.logger.warn(
           `Even though network exists it was found not added to nomad yet!`
         );
       return networkish.domain;
@@ -406,6 +403,7 @@ export class Nomad {
     return {
       id: network.domain,
       name: network.name,
+      tokenRegistry: artifact.bridge.contracts!.tokenRegistry!.proxy.address,
       bridgeRouter: artifact.bridge.contracts!.bridgeRouter!.proxy.address,
       ethHelper,
       home,
@@ -416,7 +414,7 @@ export class Nomad {
   async updateMultiProvider(): Promise<NomadContext> {
     if (!this.deployArtifacts)
       throw new Error(`Nomad haven't been deployed yet`);
-    console.log(`updateMultiProvider...`);
+    this.logger.debug(`updating MultiProvider...`);
 
     // Domain duplicates must be taken care at MultiProvider,
     // but it is possible to do it here as well
@@ -442,7 +440,7 @@ export class Nomad {
 
         ctx.registerWalletSigner(network.domain, signerKey.toString());
       } else {
-        console.warn(
+        this.logger.warn(
           `Signer key was not found for network ${network.name} - Multiprovider might not work`
         );
       }
@@ -459,57 +457,55 @@ export class Nomad {
   }
 
   getChain(network: Network): Chain {
-    const {name, domain, location} = network;
+    const { name, domain, location } = network;
 
     const deployerKey = this.deployers.get(domain)?.toString();
     if (!deployerKey)
-      throw new Error(
-        `Deployer key for ${name}(${domain}) was not found`
-      );
+      throw new Error(`Deployer key for ${name}(${domain}) was not found`);
 
-      const rpc = location.toString();
-      const confirmations = 5;
-      const chunk = 100;
-      const timelag = 5;
-      const gas = DEFAULT_GAS;
-      // Also works:
-      // {
-      //   limit: ethers.BigNumber.from(30000000), // 3 million gas
-      //   price: ethers.BigNumber.from(1_000_000), 
-      // };
+    const rpc = location.toString();
+    const confirmations = 5;
+    const chunk = 100;
+    const timelag = 5;
+    const gas = DEFAULT_GAS;
+    // Also works:
+    // {
+    //   limit: ethers.BigNumber.from(30000000), // 3 million gas
+    //   price: ethers.BigNumber.from(1_000_000),
+    // };
 
-      const provider = new ethers.providers.JsonRpcProvider(rpc);
-      const signer = new ethers.Wallet(deployerKey, provider);
-      const deployer = new NonceManager(signer);
-      return {
-        domain,
+    const provider = new ethers.providers.JsonRpcProvider(rpc);
+    const signer = new ethers.Wallet(deployerKey, provider);
+    const deployer = new NonceManager(signer);
+    return {
+      domain,
+      name,
+      provider,
+      deployer,
+      confirmations,
+      gas,
+      config: {
         name,
-        provider,
-        deployer,
+        rpc,
+        domain,
+        deployerKey,
+        chunk,
+        timelag,
         confirmations,
-        gas,
-        config: {
-          name,
-          rpc,
-          domain,
-          deployerKey,
-          chunk,
-          timelag,
-          confirmations,
-        },
-      };
+      },
+    };
   }
 
   getCoreConfig(network: Network): CoreConfig {
     const updater = this.updaters.get(network.domain);
     if (!updater)
-      console.warn(
+      this.logger.warn(
         `Updater key for ${network.name}(${network.domain}) was not found`
       ); // throw new Error();
 
     const watcher = this.watchers.get(network.domain);
     if (!watcher)
-      console.warn(
+      this.logger.warn(
         `Watchers key for ${network.name}(${network.domain}) was not found`
       ); // throw new Error();
 
@@ -544,7 +540,12 @@ export class Nomad {
     if (artifacts) {
       const addresses = artifacts.core.coreDeployAddresses;
 
-      return new ExistingCoreDeploy(chain, coreConfig, addresses);
+      return new ExistingCoreDeploy(
+        chain,
+        coreConfig,
+        addresses,
+        chain.deployer
+      );
     }
   }
 
@@ -587,9 +588,9 @@ export class Nomad {
         chain,
         bridgeConfig,
         path,
-        false,
         bridgeAddresses,
-        coreAddresses
+        coreAddresses,
+        chain.deployer
       );
     }
   }
@@ -660,7 +661,11 @@ export class Nomad {
     if (oldRemotes.length === 0) {
       await this.deployAllNetworks([this.host, ...newRemotes]);
     } else {
-      await this.deployAdditionalNetworks(this.host, oldRemotes, newRemotes);
+      await this.deployAdditionalNetworks(
+        newRemotes,
+        this.host,
+        options?.hubNSpoke ? [] : oldRemotes
+      );
     }
 
     this.enhanceArtifacts(options?.injectSigners);
@@ -699,16 +704,58 @@ export class Nomad {
   }
 
   async deployAdditionalNetworks(
+    newNetworks: Network[],
     host: Network,
-    oldNetworks: Network[],
-    newNetworks: Network[]
+    oldNetworks: Network[]
   ): Promise<void> {
     for (const newNetwork of newNetworks) {
-      await this.deployAdditionalNetwork(newNetwork, host, oldNetworks);
+      if (oldNetworks.length) {
+        await this.deployAdditionalNetworkCross(newNetwork, host, oldNetworks);
+      } else {
+        await this.deployAdditionalNetwork(newNetwork, host);
+      }
     }
   }
 
-  async deployAdditionalNetwork(
+  async deployAdditionalNetwork(newNetwork: Network, host: Network) {
+    const govCoreDeploy = this.getExistingCoreDeploy(host)!;
+    const govBridgeDeploy = this.getExistingBridgeDeploy(host)!;
+
+    const newCoreDeploy = this.getCoreDeploy(newNetwork);
+    await deployNewChain(newCoreDeploy, [govCoreDeploy]);
+
+    const newBridgeDeploy = this.getBridgeDeploy(newNetwork, newCoreDeploy);
+    await deployNewChainBridge(newBridgeDeploy, [govBridgeDeploy]);
+
+    const deployer = newCoreDeploy.chain.deployer as NonceManager;
+    const nonce = await deployer.getTransactionCount();
+    deployer.setTransactionCount(nonce);
+
+    await addConnection(
+      [newCoreDeploy, newBridgeDeploy],
+      [govCoreDeploy, govBridgeDeploy]
+    );
+
+    const coreDeployArtifacts = this.ejectCoreDeploysArtifacts([
+      newCoreDeploy,
+      govCoreDeploy,
+    ]);
+    const bridgeDeployArtifacts = this.ejectBridgeDeploysArtifacts([
+      newBridgeDeploy,
+      govBridgeDeploy,
+    ]);
+
+    const artifacts = this.mergeCoreAndBridgeArtifacts(
+      coreDeployArtifacts,
+      bridgeDeployArtifacts
+    );
+
+    this.setArtifacts(artifacts);
+
+    this.setDeployed(newNetwork.domain);
+  }
+
+  async deployAdditionalNetworkCross(
     newNetwork: Network,
     host: Network,
     oldNetworks: Network[]
@@ -716,7 +763,6 @@ export class Nomad {
     const oldCoreDeploys = [host, ...oldNetworks].map(
       (n) => this.getExistingCoreDeploy(n)!
     );
-    const hostCoreDeploy = oldCoreDeploys[0];
 
     const oldBridgeDeploys = [host, ...oldNetworks].map(
       (n) => this.getExistingBridgeDeploy(n)!
@@ -732,58 +778,9 @@ export class Nomad {
     const nonce = await deployer.getTransactionCount();
     deployer.setTransactionCount(nonce);
 
-    const governingRouter = hostCoreDeploy.contracts.governance!.proxy.connect(
-      hostCoreDeploy.deployer
-    );
-
     const zippedDeploys = zip(oldCoreDeploys, oldBridgeDeploys);
 
-    const delegated = true;
-    if (delegated) {
-      const promises = zippedDeploys.map(([oldCore, oldBridge]) => {
-        // We have a set of calls, but only here we know where they go. If we meld them into gnosis safe
-        const calls: CallData[] = [
-          getEnrollBridgeCall(newBridgeDeploy, oldBridge),
-          getEnrollReplicaCall(newCoreDeploy, oldCore),
-          ...getEnrollWatchersCall(newCoreDeploy, oldCore),
-        ];
-
-        if (oldCore == hostCoreDeploy) {
-          return governingRouter.callLocal(calls, hostCoreDeploy.overrides);
-        } else {
-          return governingRouter.callRemote(
-            oldCore.chain.domain,
-            calls,
-            hostCoreDeploy.overrides
-          );
-        }
-      });
-
-      await Promise.all([
-        ...promises,
-        // this also eventually should also be a prepared
-        // call which will be passed to itslef (GovernanceRouter) probably
-        governingRouter.setRouterGlobal(
-          newCoreDeploy.chain.domain,
-          toBytes32(newCoreDeploy.contracts.governance!.proxy.address)
-        ),
-      ]);
-    } else {
-      // await Promise.all([
-      //     enrollCoreThroughGovernance(hostCoreDeploy, newCoreDeploy, oldCoreDeploys),
-      //     enrollBridgeThroughGovernance(hostCoreDeploy, newBridgeDeploy, oldBridgeDeploys),
-      //     enrollRouterThroughGovernance(hostCoreDeploy, newCoreDeploy),
-      // ])
-    }
-
-    const remoteDomains = Array.from(this.deployed);
-    await checkCoreDeploy(newCoreDeploy, remoteDomains, host.domain);
-    await checkBridgeDeploy(newBridgeDeploy, remoteDomains);
-    await this.checkIncrementalDeploy(
-      newCoreDeploy,
-      newBridgeDeploy,
-      zippedDeploys
-    );
+    await addCrossConnection([newCoreDeploy, newBridgeDeploy], zippedDeploys);
 
     const coreDeployArtifacts = this.ejectCoreDeploysArtifacts([
       newCoreDeploy,
@@ -802,86 +799,6 @@ export class Nomad {
     this.setArtifacts(artifacts);
 
     this.setDeployed(newNetwork.domain);
-  }
-
-  async checkIncrementalDeploy(
-    newCoreDeploy: CoreDeploy,
-    newBridgeDeploy: BridgeDeploy,
-    zippedDeploys: [CoreDeploy, BridgeDeploy][]
-  ): Promise<void> {
-    const newDomain = newCoreDeploy.chain.domain;
-
-    const actualGovRouterAddress =
-      newCoreDeploy.contracts.governance!.proxy.address.toLowerCase();
-
-    const actualWatchers = newCoreDeploy.config.watchers.map((w) =>
-      w.toLowerCase()
-    );
-
-    const actualBridgeRouterAddress =
-      newBridgeDeploy.contracts.bridgeRouter!.proxy.address.toLowerCase();
-
-    let lastError: typeof AssertionError | undefined = undefined;
-    const w = new Waiter(
-      async () => {
-        try {
-          for (const [oldCoreDeploy, oldBridgeDeploy] of zippedDeploys) {
-            const govRouterAddress =
-              await oldCoreDeploy.contracts.governance!.proxy.routers(
-                newDomain
-              );
-            expect("0x" + govRouterAddress.slice(26).toLowerCase()).to.equal(
-              actualGovRouterAddress,
-              `Wrong remote GovernanceRouter address at Domain ${oldCoreDeploy.chain.domain}`
-            );
-
-            for (const wAddress of actualWatchers) {
-              const permissionExists =
-                await oldCoreDeploy.contracts.xAppConnectionManager!.watcherPermission(
-                  wAddress,
-                  newDomain
-                );
-              expect(
-                permissionExists,
-                `No permission exists for watcher '${wAddress}' and domain: ${newDomain}`
-              );
-            }
-
-            const actualReplicaAddress =
-              oldCoreDeploy.contracts.replicas[
-                newDomain
-              ].proxy.address.toLowerCase();
-            const replicaAddress =
-              await oldCoreDeploy.contracts.xAppConnectionManager!.domainToReplica(
-                newDomain
-              );
-            expect(replicaAddress.toLowerCase()).to.equal(
-              actualReplicaAddress,
-              `Wrong Replica address at Domain ${oldCoreDeploy.chain.domain}`
-            );
-
-            const bridgeRouterAddress =
-              await oldBridgeDeploy.contracts.bridgeRouter!.proxy.remotes(
-                newDomain
-              );
-            expect("0x" + bridgeRouterAddress.slice(26).toLowerCase()).to.equal(
-              actualBridgeRouterAddress,
-              `Wrong remote BridgeRouter address at Domain ${oldCoreDeploy.chain.domain}`
-            );
-          }
-
-          return true;
-        } catch (e: any) {
-          lastError = e;
-        }
-      },
-      500_000,
-      5_000
-    );
-
-    const [_, success] = await w.wait();
-    if (!success)
-      throw new Error(`Incremental deploy check failed: '${lastError}'`);
   }
 
   async connectNetworks(): Promise<void> {
@@ -1324,6 +1241,7 @@ function exportDeployArtifacts(
 
 interface DeployOptions {
   injectSigners?: boolean;
+  hubNSpoke?: boolean;
 }
 
 interface ExplicitKey {
