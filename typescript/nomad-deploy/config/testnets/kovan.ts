@@ -36,8 +36,8 @@ export const devConfig: CoreConfig = {
 
 export const stagingConfig: CoreConfig = {
   environment: 'staging',
-  updater: '0x201dd86063Dc251cA5a576d1b7365C38e5fB4CD5',
-  watchers: ['0x22B2855635154Baa41C306BcA979C8c9a077A180'],
+  updater: '0xdFd616120B772040bA221B4C1CCEdDcBa9f1aAaF',
+  watchers: ['0xeef02Cd43B46a00A22d275FD09ea38fc38340A43'],
   recoveryManager: '0x24F6c874F56533d9a1422e85e5C7A806ED11c036',
   optimisticSeconds: 60 * 60 * 3, // 3 hours
   recoveryTimelock: 180,
