@@ -452,10 +452,10 @@ export async function enrollRemote(local: CoreDeploy, remote: CoreDeploy) {
 /**
  * Transfers governorship to the governing chain's GovernanceRouter.
  *
- * @param non - The non-governor chain deploy instance
  * @param gov - The governor chain deploy instance
+ * @param non - The non-governor chain deploy instance
  */
-export async function transferGovernorship(non: CoreDeploy, gov: CoreDeploy) {
+export async function transferGovernorship(gov: CoreDeploy, non: CoreDeploy) {
   log(gov.test, `${non.chain.name}: transferring governorship`);
   let governorAddress = await gov.contracts.governance!.proxy.governor();
   let tx = await non.contracts.governance!.proxy.transferGovernor(
@@ -544,7 +544,7 @@ export async function deployTwoChains(gov: CoreDeploy, non: CoreDeploy) {
     await appointGovernor(gov);
   }
 
-  await transferGovernorship(non, gov);
+  await transferGovernorship(gov, non);
 
   await Promise.all([relinquish(gov), relinquish(non)]);
 
@@ -559,6 +559,10 @@ export async function deployTwoChains(gov: CoreDeploy, non: CoreDeploy) {
   }
 }
 
+function containsDuplicateDomains(array: any): boolean {
+  return (new Set(array).size !== array.length);
+}
+
 /**
  * Deploy the entire suite of Nomad contracts
  * on each chain within the chainConfigs array
@@ -571,15 +575,10 @@ export async function deployTwoChains(gov: CoreDeploy, non: CoreDeploy) {
  * @param deploys - An array of chain deploys
  */
 export async function deployNChains(deploys: CoreDeploy[]) {
-  const valueArr = deploys.map(function (item) {
-    return item.chain.domain;
-  });
-  const duplicateDomains = valueArr.some(function (item, idx) {
-    return valueArr.indexOf(item) != idx;
-  });
-  if (duplicateDomains) {
+  const domains = deploys.map(deploy => deploy.chain.domain);
+  if (containsDuplicateDomains(domains)) {
     throw new Error(
-      'You have specified multiple deploys with the same domain. Check your config.',
+        'You have specified multiple deploys with the same domain. Check your config.',
     );
   }
 
@@ -651,7 +650,7 @@ export async function deployNChains(deploys: CoreDeploy[]) {
 
   await Promise.all(
     nonGovChains.map(async (non) => {
-      await transferGovernorship(non, govChain);
+      await transferGovernorship(govChain, non);
     }),
   );
 
@@ -695,14 +694,10 @@ export async function deployHubAndSpoke(hub: CoreDeploy, spokes: CoreDeploy[]) {
     throw new Error('Must pass at least one spoke config');
   }
 
+  // setup array of all deploys
   const deploys = [hub, ...spokes];
-  const valueArr = deploys.map(function (item) {
-    return item.chain.domain;
-  });
-  const duplicateDomains = valueArr.some(function (item, idx) {
-    return valueArr.indexOf(item) != idx;
-  });
-  if (duplicateDomains) {
+  const domains = deploys.map(deploy => deploy.chain.domain);
+  if (containsDuplicateDomains(domains)) {
     throw new Error(
         'You have specified multiple deploys with the same domain. Check your config.',
     );
@@ -710,6 +705,14 @@ export async function deployHubAndSpoke(hub: CoreDeploy, spokes: CoreDeploy[]) {
 
   // there exists any chain marked test
   const isTestDeploy: boolean = deploys.filter((c) => c.test).length > 0;
+
+  log(isTestDeploy, 'awaiting provider ready');
+  await Promise.all([
+    deploys.map(async (deploy) => {
+      await deploy.ready();
+    }),
+  ]);
+  log(isTestDeploy, 'done readying');
 
   log(isTestDeploy, `Beginning 1 Hub, ${spokes.length} Spoke${spokes.length > 1 ? "s" : ""} deploy process`);
   log(isTestDeploy, `Deploy env is ${hub.config.environment}`);
@@ -722,19 +725,12 @@ export async function deployHubAndSpoke(hub: CoreDeploy, spokes: CoreDeploy[]) {
     );
   });
 
+  // ensure that the hub has a governor config
   if(!isTestDeploy && !hub.config.governor) {
     throw new Error(
         `Hub has no governor config`,
     );
   }
-
-  log(isTestDeploy, 'awaiting provider ready');
-  await Promise.all([
-    deploys.map(async (deploy) => {
-      await deploy.ready();
-    }),
-  ]);
-  log(isTestDeploy, 'done readying');
 
   // store block numbers for each chain, so that agents know where to start
   await Promise.all(deploys.map((d) => d.recordFromBlock()));
@@ -746,22 +742,26 @@ export async function deployHubAndSpoke(hub: CoreDeploy, spokes: CoreDeploy[]) {
       }),
   );
 
-  // enroll remotes on every chain
-  //
+  // enroll hub on all spoke chains
+  await Promise.all(
+      spokes.map(async (spoke) => {
+        log(
+            isTestDeploy,
+            `connecting Spoke ${spoke.chain.name} to Hub ${hub.chain.name}`,
+        );
+        await enrollRemote(spoke, hub);
+        log(
+            isTestDeploy,
+            `connected Spoke ${spoke.chain.name} to Hub ${hub.chain.name}`,
+        );
+      }),
+  );
+
+  // enroll spokes on hub chain
   //    NB: do not use Promise.all for this block. It introduces a race condition
   //    which results in multiple replica implementations on the home chain.
   //
   for (let spoke of spokes) {
-      log(
-          isTestDeploy,
-          `connecting Spoke ${spoke.chain.name} to Hub ${hub.chain.name}`,
-      );
-      await enrollRemote(spoke, hub);
-      log(
-          isTestDeploy,
-          `connected Spoke ${spoke.chain.name} to Hub ${hub.chain.name}`,
-      );
-
     log(
         isTestDeploy,
         `connecting Hub ${hub.chain.name} to Spoke ${spoke.chain.name}`,
@@ -782,7 +782,7 @@ export async function deployHubAndSpoke(hub: CoreDeploy, spokes: CoreDeploy[]) {
 
   await Promise.all(
       spokes.map(async (spoke) => {
-        await transferGovernorship(spoke, hub);
+        await transferGovernorship(hub, spoke);
       }),
   );
 
@@ -868,7 +868,7 @@ export async function deployNewChain(
     await deployUnenrolledReplica(oldDeploy, newDeploy);
   }
 
-  await transferGovernorship(newDeploy, govDeploy);
+  await transferGovernorship(govDeploy, newDeploy);
 
   // relinquish control of all chains
   await relinquish(newDeploy);
@@ -964,7 +964,7 @@ function getDirectory(deploy: CoreDeploy) {
   } else if (environment == "prod") {
     folder = "mainnet";
   }
-  const dir = `../../rust/config/$${folder}`;
+  const dir = `../../rust/config/${folder}`;
   return dir;
 }
 
