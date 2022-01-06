@@ -1,4 +1,3 @@
-import { getPathToLatestDeploy } from '../../src/verification/readDeployOutput';
 import {deployBridgesHubAndSpoke} from '../../src/bridge';
 import * as kovan from '../../config/testnets/kovan';
 import * as rinkeby from '../../config/testnets/rinkeby';
@@ -6,7 +5,7 @@ import * as moonbasealpha from "../../config/testnets/moonbasealpha";
 import { BridgeDeploy } from '../../src/bridge/BridgeDeploy';
 
 // get the path to the latest core system deploy
-const path = getPathToLatestDeploy();
+const path = "../../../../rust/config/development";
 
 const moonBaseAlphaDeploy = new BridgeDeploy(
     moonbasealpha.chain,
