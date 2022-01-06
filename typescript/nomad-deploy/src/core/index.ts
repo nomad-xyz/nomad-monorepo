@@ -560,7 +560,7 @@ export async function deployTwoChains(gov: CoreDeploy, non: CoreDeploy) {
 }
 
 function containsDuplicateDomains(array: any): boolean {
-  return (new Set(array).size !== array.length);
+  return new Set(array).size !== array.length;
 }
 
 /**
@@ -575,10 +575,10 @@ function containsDuplicateDomains(array: any): boolean {
  * @param deploys - An array of chain deploys
  */
 export async function deployNChains(deploys: CoreDeploy[]) {
-  const domains = deploys.map(deploy => deploy.chain.domain);
+  const domains = deploys.map((deploy) => deploy.chain.domain);
   if (containsDuplicateDomains(domains)) {
     throw new Error(
-        'You have specified multiple deploys with the same domain. Check your config.',
+      'You have specified multiple deploys with the same domain. Check your config.',
     );
   }
 
@@ -644,7 +644,10 @@ export async function deployNChains(deploys: CoreDeploy[]) {
 
   // appoint the configured governance account as governor
   if (govChain.config.governor) {
-    log(isTestDeploy, `appoint governor: ${govChain.config.governor.address} at ${govChain.config.governor.domain}`);
+    log(
+      isTestDeploy,
+      `appoint governor: ${govChain.config.governor.address} at ${govChain.config.governor.domain}`,
+    );
     await appointGovernor(govChain);
   }
 
@@ -675,7 +678,6 @@ export async function deployNChains(deploys: CoreDeploy[]) {
   }
 }
 
-
 /**
  * Deploy the entire suite of Nomad contracts
  * on each chain within the chainConfigs array
@@ -696,10 +698,10 @@ export async function deployHubAndSpoke(hub: CoreDeploy, spokes: CoreDeploy[]) {
 
   // setup array of all deploys
   const deploys = [hub, ...spokes];
-  const domains = deploys.map(deploy => deploy.chain.domain);
+  const domains = deploys.map((deploy) => deploy.chain.domain);
   if (containsDuplicateDomains(domains)) {
     throw new Error(
-        'You have specified multiple deploys with the same domain. Check your config.',
+      'You have specified multiple deploys with the same domain. Check your config.',
     );
   }
 
@@ -714,22 +716,30 @@ export async function deployHubAndSpoke(hub: CoreDeploy, spokes: CoreDeploy[]) {
   ]);
   log(isTestDeploy, 'done readying');
 
-  log(isTestDeploy, `Beginning 1 Hub, ${spokes.length} Spoke${spokes.length > 1 ? "s" : ""} deploy process`);
+  log(
+    isTestDeploy,
+    `Beginning 1 Hub, ${spokes.length} Spoke${
+      spokes.length > 1 ? 's' : ''
+    } deploy process`,
+  );
   log(isTestDeploy, `Deploy env is ${hub.config.environment}`);
   log(isTestDeploy, `${hub.chain.name} is governing hub`);
-  log(isTestDeploy, `${JSON.stringify(spokes.map(deploy => deploy.chain.name))} ${spokes.length > 1 ? "are spokes" : "is spoke"}`);
+  log(
+    isTestDeploy,
+    `${JSON.stringify(spokes.map((deploy) => deploy.chain.name))} ${
+      spokes.length > 1 ? 'are spokes' : 'is spoke'
+    }`,
+  );
   deploys.forEach((deploy) => {
     log(
-        isTestDeploy,
-        `Updater for ${deploy.chain.name} Home is ${deploy.config.updater}`,
+      isTestDeploy,
+      `Updater for ${deploy.chain.name} Home is ${deploy.config.updater}`,
     );
   });
 
   // ensure that the hub has a governor config
-  if(!isTestDeploy && !hub.config.governor) {
-    throw new Error(
-        `Hub has no governor config`,
-    );
+  if (!isTestDeploy && !hub.config.governor) {
+    throw new Error(`Hub has no governor config`);
   }
 
   // store block numbers for each chain, so that agents know where to start
@@ -737,24 +747,24 @@ export async function deployHubAndSpoke(hub: CoreDeploy, spokes: CoreDeploy[]) {
 
   // deploy nomad on each chain
   await Promise.all(
-      deploys.map(async (deploy) => {
-        await deployNomad(deploy);
-      }),
+    deploys.map(async (deploy) => {
+      await deployNomad(deploy);
+    }),
   );
 
   // enroll hub on all spoke chains
   await Promise.all(
-      spokes.map(async (spoke) => {
-        log(
-            isTestDeploy,
-            `connecting Spoke ${spoke.chain.name} to Hub ${hub.chain.name}`,
-        );
-        await enrollRemote(spoke, hub);
-        log(
-            isTestDeploy,
-            `connected Spoke ${spoke.chain.name} to Hub ${hub.chain.name}`,
-        );
-      }),
+    spokes.map(async (spoke) => {
+      log(
+        isTestDeploy,
+        `connecting Spoke ${spoke.chain.name} to Hub ${hub.chain.name}`,
+      );
+      await enrollRemote(spoke, hub);
+      log(
+        isTestDeploy,
+        `connected Spoke ${spoke.chain.name} to Hub ${hub.chain.name}`,
+      );
+    }),
   );
 
   // enroll spokes on hub chain
@@ -763,27 +773,30 @@ export async function deployHubAndSpoke(hub: CoreDeploy, spokes: CoreDeploy[]) {
   //
   for (let spoke of spokes) {
     log(
-        isTestDeploy,
-        `connecting Hub ${hub.chain.name} to Spoke ${spoke.chain.name}`,
+      isTestDeploy,
+      `connecting Hub ${hub.chain.name} to Spoke ${spoke.chain.name}`,
     );
     await enrollRemote(hub, spoke);
     log(
-        isTestDeploy,
-        `connected Hub ${hub.chain.name} to Spoke ${spoke.chain.name}`,
+      isTestDeploy,
+      `connected Hub ${hub.chain.name} to Spoke ${spoke.chain.name}`,
     );
   }
 
   // appoint the configured governance account as governor
   if (hub.config.governor) {
-    log(isTestDeploy, `appoint governor: ${hub.config.governor.address} at ${hub.config.governor.domain}`);
+    log(
+      isTestDeploy,
+      `appoint governor: ${hub.config.governor.address} at ${hub.config.governor.domain}`,
+    );
     // TODO: governor chain should never transfer to another domain...
     await appointGovernor(hub);
   }
 
   await Promise.all(
-      spokes.map(async (spoke) => {
-        await transferGovernorship(hub, spoke);
-      }),
+    spokes.map(async (spoke) => {
+      await transferGovernorship(hub, spoke);
+    }),
   );
 
   // relinquish control of all chains
@@ -795,7 +808,11 @@ export async function deployHubAndSpoke(hub: CoreDeploy, spokes: CoreDeploy[]) {
   }
 
   // check hub deploy is correct
-  await checkCoreDeploy(hub, spokes.map(spoke => spoke.chain.domain), hub.chain.domain);
+  await checkCoreDeploy(
+    hub,
+    spokes.map((spoke) => spoke.chain.domain),
+    hub.chain.domain,
+  );
 
   // write config outputs
   if (!isTestDeploy) {
@@ -957,12 +974,12 @@ export function writePartials(dir: string) {
 function getDirectory(deploy: CoreDeploy) {
   const environment = deploy.config.environment;
   let folder;
-  if (environment == "dev") {
-    folder = "development";
-  } else if (environment == "staging") {
-    folder = "staging";
-  } else if (environment == "prod") {
-    folder = "mainnet";
+  if (environment == 'dev') {
+    folder = 'development';
+  } else if (environment == 'staging') {
+    folder = 'staging';
+  } else if (environment == 'prod') {
+    folder = 'mainnet';
   }
   const dir = `../../rust/config/${folder}`;
   return dir;
@@ -973,22 +990,19 @@ function writeOutput(local: CoreDeploy, remotes: CoreDeploy[], dir: string) {
   const sdk = CoreDeploy.buildSDK(local, remotes);
   const name = local.chain.name;
 
-  fs.mkdirSync(dir, {recursive: true});
+  fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(
-      `${dir}/${name}_config.json`,
-      JSON.stringify(config, null, 2),
+    `${dir}/${name}_config.json`,
+    JSON.stringify(config, null, 2),
+  );
+  fs.writeFileSync(`${dir}/${name}_sdk.json`, JSON.stringify(sdk, null, 2));
+  fs.writeFileSync(
+    `${dir}/${name}_contracts.json`,
+    JSON.stringify(local.contractOutput, null, 2),
   );
   fs.writeFileSync(
-      `${dir}/${name}_sdk.json`,
-      JSON.stringify(sdk, null, 2),
-  );
-  fs.writeFileSync(
-      `${dir}/${name}_contracts.json`,
-      JSON.stringify(local.contractOutput, null, 2),
-  );
-  fs.writeFileSync(
-      `${dir}/${name}_verification.json`,
-      JSON.stringify(local.verificationInput, null, 2),
+    `${dir}/${name}_verification.json`,
+    JSON.stringify(local.verificationInput, null, 2),
   );
 }
 
@@ -1006,7 +1020,7 @@ export function writeDeployOutput(deploys: CoreDeploy[]) {
       .slice()
       .filter((remote) => remote.chain.domain !== local.chain.domain);
 
-      writeOutput(local, remotes, dir);
+    writeOutput(local, remotes, dir);
   }
   writePartials(dir);
 }

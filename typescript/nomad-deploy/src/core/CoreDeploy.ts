@@ -11,7 +11,7 @@ import { CoreContracts } from './CoreContracts';
 import { Deploy } from '../deploy';
 import { BigNumberish } from '@ethersproject/bignumber';
 import fs from 'fs';
-import {NomadDomain} from "@nomad-xyz/sdk/dist/nomad";
+import { NomadDomain } from '@nomad-xyz/sdk/dist/nomad';
 
 type Address = string;
 
@@ -105,14 +105,14 @@ export class CoreDeploy extends Deploy<CoreContracts> {
         blocks: local.chain.config.chunk || 2000,
       },
       home: local.contracts.home!.proxy.address,
-      replicas: remotes.map(remote => {
+      replicas: remotes.map((remote) => {
         return {
           domain: remote.chain.domain,
-          address: remote.contracts.replicas[local.chain.domain].proxy.address
-        }
+          address: remote.contracts.replicas[local.chain.domain].proxy.address,
+        };
       }),
-      bridgeRouter: "n/a",
-      tokenRegistry: "n/a"
+      bridgeRouter: 'n/a',
+      tokenRegistry: 'n/a',
     };
   }
 

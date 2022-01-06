@@ -1,10 +1,10 @@
-import {deployBridgesHubAndSpoke} from '../../src/bridge';
+import { deployBridgesHubAndSpoke } from '../../src/bridge';
 import * as ethereum from '../../config/mainnets/ethereum';
 import * as polygon from '../../config/mainnets/polygon';
 import { BridgeDeploy } from '../../src/bridge/BridgeDeploy';
 
 // get the path to the latest core system deploy
-const path = "../../../../rust/config/mainnet";
+const path = '../../../../rust/config/mainnet';
 
 const ethereumDeploy = new BridgeDeploy(
   ethereum.chain,
@@ -19,4 +19,4 @@ const polygonDeploy = new BridgeDeploy(
   path,
 );
 
-deployBridgesHubAndSpoke(ethereumDeploy, [  polygonDeploy]);
+deployBridgesHubAndSpoke(ethereumDeploy, [polygonDeploy]);
