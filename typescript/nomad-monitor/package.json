@@ -24,7 +24,7 @@
     "release-docker": "docker buildx build --platform linux/amd64,linux/arm64 --push -t gcr.io/nomad-xyz/nomad-monitor:$(git rev-parse --short HEAD) ."
   },
   "dependencies": {
-    "@nomad-xyz/contract-interfaces": "^1.0.1",
+    "@nomad-xyz/contract-interfaces": "^1.0.2",
     "@nomad-xyz/sdk": "^0.1.7",
     "@types/bunyan": "^1.8.7",
     "@types/express": "^4.17.13",
