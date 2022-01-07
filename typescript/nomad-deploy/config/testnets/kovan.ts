@@ -40,8 +40,8 @@ export const devConfig: CoreConfig = {
 
 export const stagingConfig: CoreConfig = {
   environment: 'staging',
-  updater: '0x201dd86063Dc251cA5a576d1b7365C38e5fB4CD5',
-  watchers: ['0x22B2855635154Baa41C306BcA979C8c9a077A180'],
+  updater: '0x5340fe2F454B861E71647bd80596A3463e095C9c',
+  watchers: ['0xa031973b293B924f6C848202Bf1dc3107fDE4D1e'],
   recoveryManager: '0x24F6c874F56533d9a1422e85e5C7A806ED11c036',
   governor: {
     domain: chainJson.domain,
