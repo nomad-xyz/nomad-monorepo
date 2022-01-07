@@ -25,7 +25,7 @@ import {
 } from "@nomad-xyz/deploy/src/bridge/BridgeDeploy";
 import { getPathToLatestDeploy } from "@nomad-xyz/deploy/src/verification/readDeployOutput";
 import {
-  deployBridges,
+  deployBridgesComplete,
   deployNewChainBridge,
 } from "@nomad-xyz/deploy/src/bridge";
 import { deployNChains, deployNewChain } from "@nomad-xyz/deploy/src/core";
@@ -624,7 +624,7 @@ export class Nomad {
 
   async deployBridges(networks: Network[]) {
     const deploys = networks.map((network) => this.getBridgeDeploy(network));
-    await deployBridges(deploys);
+    await deployBridgesComplete(deploys);
     return deploys;
   }
 
