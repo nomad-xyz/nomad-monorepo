@@ -20,7 +20,7 @@ export type BridgeDeployOutput = {
  *
  * @param deploys - The list of deploy instances for each chain
  */
-export async function deployBridges(deploys: AnyBridgeDeploy[]) {
+export async function deployBridgesComplete(deploys: AnyBridgeDeploy[]) {
   const isTestDeploy: boolean = deploys.filter((c) => c.test).length > 0;
 
   // deploy BridgeTokens & BridgeRouters
@@ -55,6 +55,67 @@ export async function deployBridges(deploys: AnyBridgeDeploy[]) {
     deploys.map(async (local) => {
       const remotes = deploys
         .filter((remote) => remote.chain.domain != local.chain.domain)
+        .map((remote) => remote.chain.domain);
+      await checkBridgeDeploy(local, remotes);
+    }),
+  );
+
+  if (!isTestDeploy) {
+    // output the Bridge deploy information to a subdirectory
+    // of the core system deploy config folder
+    writeBridgeDeployOutput(deploys);
+  }
+}
+
+/**
+ * Deploy and configure a cross-chain token bridge system
+ * with one BridgeRouter on each of the provided chains
+ * with ownership delegated to Nomad governance
+ *
+ * @param deploys - The list of deploy instances for each chain
+ */
+export async function deployBridgesHubAndSpoke(
+  hub: AnyBridgeDeploy,
+  spokes: AnyBridgeDeploy[],
+) {
+  const deploys: AnyBridgeDeploy[] = [hub, ...spokes];
+  const isTestDeploy: boolean = deploys.filter((c) => c.test).length > 0;
+
+  // deploy BridgeTokens & BridgeRouters
+  await Promise.all(
+    deploys.map(async (deploy) => {
+      // Must be done in order per-deploy.
+      // Do not rearrange or parallelize.
+      await deployTokenUpgradeBeacon(deploy);
+      await deployTokenRegistry(deploy);
+      await deployBridgeRouter(deploy);
+      await deployEthHelper(deploy);
+    }),
+  );
+
+  // after all BridgeRouters have been deployed,
+  // enroll the spokes' BridgeRouters on the hub
+  await enrollAllBridgeRouters(hub, spokes);
+
+  // enrol the hub's BridgeRouter on all spokes
+  await Promise.all(
+    spokes.map(async (spoke) => {
+      await enrollBridgeRouter(spoke, hub);
+    }),
+  );
+
+  // after all peer BridgeRouters have been co-enrolled,
+  // transfer ownership of BridgeRouters to Governance
+  await Promise.all(
+    deploys.map(async (deploy) => {
+      await transferOwnershipOfBridge(deploy);
+    }),
+  );
+
+  await Promise.all(
+    deploys.map(async (local) => {
+      const remotes = deploys
+        .filter((remote) => remote.chain.domain !== local.chain.domain)
         .map((remote) => remote.chain.domain);
       await checkBridgeDeploy(local, remotes);
     }),
@@ -138,28 +199,28 @@ export async function deployTokenRegistry(deploy: AnyBridgeDeploy) {
   console.log(`deploying ${deploy.chain.name} TokenRegistry`);
 
   const initData =
-      xAppContracts.TokenRegistry__factory.createInterface().encodeFunctionData(
-          'initialize',
-          [
-            deploy.contracts.bridgeToken!.beacon.address,
-            deploy.coreContractAddresses.xAppConnectionManager,
-          ],
-      );
+    xAppContracts.TokenRegistry__factory.createInterface().encodeFunctionData(
+      'initialize',
+      [
+        deploy.contracts.bridgeToken!.beacon.address,
+        deploy.coreContractAddresses.xAppConnectionManager,
+      ],
+    );
 
   deploy.contracts.tokenRegistry =
-      await proxyUtils.deployProxy<xAppContracts.TokenRegistry>(
-          'TokenRegistry',
-          deploy,
-          new xAppContracts.TokenRegistry__factory(deploy.chain.deployer),
-          initData,
-      );
+    await proxyUtils.deployProxy<xAppContracts.TokenRegistry>(
+      'TokenRegistry',
+      deploy,
+      new xAppContracts.TokenRegistry__factory(deploy.chain.deployer),
+      initData,
+    );
 
   assert(
-      (await deploy.contracts.tokenRegistry!.proxy.xAppConnectionManager()) ===
+    (await deploy.contracts.tokenRegistry!.proxy.xAppConnectionManager()) ===
       deploy.coreContractAddresses.xAppConnectionManager,
   );
   assert(
-      (await deploy.contracts.tokenRegistry!.proxy.tokenBeacon()) ===
+    (await deploy.contracts.tokenRegistry!.proxy.tokenBeacon()) ===
       deploy.contracts.bridgeToken!.beacon.address,
   );
 
@@ -298,8 +359,8 @@ export async function transferOwnershipOfBridge(deploy: AnyBridgeDeploy) {
   console.log(`transfer ownership of ${deploy.chain.name} TokenRegistry`);
 
   let tx = await deploy.contracts.tokenRegistry!.proxy.transferOwnership(
-      deploy.contracts.bridgeRouter!.proxy.address,
-      deploy.overrides,
+    deploy.contracts.bridgeRouter!.proxy.address,
+    deploy.overrides,
   );
 
   await tx.wait(deploy.chain.confirmations);
@@ -343,6 +404,15 @@ export function getEnrollBridgeCall(
   ]);
 }
 
+function buildSDK(deploy: AnyBridgeDeploy) {
+  const config = {
+    bridgeRouter: deploy.contracts.bridgeRouter?.proxy!.address,
+    tokenRegistry: deploy.contracts.tokenRegistry?.proxy!.address,
+    ethHelper: deploy.contracts.ethHelper?.address,
+  };
+  return JSON.stringify(config, null, 2);
+}
+
 /**
  * Outputs the values for bridges that have been deployed.
  *
@@ -368,6 +438,8 @@ export function writeBridgeDeployOutput(deploys: AnyBridgeDeploy[]) {
 
     const contracts = deploy.contracts.toJsonPretty();
     fs.writeFileSync(`${dir}/${name}_contracts.json`, contracts);
+
+    fs.writeFileSync(`${dir}/${name}_sdk.json`, buildSDK(deploy));
 
     fs.writeFileSync(
       `${dir}/${name}_verification.json`,

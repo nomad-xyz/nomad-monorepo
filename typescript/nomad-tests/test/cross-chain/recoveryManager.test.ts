@@ -7,8 +7,8 @@ import { increaseTimestampBy } from '../utils';
 import { getTestDeploy } from '../testChain';
 import { Updater } from 'lib/core';
 import { Signer } from 'lib/types';
-import { CoreDeploy as Deploy } from '@nomad-xyz/deploy/dist/src/core/CoreDeploy';
-import { deployNChains } from '@nomad-xyz/deploy/dist/src/core';
+import {CoreDeploy} from '@nomad-xyz/deploy/dist/src/core/CoreDeploy';
+import {deployHubAndSpoke} from '@nomad-xyz/deploy/dist/src/core';
 import * as contracts from '@nomad-xyz/contract-interfaces/dist/core';
 
 async function expectNotInRecovery(
@@ -210,6 +210,7 @@ async function expectOnlyRecoveryManagerCanInitiateRecovery(
 
 const localDomain = 1000;
 const remoteDomain = 2000;
+const extraDomain = 3000;
 
 /*
  * Deploy the full Nomad suite on two chains
@@ -222,35 +223,38 @@ describe('RecoveryManager', async () => {
     home: contracts.TestHome,
     updaterManager: contracts.UpdaterManager;
 
-  let deploys: Deploy[] = [];
-
   before(async () => {
     [governor, recoveryManager, randomSigner] = await ethers.getSigners();
     const updater = await Updater.fromSigner(randomSigner, localDomain);
 
-    deploys.push(
-      await getTestDeploy(
+
+    const hub: CoreDeploy = await getTestDeploy(
         localDomain,
         updater.address,
         [],
         recoveryManager.address,
-      ),
-    );
-    deploys.push(
-      await getTestDeploy(
+      );
+
+    const spoke: CoreDeploy = await getTestDeploy(
         remoteDomain,
         updater.address,
         [],
         recoveryManager.address,
-      ),
+      );
+
+    const extraSpoke: CoreDeploy = await getTestDeploy(
+        extraDomain,
+        updater.address,
+        [],
+        recoveryManager.address,
     );
 
-    await deployNChains(deploys);
+    await deployHubAndSpoke(hub, [spoke, extraSpoke]);
 
-    governanceRouter = deploys[0].contracts.governance
+    governanceRouter = hub.contracts.governance
       ?.proxy! as contracts.TestGovernanceRouter;
-    home = deploys[0].contracts.home?.proxy! as contracts.TestHome;
-    updaterManager = deploys[0].contracts.updaterManager!;
+    home = hub.contracts.home?.proxy! as contracts.TestHome;
+    updaterManager = hub.contracts.updaterManager!;
 
     // set governor
     await governanceRouter.transferGovernor(localDomain, governor.address);

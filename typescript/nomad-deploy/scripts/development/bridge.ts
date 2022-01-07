@@ -1,18 +1,18 @@
-import { getPathToLatestDeploy } from '../../src/verification/readDeployOutput';
-import { deployBridges } from '../../src/bridge';
-import * as alfajores from '../../config/testnets/alfajores';
+import { deployBridgesHubAndSpoke } from '../../src/bridge';
 import * as kovan from '../../config/testnets/kovan';
 import * as rinkeby from '../../config/testnets/rinkeby';
+import * as moonbasealpha from '../../config/testnets/moonbasealpha';
 import { BridgeDeploy } from '../../src/bridge/BridgeDeploy';
 
 // get the path to the latest core system deploy
-const path = getPathToLatestDeploy();
+const path = '../../../../rust/config/development';
 
-const alfajoresDeploy = new BridgeDeploy(
-  alfajores.chain,
-  alfajores.bridgeConfig,
+const moonBaseAlphaDeploy = new BridgeDeploy(
+  moonbasealpha.chain,
+  moonbasealpha.bridgeConfig,
   path,
 );
+
 const kovanDeploy = new BridgeDeploy(kovan.chain, kovan.bridgeConfig, path);
 
 const rinkebyDeploy = new BridgeDeploy(
@@ -21,4 +21,4 @@ const rinkebyDeploy = new BridgeDeploy(
   path,
 );
 
-deployBridges([alfajoresDeploy, kovanDeploy, rinkebyDeploy]);
+deployBridgesHubAndSpoke(kovanDeploy, [moonBaseAlphaDeploy, rinkebyDeploy]);

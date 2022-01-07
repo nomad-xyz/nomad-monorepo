@@ -58,21 +58,21 @@ export class BridgeContracts extends Contracts {
     );
 
     const registryImplementation = xAppContracts.TokenRegistry__factory.connect(
-        addresses.tokenRegistry.implementation,
-        signerOrProvider,
+      addresses.tokenRegistry.implementation,
+      signerOrProvider,
     );
     const registryProxy = xAppContracts.TokenRegistry__factory.connect(
-        addresses.tokenRegistry.proxy,
-        signerOrProvider,
+      addresses.tokenRegistry.proxy,
+      signerOrProvider,
     );
     const registryUpgradeBeacon = contracts.UpgradeBeacon__factory.connect(
-        addresses.tokenRegistry.beacon,
-        signerOrProvider,
+      addresses.tokenRegistry.beacon,
+      signerOrProvider,
     );
     b.tokenRegistry = new BeaconProxy<xAppContracts.TokenRegistry>(
-        registryImplementation,
-        registryProxy,
-        registryUpgradeBeacon,
+      registryImplementation,
+      registryProxy,
+      registryUpgradeBeacon,
     );
 
     const tokenImplementation = xAppContracts.BridgeToken__factory.connect(

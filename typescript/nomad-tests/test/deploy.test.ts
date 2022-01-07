@@ -1,21 +1,22 @@
 import { ethers } from 'hardhat';
 import { expect } from 'chai';
-
 import { getTestDeploy } from './testChain';
 import { Updater } from 'lib/core';
 import { Signer } from 'lib/types';
 import { CoreContractAddresses } from '@nomad-xyz/deploy/dist/src/chain';
-import { deployBridges } from '@nomad-xyz/deploy/dist/src/bridge';
+import { deployBridgesComplete } from '@nomad-xyz/deploy/dist/src/bridge';
 import { BridgeDeploy } from '@nomad-xyz/deploy/dist/src/bridge/BridgeDeploy';
 import {
   deployTwoChains,
   deployNChains,
+  deployHubAndSpoke,
 } from '@nomad-xyz/deploy/dist/src/core';
 import { CoreDeploy } from '@nomad-xyz/deploy/dist/src/core/CoreDeploy';
 import {
   MockWeth,
   MockWeth__factory,
 } from '@nomad-xyz/contract-interfaces/dist/bridge';
+import {toBytes32} from "lib/utils";
 
 const domains = [1000, 2000, 3000, 4000];
 
@@ -81,6 +82,119 @@ describe('core deploy scripts', async () => {
       }
     });
   });
+
+  describe('deployHubAndSpoke', async () => {
+    for (let i = 1; i < domains.length; i++) {
+      describe(`${i}-spoke deploy`, async () => {
+        let hub: CoreDeploy;
+        let spokes: CoreDeploy[] = [];
+        const nullBytes = `0x${'00'.repeat(32)}`;
+
+        before(async () => {
+            // tests deploys for up to 4 chains
+            hub = await getTestDeploy(domains[0], updater.address, [
+              recoveryManager.address,
+            ]);
+
+            for(let j = 1; j <= i; j++) {
+              spokes.push(
+                  await getTestDeploy(domains[j], updater.address, [
+                    recoveryManager.address,
+                  ]),
+              );
+            }
+
+            // deploy nomad contracts on `i` chains
+            // will test inside deploy function
+            await deployHubAndSpoke(hub, spokes);
+          });
+
+          it('does not enroll spokes in each other', async () => {
+            for (let spoke1 of spokes) {
+              for (let spoke2 of spokes) {
+                // replica is not deployed
+                expect(spoke1.contracts.replicas[spoke2.chain.domain]).to.be.undefined;
+                // replica is not enrolled
+                let replica = await spoke1.contracts.xAppConnectionManager!.domainToReplica(spoke2.chain.domain);
+                expect(replica).to.equal(ethers.constants.AddressZero);
+                // governanceRouter is not enrolled
+                let governanceRouter = await spoke1.contracts.governance!.proxy.routers(spoke2.chain.domain);
+                expect(governanceRouter).to.equal(nullBytes);
+
+                // replica is not deployed
+                expect(spoke2.contracts.replicas[spoke1.chain.domain]).to.be.undefined;
+                // replica is not enrolled
+                replica = await spoke2.contracts.xAppConnectionManager!.domainToReplica(spoke1.chain.domain);
+                expect(replica).to.equal(ethers.constants.AddressZero);
+                // governanceRouter is not enrolled
+                governanceRouter = await spoke2.contracts.governance!.proxy.routers(spoke1.chain.domain);
+                expect(governanceRouter).to.equal(nullBytes);
+              }
+            }
+          });
+
+        it('does enroll hub in all spokes', async () => {
+          for (let spoke of spokes) {
+              // replica is deployed
+              expect(spoke.contracts.replicas[hub.chain.domain]).to.not.be.undefined;
+              // replica is enrolled
+              let replica = await spoke.contracts.xAppConnectionManager!.domainToReplica(hub.chain.domain);
+              expect(replica).to.equal(spoke.contracts.replicas[hub.chain.domain].proxy.address);
+              // governanceRouter is enrolled
+              let governanceRouter = await spoke.contracts.governance!.proxy.routers(hub.chain.domain);
+              expect(governanceRouter).to.equal(toBytes32(hub.contracts.governance!.proxy.address).toLowerCase());
+
+              // replica is deployed
+              expect(hub.contracts.replicas[spoke.chain.domain]).to.not.be.undefined;
+              replica = await hub.contracts.xAppConnectionManager!.domainToReplica(spoke.chain.domain);
+              // replica is enrolled
+              expect(replica).to.equal(hub.contracts.replicas[spoke.chain.domain].proxy.address);
+              // governanceRouter is enrolled
+              governanceRouter = await hub.contracts.governance!.proxy.routers(spoke.chain.domain);
+              expect(governanceRouter).to.equal(toBytes32(spoke.contracts.governance!.proxy.address).toLowerCase());
+          }
+        });
+        });
+      }
+
+    describe("input verification", async () => {
+      it(`asserts hub config exists`, async () => {
+        let hub: CoreDeploy;
+        const spoke: CoreDeploy = await getTestDeploy(domains[0], updater.address, [
+          recoveryManager.address,
+        ]);
+        const errMsg = 'Must pass hub config';
+
+        try {
+          // @ts-ignore
+          await deployHubAndSpoke(hub, [spoke]);
+          // `deployNChains` should error and skip to catch block. If it didn't, we need to make it fail
+          // here (same as `expect(true).to.be.false`, but more explicit)
+          expect('no error').to.equal(errMsg);
+        } catch (e: any) {
+          // expect correct error message
+          expect(e.message).to.equal(errMsg);
+        }
+      });
+
+      it(`asserts at least one spoke config exists`, async () => {
+        const hub: CoreDeploy = await getTestDeploy(domains[0], updater.address, [
+          recoveryManager.address,
+        ]);
+        const errMsg = 'Must pass at least one spoke config';
+
+        try {
+          await deployHubAndSpoke(hub, []);
+          // `deployNChains` should error and skip to catch block. If it didn't, we need to make it fail
+          // here (same as `expect(true).to.be.false`, but more explicit)
+          expect('no error').to.equal(errMsg);
+        } catch (e: any) {
+          // expect correct error message
+          expect(e.message).to.equal(errMsg);
+        }
+      });
+    });
+  });
 });
 
 describe('bridge deploy scripts', async () => {
@@ -131,7 +245,7 @@ describe('bridge deploy scripts', async () => {
     );
 
     // deploy bridges
-    await deployBridges([alfajoresDeploy, kovanDeploy]);
+    await deployBridgesComplete([alfajoresDeploy, kovanDeploy]);
   });
 
   it('3-chain bridge', async () => {
@@ -159,6 +273,6 @@ describe('bridge deploy scripts', async () => {
     );
 
     // deploy 3 bridges
-    await deployBridges([alfajoresDeploy, kovanDeploy, rinkebyDeploy]);
+    await deployBridgesComplete([alfajoresDeploy, kovanDeploy, rinkebyDeploy]);
   });
 });

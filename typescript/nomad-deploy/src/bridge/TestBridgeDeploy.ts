@@ -10,7 +10,8 @@ import {
   MockCore,
   MockCore__factory,
   MockWeth,
-  MockWeth__factory, TokenRegistry,
+  MockWeth__factory,
+  TokenRegistry,
 } from '@nomad-xyz/contract-interfaces/dist/bridge';
 import { ContractVerificationInput } from '../deploy';
 import { BridgeContracts } from './BridgeContracts';
@@ -136,10 +137,9 @@ export default class TestBridgeDeploy {
       toBytes32(await signer.getAddress()),
     );
 
-
     // transfer ownership of the token registry to the bridge router
     await contracts.tokenRegistry!.proxy.transferOwnership(
-        contracts.bridgeRouter!.proxy.address,
+      contracts.bridgeRouter!.proxy.address,
     );
 
     return deploy;
@@ -188,11 +188,11 @@ export default class TestBridgeDeploy {
   }
 
   get testName(): string {
-    return "NomadTest";
+    return 'NomadTest';
   }
 
   get testSymbol(): string {
-    return "TEST";
+    return 'TEST';
   }
 
   get testDecimals(): number {

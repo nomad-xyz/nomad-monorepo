@@ -1,7 +1,4 @@
-import {
-  getEnrollReplicaCall,
-  getEnrollWatchersCall,
-} from '../../src/core';
+import { getEnrollReplicaCall, getEnrollWatchersCall } from '../../src/core';
 import * as tom from '../../config/local/tom';
 import * as jerry from '../../config/local/jerry';
 import * as daffy from '../../config/local/jerry';
