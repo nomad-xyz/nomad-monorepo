@@ -839,8 +839,7 @@ export async function deployNewChain(
   }
 
   // there exists any chain marked test
-  const isTestDeploy: boolean =
-    newDeploy.test || hubDeploy.test;
+  const isTestDeploy: boolean = newDeploy.test || hubDeploy.test;
 
   // log the deploy details
   log(
@@ -855,10 +854,7 @@ export async function deployNewChain(
 
   // wait for providers to be ready
   log(isTestDeploy, 'awaiting provider ready');
-  await Promise.all([
-    newDeploy.ready(),
-    hubDeploy.ready()
-  ]);
+  await Promise.all([newDeploy.ready(), hubDeploy.ready()]);
   log(isTestDeploy, 'done readying');
 
   // deploy nomad on the new chain
@@ -886,7 +882,11 @@ export async function deployNewChain(
   await relinquish(newDeploy);
 
   // checks new chain deploy is correct
-  await checkCoreDeploy(newDeploy, [hubDeploy.chain.domain], hubDeploy.chain.domain);
+  await checkCoreDeploy(
+    newDeploy,
+    [hubDeploy.chain.domain],
+    hubDeploy.chain.domain,
+  );
 }
 
 /**

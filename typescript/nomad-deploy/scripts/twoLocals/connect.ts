@@ -1,10 +1,12 @@
 import * as tom from '../../config/local/tom';
-import * as jerry from '../../config/local/jerry';
 import * as daffy from '../../config/local/jerry';
 import { ExistingCoreDeploy } from '../../src/core/CoreDeploy';
 import { deployEnvironment } from '../../src/chain';
 import { ExistingBridgeDeploy } from '../../src/bridge/BridgeDeploy';
-import { addConnection } from '../../src/incremental';
+import {
+  connectionGovernanceActions,
+  executeGovernanceActions,
+} from '../../src/incremental';
 
 let environment = deployEnvironment();
 
@@ -16,15 +18,6 @@ const path =
 // Instantiate Governor Deploy Tom
 const tomConfig = environment === 'staging' ? tom.stagingConfig : tom.devConfig;
 const tomCoreDeploy = ExistingCoreDeploy.withPath(tom.chain, tomConfig, path);
-
-// Instantiate another old deploy Jerry
-const jerryConfig =
-  environment === 'staging' ? jerry.stagingConfig : jerry.devConfig;
-const jerryCoreDeploy = ExistingCoreDeploy.withPath(
-  jerry.chain,
-  jerryConfig,
-  path,
-);
 
 // Instantiate New Deploy, which is already existing at this moment
 let daffyConfig =
@@ -41,11 +34,6 @@ const tomBridgeDeploy = new ExistingBridgeDeploy(
   tom.bridgeConfig,
   path,
 );
-const jerryBridgeDeploy = new ExistingBridgeDeploy(
-  jerry.chain,
-  jerry.bridgeConfig,
-  path,
-);
 
 // Instantiate New Bridge Deploy, which is already existing at this moment
 const daffyBridgeDeploy = new ExistingBridgeDeploy(
@@ -54,11 +42,11 @@ const daffyBridgeDeploy = new ExistingBridgeDeploy(
   path,
 );
 
-// Renaming some variables for convinience
-const newCoreDeploy = daffyCoreDeploy;
-const newBridgeDeploy = daffyBridgeDeploy;
-
-addConnection(
-  [newCoreDeploy, newBridgeDeploy],
-  [tomCoreDeploy, tomBridgeDeploy],
+const actions = connectionGovernanceActions(
+  tomCoreDeploy,
+  tomBridgeDeploy,
+  daffyCoreDeploy,
+  daffyBridgeDeploy,
 );
+
+executeGovernanceActions(tomCoreDeploy, actions);
