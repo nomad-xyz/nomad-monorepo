@@ -5,31 +5,18 @@
       "key": "",
       "type": "hexKey"
     },
-    "alfajores": {
-      "key": "",
-      "type": "hexKey"
-    },
-    "rinkeby": {
+    "moonbasealpha": {
       "key": "",
       "type": "hexKey"
     }
   },
   "replicas": {
-    "alfajores": {
-      "address": "0xFA8D78069dC87BC1355bf588b86C1E1F634a9906",
-      "domain": "1000",
-      "name": "alfajores",
+    "moonbasealpha": {
+      "address": "0x8f8424DC94b4c302984Ab5a03fc4c2d1Ec95DC92",
+      "domain": "5000",
+      "name": "moonbasealpha",
       "rpcStyle": "ethereum",
-      "connection": {
-        "type": "http",
-        "url": ""
-      }
-    },
-    "rinkeby": {
-      "address": "0xa61aE9E7a2B63131efc69B032aac3A5f8D300eEF",
-      "domain": "2000",
-      "name": "rinkeby",
-      "rpcStyle": "ethereum",
+      "timelag": 5,
       "connection": {
         "type": "http",
         "url": ""
@@ -37,10 +24,11 @@
     }
   },
   "home": {
-    "address": "0xD524390aF2931084269E90e6fcF2423ac4905780",
+    "address": "0xF207D7CdAEA189068aae28c441937fdA20DF4016",
     "domain": "3000",
     "name": "kovan",
     "rpcStyle": "ethereum",
+    "timelag": 5,
     "connection": {
       "type": "http",
       "url": ""
@@ -50,5 +38,9 @@
     "level": "debug",
     "fmt": "json"
   },
-  "db": "db_path"
+  "db": "db_path",
+  "index": {
+    "from": "29136238",
+    "chunk": "2000"
+  }
 }

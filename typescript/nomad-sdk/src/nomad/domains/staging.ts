@@ -1,50 +1,36 @@
 import { NomadDomain } from './domain';
 
-export const alfajores: NomadDomain = {
-  name: 'alfajores',
-  id: 1000,
-  bridgeRouter: '0x76Cb005cC06b94957975964cb590F45aBDECEdF6',
-  tokenRegistry: 'TODO',
-  home: '0x495d3CEC866810898Ed0eC809da8bdEc08bcC866',
-  replicas: [
-    { domain: 2000, address: '0x0D1abAC01614698bCB5D96dF5818BE8793FD4957' },
-    {
-      domain: 3000,
-      address: '0xFA8D78069dC87BC1355bf588b86C1E1F634a9906',
-    },
-  ],
-};
-
 export const kovan: NomadDomain = {
   name: 'kovan',
   id: 3000,
-  bridgeRouter: '0x54f73e6fAB8Bb28A220Bd054A84ffB76dDb1c143',
+  bridgeRouter: '0xB7ED67D47C5A04d8A81a096bEc281785C2a51efD',
   tokenRegistry: 'TODO',
   ethHelper: '0xEFbe71EEE2Ae694539DC0f36BfC35d417C120273',
-  home: '0xD524390aF2931084269E90e6fcF2423ac4905780',
+  home: '0xF207D7CdAEA189068aae28c441937fdA20DF4016',
   replicas: [
-    { domain: 2000, address: '0x21e956543645dc57ff769751427e80AE10a8F629' },
-    {
-      domain: 1000,
-      address: '0x1a22D30eD82C1bbAe9C68FC66Ac49f8eBA22651F',
+    { 
+      domain: 5000, 
+      address: '0x8f8424DC94b4c302984Ab5a03fc4c2d1Ec95DC92' 
     },
   ],
 };
 
-export const rinkeby: NomadDomain = {
-  name: 'rinkeby',
-  id: 2000,
-  bridgeRouter: '0xc9afF5f897C7F8dd5cd05499348817f71C84E1fE',
+export const moonbasealpha: NomadDomain = {
+  name: 'moonbasealpha',
+  paginate: {
+    blocks: 2000, 
+    from: 1485171,
+  },
+  id: 5000,
+  bridgeRouter: '0x8F60dc7117dE62398a801100bfcf613569Dd66d7',
   tokenRegistry: 'TODO',
-  ethHelper: '0xC652fd8dF178BEC5E62979C00bBceD0eDf0b10F8',
-  home: '0x9D211A0E4Ac2A913D1F253FD4a6bC9555d78505b',
+  home: '0x53B94f2D4a3159b66fcCC4f406Ea388426A3f3cB',
   replicas: [
-    { domain: 1000, address: '0xB1F356AA3e63E56D4092D9b9354BF0C686De7cb8' },
     {
       domain: 3000,
-      address: '0xa61aE9E7a2B63131efc69B032aac3A5f8D300eEF',
+      address: '0x09B6a30de401084e1D355e859061D6C3EB1bC178',
     },
   ],
 };
 
-export const stagingDomains = [alfajores, kovan, rinkeby];
+export const stagingDomains = [kovan, moonbasealpha];

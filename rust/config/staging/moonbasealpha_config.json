@@ -1,35 +1,22 @@
 {
   "environment": "staging",
   "signers": {
-    "rinkeby": {
+    "moonbasealpha": {
       "key": "",
       "type": "hexKey"
     },
     "kovan": {
-      "key": "",
-      "type": "hexKey"
-    },
-    "alfajores": {
       "key": "",
       "type": "hexKey"
     }
   },
   "replicas": {
     "kovan": {
-      "address": "0x21e956543645dc57ff769751427e80AE10a8F629",
+      "address": "0x09B6a30de401084e1D355e859061D6C3EB1bC178",
       "domain": "3000",
       "name": "kovan",
       "rpcStyle": "ethereum",
-      "connection": {
-        "type": "http",
-        "url": ""
-      }
-    },
-    "alfajores": {
-      "address": "0x0D1abAC01614698bCB5D96dF5818BE8793FD4957",
-      "domain": "1000",
-      "name": "alfajores",
-      "rpcStyle": "ethereum",
+      "timelag": 5,
       "connection": {
         "type": "http",
         "url": ""
@@ -37,10 +24,11 @@
     }
   },
   "home": {
-    "address": "0x9D211A0E4Ac2A913D1F253FD4a6bC9555d78505b",
-    "domain": "2000",
-    "name": "rinkeby",
+    "address": "0x53B94f2D4a3159b66fcCC4f406Ea388426A3f3cB",
+    "domain": "5000",
+    "name": "moonbasealpha",
     "rpcStyle": "ethereum",
+    "timelag": 5,
     "connection": {
       "type": "http",
       "url": ""
@@ -50,5 +38,9 @@
     "level": "debug",
     "fmt": "json"
   },
-  "db": "db_path"
+  "db": "db_path",
+  "index": {
+    "from": "1485080",
+    "chunk": "2000"
+  }
 }
