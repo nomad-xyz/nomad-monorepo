@@ -1,1 +1,1 @@
-docker build -t gcr.io/nomad-xyz/keymaster:$1 .
+docker buildx build --platform linux/amd64,linux/arm64 --push -t gcr.io/nomad-xyz/keymaster:$1 .
