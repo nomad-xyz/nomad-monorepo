@@ -1,36 +1,5 @@
 import { NomadDomain } from './domain';
 
-// Note: 
-// Commented out as the current deployment doesn't include rinkeby
-//
-// export const rinkeby: NomadDomain = {
-//   name: 'rinkeby',
-//   paginate: {
-//     blocks: 2000, 
-//     from: 9811702,
-//   },
-//   id: 2000,
-//   bridgeRouter: '0x9EA9754A42d99A41D17Ee4b6330Fc5a9C785E2e9',
-//   tokenRegistry: 'TODO',
-//   ethHelper: '0x4882cbF04c2c825d8FfB91CfF7F748a86B05F3f3',
-//   home: '0x5E52A432958d2eE8B87da0E2875a8d56abdd3000',
-//   replicas: [
-//     { 
-//       domain: 1000, 
-//       address: '0x700C84df52388f0D5d23F8565a2B40D85d0348A3' 
-//     },
-//     {
-//       domain: 3000,
-//       address: '0x07d12F93980661E17ACa9034b15B285b495f4863',
-//     },
-//     {
-//       domain: 5000,
-//       address: '0x6aA7eC78A9B8D15487F6C181f5446239d61592A9',
-//     },
-    
-//   ],
-// };
-
 export const kovan: NomadDomain = {
   name: 'kovan',
   paginate: {
@@ -39,17 +8,16 @@ export const kovan: NomadDomain = {
   },
   id: 3000,
   bridgeRouter: '0x3A3f8d6741f106ACb76763299CEF9239C3A0e929',
-  tokenRegistry: 'TODO',
-  ethHelper: '0x5Fa9A1B5149c3A85d02a43Bb7Aa5C9a72956b0eB',
+  tokenRegistry: '0x53e6d34fc51034923d78D5Cf2a687063b6703096',
+  ethHelper: '0x250B6C2C13ab44e67Ed584d324e6d1568B6505be',
   home: '0x5635b4B8Ea091b56A64317A89512ad9564BbcafB',
   // replicas of remote homes deployed to Kovan
   // NOT  Kovan replicas deployed to remote chains
   replicas: [
     { 
       domain: 5000, 
-      address: '0xF90FbAc8F2ddc0BAc21A09494c9FD1b94d3311e2' 
+      address: '0xF90FbAc8F2ddc0BAc21A09494c9FD1b94d3311e2',
     },
-    
   ],
 };
 
@@ -61,7 +29,7 @@ export const moonbasealpha: NomadDomain = {
   },
   id: 5000,
   bridgeRouter: '0x7F0Ee81930DdaeDB77cA2FF569Fe0A9963D95627',
-  tokenRegistry: 'TODO',
+  tokenRegistry: '0xca445BA4554cB9f2cA90f63d14A73D568dE67cc6',
   home: '0x20f63643D5E521E8C1d6D73a2dd09D3C5e752Cbe',
   // replicas of remote homes deployed to Moonbasealpha
   // NOT  Moonbasealpha replicas deployed to remote chains
