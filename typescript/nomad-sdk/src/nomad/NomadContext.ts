@@ -460,7 +460,12 @@ export class NomadContext extends MultiProvider {
 
     overrides.value = amount;
 
-    const tx = await ethHelper.sendToEVMLike(toDomain, recipient, enableFast, overrides);
+    const tx = await ethHelper.sendToEVMLike(
+      toDomain,
+      recipient,
+      enableFast,
+      overrides,
+    );
     const receipt = await tx.wait();
 
     const message = TransferMessage.singleFromReceipt(this, from, receipt);
