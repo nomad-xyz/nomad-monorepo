@@ -19,7 +19,7 @@ export const kovan: NomadDomain = {
       address: '0xF90FbAc8F2ddc0BAc21A09494c9FD1b94d3311e2',
     },
   ],
-  governanceRouter: 'TODO',
+  governanceRouter: '0xC86666B3523c20b00c7F3BAa3d019d40E1b7c9b8',
 };
 
 export const moonbasealpha: NomadDomain = {
@@ -40,7 +40,7 @@ export const moonbasealpha: NomadDomain = {
       address: '0x84683c2d02FF9DfC65cc2c18Cf668773b318B224',
     },
   ],
-  governanceRouter: 'TODO',
+  governanceRouter: '0xC72B0CBA22aC0d790B567E806E6e3257aAB103Fe',
 };
 
 export const devDomains = [kovan, moonbasealpha];
