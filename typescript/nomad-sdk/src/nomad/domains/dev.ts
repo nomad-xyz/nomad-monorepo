@@ -39,8 +39,8 @@ export const kovan: NomadDomain = {
   },
   id: 3000,
   bridgeRouter: '0x3A3f8d6741f106ACb76763299CEF9239C3A0e929',
-  tokenRegistry: 'TODO',
-  ethHelper: '0x5Fa9A1B5149c3A85d02a43Bb7Aa5C9a72956b0eB',
+  tokenRegistry: '0x53e6d34fc51034923d78D5Cf2a687063b6703096',
+  ethHelper: '0x250B6C2C13ab44e67Ed584d324e6d1568B6505be',
   home: '0x5635b4B8Ea091b56A64317A89512ad9564BbcafB',
   // replicas of remote homes deployed to Kovan
   // NOT  Kovan replicas deployed to remote chains
@@ -61,7 +61,7 @@ export const moonbasealpha: NomadDomain = {
   },
   id: 5000,
   bridgeRouter: '0x7F0Ee81930DdaeDB77cA2FF569Fe0A9963D95627',
-  tokenRegistry: 'TODO',
+  tokenRegistry: '0xca445BA4554cB9f2cA90f63d14A73D568dE67cc6',
   home: '0x20f63643D5E521E8C1d6D73a2dd09D3C5e752Cbe',
   // replicas of remote homes deployed to Moonbasealpha
   // NOT  Moonbasealpha replicas deployed to remote chains
