@@ -75,7 +75,7 @@ function getNetworks() {
       break;
 
     default:
-      networks = ['alfajores', 'rinkeby', 'kovan', 'moonbasealpha'];
+      networks = ['kovan', 'moonbasealpha'];
       break;
   }
 
