@@ -27,8 +27,20 @@ export class MonitorConfig {
 
     this.origin = origin;
     this.remotes = getNetworks().filter((m) => m != origin);
-    this.context =
-      environment == 'production' ? contexts.mainnet : contexts.dev;
+    switch(environment){
+      case 'production': {
+        this.context = contexts.mainnet
+        break;
+      }
+      case 'staging': {
+        this.context = contexts.staging
+        break;
+      }
+      default: {
+        this.context = contexts.dev
+        break;
+      }
+    }
     this.metrics = getMetrics(script);
     this.logger = createLogger(script);
     this.googleCredentialsFile =
@@ -74,6 +86,10 @@ function getNetworks() {
       networks = ['ethereum', 'celo', 'polygon'];
       break;
 
+    case 'staging':
+      networks = ['kovan', 'moonbasealpha'];
+      break;
+    
     default:
       networks = ['kovan', 'moonbasealpha'];
       break;
