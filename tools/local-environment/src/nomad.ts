@@ -1,7 +1,7 @@
 import fs from "fs";
 
 // Local imports
-import { Network, networkFromObject } from "./network";
+import { Network, Networkish, networkFromObject } from "./network";
 import { Key } from "./key";
 import { Agent, AgentType, agentTypeToString, LocalAgent } from "./agent";
 
@@ -31,8 +31,10 @@ import {
 import { deployNChains, deployNewChain } from "@nomad-xyz/deploy/src/core";
 import { ContractVerificationInput } from "@nomad-xyz/deploy/src/deploy";
 import {
-  addCrossConnection,
-  addConnection,
+  connectionGovernanceActions,
+  executeGovernanceActions,
+  crossConnectionGovernanceActions,
+  GovernanceActions,
 } from "@nomad-xyz/deploy/src/incremental";
 import TestBridgeDeploy from "@nomad-xyz/deploy/src/bridge/TestBridgeDeploy";
 import {
@@ -51,11 +53,15 @@ import {
   XAppConnectionManager,
 } from "@nomad-xyz/contract-interfaces/core";
 
-import { Updater } from "@nomad-xyz/test/lib/core";
+import { batchHash, Updater } from "@nomad-xyz/test/lib/core";
 import { NonceManager } from "@ethersproject/experimental";
 import { zip } from "./utils";
 import { ethers } from "ethers";
 import { Logger, LogLevel } from "./logger";
+import { CallData } from "@nomad-xyz/deploy/src/utils";
+import { checkCoreDeploy } from "@nomad-xyz/deploy/src/core/checks";
+import { checkBridgeDeploy } from "@nomad-xyz/deploy/src/bridge/checks";
+import { checkIncrementalDeploy } from "@nomad-xyz/deploy/src/incremental/checks";
 
 export class Nomad {
   id: number;
@@ -176,7 +182,7 @@ export class Nomad {
   }
 
   getArtifacts(
-    networkish: string | number | Network
+    networkish: Networkish
   ): CoreAndBridgeArtifact | undefined {
     const network = this.getNetwork(networkish);
     if (!network) throw new Error(`Network not found`);
@@ -189,14 +195,14 @@ export class Nomad {
     this.networks.set(network.domain, network);
   }
 
-  setDeployer(networkish: string | number | Network, key: Key) {
+  setDeployer(networkish: Networkish, key: Key) {
     const domain = this.networkToDomain(networkish);
 
     if (domain) this.deployers.set(domain, key);
   }
 
   setSigner(
-    networkish: string | number | Network,
+    networkish: Networkish,
     key: Key,
     agentType?: string | AgentType
   ) {
@@ -214,26 +220,26 @@ export class Nomad {
     }
   }
 
-  setUpdater(networkish: string | number | Network, key: Key) {
+  setUpdater(networkish: Networkish, key: Key) {
     const domain = this.networkToDomain(networkish);
 
     if (domain) this.updaters.set(domain, key);
   }
 
-  setWatcher(networkish: string | number | Network, key: Key) {
+  setWatcher(networkish: Networkish, key: Key) {
     const domain = this.networkToDomain(networkish);
 
     if (domain) this.watchers.set(domain, key);
   }
 
-  getDeployerKey(networkish: string | number | Network): Key | undefined {
+  getDeployerKey(networkish: Networkish): Key | undefined {
     const domain = this.networkToDomain(networkish);
     if (domain) return this.deployers.get(domain);
     return undefined;
   }
 
   getSignerKey(
-    networkish: string | number | Network,
+    networkish: Networkish,
     agentType?: string | AgentType
   ): Key | undefined {
     const domain = this.networkToDomain(networkish);
@@ -250,13 +256,13 @@ export class Nomad {
     return undefined;
   }
 
-  getUpdaterKey(networkish: string | number | Network): Key | undefined {
+  getUpdaterKey(networkish: Networkish): Key | undefined {
     const domain = this.networkToDomain(networkish);
     if (domain) return this.updaters.get(domain);
     return undefined;
   }
 
-  getWatcherKey(networkish: string | number | Network): Key | undefined {
+  getWatcherKey(networkish: Networkish): Key | undefined {
     const domain = this.networkToDomain(networkish);
     if (domain) return this.watchers.get(domain);
     return undefined;
@@ -269,7 +275,7 @@ export class Nomad {
   }
 
   async getNomadUpdater(
-    networkish: string | number | Network,
+    networkish: Networkish,
     addressOrIndex?: string | number
   ): Promise<Updater> {
     const network = this.getNetwork(networkish);
@@ -288,7 +294,7 @@ export class Nomad {
     return Updater.fromSigner(signerWithAddress, network.domain);
   }
 
-  setAllKey(networkish: string | number | Network, key: Key) {
+  setAllKey(networkish: Networkish, key: Key) {
     this.setDeployer(networkish, key);
     this.setSigner(networkish, key);
     this.setUpdater(networkish, key);
@@ -311,7 +317,7 @@ export class Nomad {
     }
   }
 
-  getNetwork(networkish: string | number | Network): Network | undefined {
+  getNetwork(networkish: Networkish): Network | undefined {
     const domain = this.networkToDomain(networkish);
     if (domain) return this.networks.get(domain);
     return undefined;
@@ -321,7 +327,7 @@ export class Nomad {
     return Array.from(this.networks.values());
   }
 
-  getCore(networkish: string | number | Network): NomadCoreContracts {
+  getCore(networkish: Networkish): NomadCoreContracts {
     const network = this.getNetwork(networkish);
     if (!network) throw new Error(`Network not found`);
 
@@ -333,7 +339,7 @@ export class Nomad {
     return contracts;
   }
 
-  getBridge(networkish: string | number | Network): NomadBridgeContracts {
+  getBridge(networkish: Networkish): NomadBridgeContracts {
     const network = this.getNetwork(networkish);
     if (!network) throw new Error(`Network not found`);
 
@@ -355,7 +361,7 @@ export class Nomad {
   }
 
   private networkToDomain(
-    networkish: string | number | Network
+    networkish: Networkish
   ): number | undefined {
     if (typeof networkish === "string") {
       return this.getDomainByName(networkish);
@@ -379,7 +385,7 @@ export class Nomad {
   }
 
   async getNomadDomainForNetwork(
-    networkish: string | number | Network
+    networkish: Networkish
   ): Promise<NomadDomain | undefined> {
     const network = this.getNetwork(networkish);
 
@@ -596,7 +602,7 @@ export class Nomad {
   }
 
   async getXAppConnectionManager(
-    networkish: string | number | Network
+    networkish: Networkish
   ): Promise<XAppConnectionManager> {
     const network = this.getNetwork(networkish);
     if (!network) throw new Error(`No network!`);
@@ -630,7 +636,7 @@ export class Nomad {
     return deploys;
   }
 
-  isDeployed(networkish: string | number | Network): boolean {
+  isDeployed(networkish: Networkish): boolean {
     const network = this.getNetwork(networkish);
     if (!network) throw new Error(`No network!`);
 
@@ -657,14 +663,14 @@ export class Nomad {
     if (newRemotes.length === 0) throw new Error(`No networks to deploy`);
 
     const oldRemotes = this.getDeployedRemotes();
+    const crossConnect: Network[] = (options?.connectToNew || []).map(n => this.getNetwork(n)!).filter(n => !!n);
 
     if (oldRemotes.length === 0) {
       await this.deployAllNetworks([this.host, ...newRemotes]);
     } else {
       await this.deployAdditionalNetworks(
         newRemotes,
-        this.host,
-        options?.hubNSpoke ? [] : oldRemotes
+        crossConnect
       );
     }
 
@@ -677,7 +683,7 @@ export class Nomad {
     return;
   }
 
-  async deployAllNetworks(networks: Network[]): Promise<DeployArtifacts> {
+  async deployAllNetworks(networks: Network[]): Promise<void> {
     if (!this.host.isGovernor()) {
       this.host.setLocalGovernor(this.getDeployerKey(this.host)!.toAddress());
     }
@@ -685,111 +691,62 @@ export class Nomad {
     const coreDeploysDeployed = await this.deployChains(networks);
     const bridgeDeploysDeployed = await this.deployBridges(networks);
 
-    const coreDeployArtifacts =
-      this.ejectCoreDeploysArtifacts(coreDeploysDeployed);
-    const bridgeDeployArtifacts = this.ejectBridgeDeploysArtifacts(
-      bridgeDeploysDeployed
-    );
+    this.updateArtifacts(coreDeploysDeployed, bridgeDeploysDeployed);
 
-    const artifacts = this.mergeCoreAndBridgeArtifacts(
-      coreDeployArtifacts,
-      bridgeDeployArtifacts
-    );
+    // const coreDeployArtifacts =
+    //   this.ejectCoreDeploysArtifacts(coreDeploysDeployed);
+    // const bridgeDeployArtifacts = this.ejectBridgeDeploysArtifacts(
+    //   bridgeDeploysDeployed
+    // );
 
-    this.setArtifacts(artifacts);
+    // const artifacts = this.mergeCoreAndBridgeArtifacts(
+    //   coreDeployArtifacts,
+    //   bridgeDeployArtifacts
+    // );
+
+    // this.setArtifacts(artifacts);
 
     this.setDeployed(...networks.map((n) => n.domain));
 
-    return artifacts;
+    return;
   }
 
   async deployAdditionalNetworks(
     newNetworks: Network[],
-    host: Network,
-    oldNetworks: Network[]
+    connect?: Network[],
   ): Promise<void> {
     for (const newNetwork of newNetworks) {
-      if (oldNetworks.length) {
-        await this.deployAdditionalNetworkCross(newNetwork, host, oldNetworks);
+      if (connect && connect.length) {
+        await this.deployAdditionalNetworkCross(newNetwork, connect)
       } else {
-        await this.deployAdditionalNetwork(newNetwork, host);
+        await this.deployAdditionalNetwork(newNetwork);
       }
     }
   }
 
-  async deployAdditionalNetwork(newNetwork: Network, host: Network) {
-    const govCoreDeploy = this.getExistingCoreDeploy(host)!;
-    const govBridgeDeploy = this.getExistingBridgeDeploy(host)!;
+  updateArtifacts(updatedCores: CoreDeploy[], updatedBridges: BridgeDeploy[]) {
 
-    const newCoreDeploy = this.getCoreDeploy(newNetwork);
-    await deployNewChain(newCoreDeploy, [govCoreDeploy]);
-
-    const newBridgeDeploy = this.getBridgeDeploy(newNetwork, newCoreDeploy);
-    await deployNewChainBridge(newBridgeDeploy, [govBridgeDeploy]);
-
-    const deployer = newCoreDeploy.chain.deployer as NonceManager;
-    const nonce = await deployer.getTransactionCount();
-    deployer.setTransactionCount(nonce);
-
-    await addConnection(
-      [newCoreDeploy, newBridgeDeploy],
-      [govCoreDeploy, govBridgeDeploy]
-    );
-
-    const coreDeployArtifacts = this.ejectCoreDeploysArtifacts([
-      newCoreDeploy,
-      govCoreDeploy,
-    ]);
-    const bridgeDeployArtifacts = this.ejectBridgeDeploysArtifacts([
-      newBridgeDeploy,
-      govBridgeDeploy,
-    ]);
-
-    const artifacts = this.mergeCoreAndBridgeArtifacts(
-      coreDeployArtifacts,
-      bridgeDeployArtifacts
-    );
-
-    this.setArtifacts(artifacts);
-
-    this.setDeployed(newNetwork.domain);
-  }
-
-  async deployAdditionalNetworkCross(
-    newNetwork: Network,
-    host: Network,
-    oldNetworks: Network[]
-  ) {
-    const oldCoreDeploys = [host, ...oldNetworks].map(
+    const oldCoreDeploys = this.getNetworks().map(
       (n) => this.getExistingCoreDeploy(n)!
-    );
+    ).filter(d => !!d);
 
-    const oldBridgeDeploys = [host, ...oldNetworks].map(
+    const toEjectCores = [
+      ...updatedCores,
+      ...oldCoreDeploys.filter(oldCore => !updatedCores.find(newCore => newCore.chain.domain === oldCore.chain.domain))
+    ];
+
+    const coreDeployArtifacts = this.ejectCoreDeploysArtifacts(toEjectCores);
+
+    const oldBridgeDeploys = this.getNetworks().map(
       (n) => this.getExistingBridgeDeploy(n)!
-    );
+    ).filter(d => !!d);
 
-    const newCoreDeploy = this.getCoreDeploy(newNetwork);
-    await deployNewChain(newCoreDeploy, oldCoreDeploys);
-
-    const newBridgeDeploy = this.getBridgeDeploy(newNetwork, newCoreDeploy);
-    await deployNewChainBridge(newBridgeDeploy, oldBridgeDeploys);
-
-    const deployer = newCoreDeploy.chain.deployer as NonceManager;
-    const nonce = await deployer.getTransactionCount();
-    deployer.setTransactionCount(nonce);
-
-    const zippedDeploys = zip(oldCoreDeploys, oldBridgeDeploys);
-
-    await addCrossConnection([newCoreDeploy, newBridgeDeploy], zippedDeploys);
-
-    const coreDeployArtifacts = this.ejectCoreDeploysArtifacts([
-      newCoreDeploy,
-      ...oldCoreDeploys,
-    ]);
-    const bridgeDeployArtifacts = this.ejectBridgeDeploysArtifacts([
-      newBridgeDeploy,
-      ...oldBridgeDeploys,
-    ]);
+    const toEjectBridges = [
+      ...updatedBridges,
+      ...oldBridgeDeploys.filter(oldBridge => !updatedBridges.find(newBridge => newBridge.chain.domain === oldBridge.chain.domain))
+    ];
+    
+    const bridgeDeployArtifacts = this.ejectBridgeDeploysArtifacts(toEjectBridges);
 
     const artifacts = this.mergeCoreAndBridgeArtifacts(
       coreDeployArtifacts,
@@ -797,9 +754,187 @@ export class Nomad {
     );
 
     this.setArtifacts(artifacts);
+  }
+
+  // OK!
+  async deployAdditionalNetwork(newNetwork: Network) {
+    const govCoreDeploy = this.getExistingCoreDeploy(this.host)!;
+    const govBridgeDeploy = this.getExistingBridgeDeploy(this.host)!;
+
+    const newCoreDeploy = this.getCoreDeploy(newNetwork);
+    await deployNewChain(newCoreDeploy, govCoreDeploy);
+
+    const newBridgeDeploy = this.getBridgeDeploy(newNetwork, newCoreDeploy);
+    await deployNewChainBridge(newBridgeDeploy, govBridgeDeploy);
+
+    const actions = connectionGovernanceActions(
+      govCoreDeploy, govBridgeDeploy,
+      newCoreDeploy, newBridgeDeploy,
+    );
+
+    await executeGovernanceActions(govCoreDeploy, actions);
+
+    this.updateArtifacts([newCoreDeploy, govCoreDeploy], [newBridgeDeploy, govBridgeDeploy]);
+    
+    await checkCoreDeploy(newCoreDeploy, [govCoreDeploy.chain.domain], govCoreDeploy.chain.domain);
+    await checkBridgeDeploy(newBridgeDeploy, [govCoreDeploy.chain.domain]);
+    await checkIncrementalDeploy(newCoreDeploy, newBridgeDeploy, [[govCoreDeploy, govBridgeDeploy]]);
 
     this.setDeployed(newNetwork.domain);
   }
+
+  // Not TESTED
+  async awaitActions(actions: GovernanceActions) {
+    const hubCore = this.getExistingCoreDeploy(this.host)!;
+    const coreToCalls: [CoreDeploy, CallData[]][] = [];
+
+    actions[1].forEach((d, i) => {
+      const net = this.getNetwork(d)!;
+      const core = this.getExistingCoreDeploy(net)!;
+      coreToCalls.push([core, actions[2][i]])
+    })
+
+    // coreToCalls.push([spokeBCore, callsA2B]);
+    // coreToCalls.push([spokeACore, callsB2A]);
+
+    return Promise.all(
+      coreToCalls.map(async ([deploy, calls]) => {
+        const localGov = deploy.contracts.governance!.proxy;
+  
+        const callsHash = batchHash(
+          calls.map((c) => ({ to: c.to.toString(), data: c.data.toString() })),
+        );
+        await new Promise((resolve, reject) => {
+          const timeout = setTimeout(
+            () => reject('Timedout waiting for received batches'),
+            180_000,
+          );
+          localGov.once(localGov.filters.BatchReceived(callsHash), (data) => {
+            resolve(data);
+            clearTimeout(timeout);
+          });
+        });
+  
+        console.log(
+          `Found new batch call with hash ${callsHash} at`,
+          deploy.chain.domain,
+        );
+        const execBatchCall = await localGov.executeCallBatch(calls);
+  
+        await execBatchCall.wait(hubCore.chain.confirmations);
+        console.log(`Successfully executed batch call at`, deploy.chain.domain);
+      }),
+    );
+  }
+
+  // Not TESTED
+  async deployAdditionalNetworkCross(newNetwork: Network, connectNetworks: Network[]) {
+
+    await this.deployAdditionalNetwork(newNetwork);
+
+    const govCoreDeploy = this.getExistingCoreDeploy(this.host)!;
+    const govBridgeDeploy = this.getExistingBridgeDeploy(this.host)!;
+    const newCoreDeploy = this.getCoreDeploy(newNetwork);
+    const newBridgeDeploy = this.getBridgeDeploy(newNetwork, newCoreDeploy);
+
+    const updatedCores = [govCoreDeploy, newCoreDeploy];
+    const updatedBridges = [govBridgeDeploy, newBridgeDeploy];
+
+    await Promise.all(connectNetworks.map(async (network) => {
+      const oldCoreDeploy = this.getExistingCoreDeploy(network)!;
+      const oldBridgeDeploy = this.getExistingBridgeDeploy(network)!;
+
+      const actions = crossConnectionGovernanceActions(
+        newCoreDeploy, newBridgeDeploy,
+        oldCoreDeploy, oldBridgeDeploy
+      );
+
+      await executeGovernanceActions(govCoreDeploy, actions);
+
+      await this.awaitActions(actions);
+
+      updatedCores.push(oldCoreDeploy);
+      updatedBridges.push(oldBridgeDeploy);
+    }));
+
+    
+
+    // const govCoreDeploy = this.getExistingCoreDeploy(this.host)!;
+    // const govBridgeDeploy = this.getExistingBridgeDeploy(this.host)!;
+
+    // const newCoreDeploy = this.getCoreDeploy(newNetwork);
+    // await deployNewChain(newCoreDeploy, govCoreDeploy);
+
+    // const newBridgeDeploy = this.getBridgeDeploy(newNetwork, newCoreDeploy);
+    // await deployNewChainBridge(newBridgeDeploy, govBridgeDeploy);
+
+    // // const deployer = newCoreDeploy.chain.deployer as NonceManager;
+    // // const nonce = await deployer.getTransactionCount();
+    // // deployer.setTransactionCount(nonce);
+
+    // await addConnection(
+    //   newCoreDeploy, newBridgeDeploy,
+    //   govCoreDeploy, govBridgeDeploy
+    // );
+
+    // const actions = crossConnectionGovernanceActions(
+    //   newCoreDeploy, newBridgeDeploy,
+    //   govCoreDeploy, govBridgeDeploy
+    // );
+
+    // const tx = await executeGovernanceActions(govCoreDeploy, actions);
+    // await tx.wait();
+
+    this.updateArtifacts([newCoreDeploy, govCoreDeploy], [newBridgeDeploy, govBridgeDeploy]);
+
+    this.setDeployed(newNetwork.domain);
+  }
+
+  // async deployAdditionalNetworkCross(
+  //   newNetwork: Network,
+  //   host: Network,
+  //   oldNetworks: Network[]
+  // ) {
+  //   const oldCoreDeploys = [host, ...oldNetworks].map(
+  //     (n) => this.getExistingCoreDeploy(n)!
+  //   );
+
+  //   const oldBridgeDeploys = [host, ...oldNetworks].map(
+  //     (n) => this.getExistingBridgeDeploy(n)!
+  //   );
+
+  //   const newCoreDeploy = this.getCoreDeploy(newNetwork);
+  //   await deployNewChain(newCoreDeploy, oldCoreDeploys);
+
+  //   const newBridgeDeploy = this.getBridgeDeploy(newNetwork, newCoreDeploy);
+  //   await deployNewChainBridge(newBridgeDeploy, oldBridgeDeploys);
+
+  //   const deployer = newCoreDeploy.chain.deployer as NonceManager;
+  //   const nonce = await deployer.getTransactionCount();
+  //   deployer.setTransactionCount(nonce);
+
+  //   const zippedDeploys = zip(oldCoreDeploys, oldBridgeDeploys);
+
+  //   await addCrossConnection(govCoreDeploy, [newCoreDeploy, newBridgeDeploy], zippedDeploys);
+
+  //   const coreDeployArtifacts = this.ejectCoreDeploysArtifacts([
+  //     newCoreDeploy,
+  //     ...oldCoreDeploys,
+  //   ]);
+  //   const bridgeDeployArtifacts = this.ejectBridgeDeploysArtifacts([
+  //     newBridgeDeploy,
+  //     ...oldBridgeDeploys,
+  //   ]);
+
+  //   const artifacts = this.mergeCoreAndBridgeArtifacts(
+  //     coreDeployArtifacts,
+  //     bridgeDeployArtifacts
+  //   );
+
+  //   this.setArtifacts(artifacts);
+
+  //   this.setDeployed(newNetwork.domain);
+  // }
 
   async connectNetworks(): Promise<void> {
     await Promise.all(this.getNetworks().map((n) => n.up()));
@@ -1039,6 +1174,7 @@ export class Nomad {
           .slice()
           .filter((remote) => remote.chain.domain !== deploy.chain.domain);
 
+          // console.log(`Ejecting Core for`, deploy.chain.domain, 'with', remotes.map(r => r.chain.domain))
         const config = CoreDeploy.buildConfig(deploy, remotes);
         const name = deploy.chain.name;
         const contracts = deploy.contracts;
@@ -1241,7 +1377,7 @@ function exportDeployArtifacts(
 
 interface DeployOptions {
   injectSigners?: boolean;
-  hubNSpoke?: boolean;
+  connectToNew?: Networkish[]
 }
 
 interface ExplicitKey {

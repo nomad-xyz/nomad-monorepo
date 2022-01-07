@@ -97,7 +97,7 @@ export async function sendTokensAndConfirm(
         return true;
       } else {
         newBalance = await tokenContract!.balanceOf(receiver);
-        console.log(`New balance:`, parseInt(newBalance.toString()));
+        console.log(`New balance:`, parseInt(newBalance.toString()), 'must be:', parseInt(tokenContract.toString()));
       }
     },
     4 * 60_000,

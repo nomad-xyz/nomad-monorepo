@@ -7,6 +7,8 @@ import { DockerizedActor } from "./actors";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { Governor } from "@nomad-xyz/deploy/src/core/CoreDeploy";
 
+export type Networkish = string | number | Network;
+
 enum NetworkStatus {
   Running,
   Stopped,
