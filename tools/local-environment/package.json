@@ -23,7 +23,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@nomad-xyz/contract-interfaces": "^1.0.1",
+    "@nomad-xyz/contract-interfaces": "^1.0.2",
     "@nomad-xyz/deploy": "^0.1.2",
     "@nomad-xyz/sdk": "^0.1.7",
     "@nomad-xyz/test": "file:/../../typescript/nomad-tests",
