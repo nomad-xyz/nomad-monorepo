@@ -113,6 +113,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.ERC20__factory>;
     getContractFactory(
+      name: "MultiChainGovernanceRouter",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.MultiChainGovernanceRouter__factory>;
+    getContractFactory(
       name: "PingPongRouter",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.PingPongRouter__factory>;

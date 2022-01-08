@@ -26,6 +26,7 @@ export type { TestBridgeRouter } from "./TestBridgeRouter";
 export type { TestEncoding } from "./TestEncoding";
 export type { TokenRegistry } from "./TokenRegistry";
 export type { ERC20 } from "./ERC20";
+export type { MultiChainGovernanceRouter } from "./MultiChainGovernanceRouter";
 export type { PingPongRouter } from "./PingPongRouter";
 export type { Router } from "./Router";
 export type { RouterTemplate } from "./RouterTemplate";
@@ -59,6 +60,7 @@ export { TestBridgeRouter__factory } from "./factories/TestBridgeRouter__factory
 export { TestEncoding__factory } from "./factories/TestEncoding__factory";
 export { TokenRegistry__factory } from "./factories/TokenRegistry__factory";
 export { ERC20__factory } from "./factories/ERC20__factory";
+export { MultiChainGovernanceRouter__factory } from "./factories/MultiChainGovernanceRouter__factory";
 export { PingPongRouter__factory } from "./factories/PingPongRouter__factory";
 export { Router__factory } from "./factories/Router__factory";
 export { RouterTemplate__factory } from "./factories/RouterTemplate__factory";
