@@ -55,7 +55,7 @@ export async function executeGovernanceActions(
 ) {
   const governingRouter = hubCore.contracts.governance!.proxy;
   const tx = await governingRouter.executeGovernanceActions(...calls);
-  return await tx.wait(hubCore.chain.domain);
+  return await tx.wait(hubCore.chain.confirmations);
 }
 
 /**
