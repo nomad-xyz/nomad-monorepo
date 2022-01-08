@@ -2,6 +2,7 @@ import { ethers } from 'ethers';
 import { core } from '@nomad-xyz/contract-interfaces';
 import { Contracts } from '../../contracts';
 import { ReplicaInfo } from '../domains/domain';
+import Safe, { EthersAdapter } from '@gnosis.pm/safe-core-sdk';
 
 type Address = string;
 
@@ -17,12 +18,25 @@ interface Core {
   governanceRouter: Address;
 }
 
+export type LocalGovernor = {
+  location: 'local';
+  identifier: string;
+};
+
+export type RemoteGovernor = {
+  location: 'remote';
+  domain: number;
+};
+
+export type Governor = LocalGovernor | RemoteGovernor;
+
 export class CoreContracts extends Contracts {
-  readonly domain;
+  readonly domain: number;
   readonly _home: Address;
   readonly _replicas: Map<number, InternalReplica>;
-  readonly _governanceRouter: Address;
+  readonly governanceRouterAddress: Address;
   private providerOrSigner?: ethers.providers.Provider | ethers.Signer;
+  private _governor?: Governor;
 
   constructor(
     domain: number,
@@ -35,7 +49,7 @@ export class CoreContracts extends Contracts {
     this.providerOrSigner = providerOrSigner;
     this.domain = domain;
     this._home = home;
-    this._governanceRouter = governaceRouter;
+    this.governanceRouterAddress = governaceRouter;
 
     this._replicas = new Map();
     replicas.forEach((replica) => {
@@ -70,9 +84,59 @@ export class CoreContracts extends Contracts {
       throw new Error('No provider or signer. Call `connect` first.');
     }
     return core.GovernanceRouter__factory.connect(
-      this._governanceRouter,
+      this.governanceRouterAddress,
       this.providerOrSigner,
     );
+  }
+
+  async governor(): Promise<Governor> {
+    if (this._governor) {
+      return this._governor;
+    }
+    const [domain, identifier] = await Promise.all([
+      this.governanceRouter.governorDomain(),
+      this.governanceRouter.governor(),
+    ]);
+    if (identifier === ethers.constants.AddressZero) {
+      this._governor = { location: 'remote', domain };
+    } else {
+      this._governor = { location: 'local', identifier };
+    }
+    return this._governor;
+  }
+
+  async governorSafe(): Promise<Safe> {
+    if (!this.providerOrSigner) {
+      throw new Error('No provider or signer. Call `connect` first.');
+    }
+
+    // hate all this but Safe requires a signer with a provider
+    let signer: ethers.Signer = new ethers.VoidSigner(
+      ethers.constants.AddressZero,
+    );
+    if (ethers.providers.Provider.isProvider(this.providerOrSigner)) {
+      signer = signer.connect(this.providerOrSigner);
+    } else {
+      signer = this.providerOrSigner as ethers.Signer;
+    }
+
+    const ethAdapter = new EthersAdapter({
+      ethers,
+      signer,
+    });
+    const governor = await this.governor();
+    if (governor.location === 'remote') {
+      throw new Error(
+        'Cannot produce safe for remote governor. Call this method only from the core on the governor domain.',
+      );
+    }
+    try {
+      return Safe.create({ ethAdapter, safeAddress: governor.identifier });
+    } catch (e) {
+      throw new Error(
+        `Unable to connect to safe on domain ${this.domain}. Safe library threw error: ${e}`,
+      );
+    }
   }
 
   connect(providerOrSigner: ethers.providers.Provider | ethers.Signer): void {
@@ -93,7 +157,7 @@ export class CoreContracts extends Contracts {
       id: this.domain,
       home: this._home,
       replicas: replicas,
-      governanceRouter: this._governanceRouter,
+      governanceRouter: this.governanceRouterAddress,
     };
   }
 
