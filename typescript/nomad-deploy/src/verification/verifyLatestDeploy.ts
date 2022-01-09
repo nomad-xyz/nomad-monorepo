@@ -1,8 +1,8 @@
 import { verifyProxy } from './verifyProxy';
 
 import {
-  getPathToLatestDeployConfig,
-  getPathToLatestBridgeConfig,
+  getPathToDeployConfig,
+  getPathToBridgeConfig,
   getVerificationInputFromDeploy,
 } from './readDeployOutput';
 
@@ -40,8 +40,8 @@ function etherscanLink(network: string, address: string) {
  * for the network that hardhat is configured to
  * and attempt to verify those contracts' source code on Etherscan
  * */
-export async function verifyLatestBridgeDeploy(hre: any, etherscanKey: string) {
-  const path = getPathToLatestBridgeConfig();
+export async function verifyBridgeDeploy(hre: any, etherscanKey: string, environment: string) {
+  const path = getPathToBridgeConfig(environment);
   return verifyDeploy(path, etherscanKey, hre);
 }
 
@@ -51,8 +51,8 @@ export async function verifyLatestBridgeDeploy(hre: any, etherscanKey: string) {
  * for the network that hardhat is configured to
  * and attempt to verify those contracts' source code on Etherscan
  * */
-export async function verifyLatestCoreDeploy(hre: any, etherscanKey: string) {
-  const path = getPathToLatestDeployConfig();
+export async function verifyCoreDeploy(hre: any, etherscanKey: string, environment: string) {
+  const path = getPathToDeployConfig(environment);
   return verifyDeploy(path, etherscanKey, hre);
 }
 

@@ -6,6 +6,7 @@ import { CoreDeploy, ExistingCoreDeploy } from './CoreDeploy';
 import * as contracts from '@nomad-xyz/contract-interfaces/dist/core';
 import { checkCoreDeploy } from './checks';
 import { toBytes32, CallData, formatCall } from '../utils';
+import {getPathToDeployConfig} from "../verification/readDeployOutput";
 
 function log(isTest: boolean, str: string) {
   if (!isTest) {
@@ -971,20 +972,6 @@ export function writePartials(dir: string) {
   }
 }
 
-function getDirectory(deploy: CoreDeploy) {
-  const environment = deploy.config.environment;
-  let folder;
-  if (environment == 'dev') {
-    folder = 'development';
-  } else if (environment == 'staging') {
-    folder = 'staging';
-  } else if (environment == 'prod') {
-    folder = 'mainnet';
-  }
-  const dir = `../../rust/config/${folder}`;
-  return dir;
-}
-
 function writeOutput(local: CoreDeploy, remotes: CoreDeploy[], dir: string) {
   const config = CoreDeploy.buildConfig(local, remotes);
   const sdk = CoreDeploy.buildSDK(local, remotes);
@@ -1013,7 +1000,7 @@ function writeOutput(local: CoreDeploy, remotes: CoreDeploy[], dir: string) {
  */
 export function writeDeployOutput(deploys: CoreDeploy[]) {
   log(deploys[0].test, `Have ${deploys.length} deploys`);
-  const dir = getDirectory(deploys[0]);
+  const dir = getPathToDeployConfig(deploys[0].config.environment);
   for (const local of deploys) {
     // get remotes
     const remotes = deploys
@@ -1033,7 +1020,7 @@ export function writeDeployOutput(deploys: CoreDeploy[]) {
 export function writeHubAndSpokeOutput(hub: CoreDeploy, spokes: CoreDeploy[]) {
   log(hub.test, `Have 1 Hub and ${spokes.length} Spoke deploys`);
 
-  const dir = getDirectory(hub);
+  const dir = getPathToDeployConfig(hub.config.environment);
 
   // write spoke outputs
   for (let spoke of spokes) {
