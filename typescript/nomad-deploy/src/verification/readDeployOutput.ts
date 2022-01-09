@@ -1,7 +1,7 @@
 import fs from 'fs';
 import { ContractVerificationName } from '../deploy';
 
-export const VALID_ENVIRONMENTS = ["dev", "staging", "prod"];
+export const VALID_ENVIRONMENTS = ['dev', 'staging', 'prod'];
 
 type ContractInput = {
   name: ContractVerificationName;
@@ -55,16 +55,22 @@ export function getPathToBridgeConfigFromCore(coreConfigPath: string) {
  * of Nomad core system deploys
  * */
 export function getPathToDeployConfig(environment: string) {
-  if(!isValidEnvironment) {
-    throw new Error(`${environment} is not a valid environment. Please choose from ${JSON.stringify(VALID_ENVIRONMENTS, null, 2)}`)
+  if (!isValidEnvironment) {
+    throw new Error(
+      `${environment} is not a valid environment. Please choose from ${JSON.stringify(
+        VALID_ENVIRONMENTS,
+        null,
+        2,
+      )}`,
+    );
   }
   let folder;
-  if (environment == "staging") {
-    folder = "staging";
-  } else if (environment == "prod") {
-    folder = "mainnet";
+  if (environment == 'staging') {
+    folder = 'staging';
+  } else if (environment == 'prod') {
+    folder = 'mainnet';
   } else {
-    folder = "development";
+    folder = 'development';
   }
   return `../../rust/config/${folder}`;
 }

@@ -5,31 +5,36 @@ import { BridgeConfig } from '../../src/bridge/BridgeDeploy';
 
 dotenv.config();
 
-const rpc = process.env.CELO_RPC;
+const rpc = process.env.MOONBEAM_RPC;
 if (!rpc) {
   throw new Error('Missing RPC URI');
 }
 
 export const chainJson: ChainJson = {
-  name: 'celo',
+  name: 'moonbeam',
   rpc,
-  deployerKey: process.env.CELO_DEPLOYER_KEY,
-  domain: 0x63656c6f, // b'celo' interpreted as an int
+  deployerKey: process.env.MOONBEAM_DEPLOYER_KEY,
+  domain: 0x1234, // TODO!!!!
+  gas: {
+    price: {
+      maxFeePerGas: '40000000000', // 40 gwei TODO: verify
+      maxPriorityFeePerGas: '4000000000', // 4 gwei TODO: verify
+    },
+  },
   chunk: 2000,
-  timelag: 5,
+  timelag: 20,
 };
 
 export const chain = toChain(chainJson);
 
 export const config: CoreConfig = {
   environment: 'prod',
-  updater: '0xDB2091535eb0Ee447Ce170DDC25204FEA822dd81',
+  updater: 'TODO: verify',
   recoveryTimelock: 60 * 60 * 24, // 1 day
-  recoveryManager: '0x3D9330014952Bf0A3863FEB7a657bfFA5C9D40B9',
-  optimisticSeconds: 60 * 15, // 15 minutes
-  watchers: ['0xeE42B7757798cf495CDaA8eDb0CC237F07c60C81'],
-  // governor: {},
-  processGas: 850_000,
+  recoveryManager: 'TODO: deploy',
+  optimisticSeconds: 60 * 30, // 30 minutes
+  watchers: ['TODO: verify'],
+  processGas: 850_000, // TODO: verify
   reserveGas: 15_000,
 };
 

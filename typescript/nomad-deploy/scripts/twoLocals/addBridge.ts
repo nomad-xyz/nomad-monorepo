@@ -7,7 +7,7 @@ import {
   ExistingBridgeDeploy,
 } from '../../src/bridge/BridgeDeploy';
 import { deployEnvironment } from '../../src/chain';
-import {getPathToDeployConfig} from "../../src/verification/readDeployOutput";
+import { getPathToDeployConfig } from '../../src/verification/readDeployOutput';
 
 let environment = deployEnvironment();
 const path = getPathToDeployConfig(environment);

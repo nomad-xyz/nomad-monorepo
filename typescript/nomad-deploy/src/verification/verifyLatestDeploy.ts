@@ -40,7 +40,11 @@ function etherscanLink(network: string, address: string) {
  * for the network that hardhat is configured to
  * and attempt to verify those contracts' source code on Etherscan
  * */
-export async function verifyBridgeDeploy(hre: any, etherscanKey: string, environment: string) {
+export async function verifyBridgeDeploy(
+  hre: any,
+  etherscanKey: string,
+  environment: string,
+) {
   const path = getPathToBridgeConfig(environment);
   return verifyDeploy(path, etherscanKey, hre);
 }
@@ -51,7 +55,11 @@ export async function verifyBridgeDeploy(hre: any, etherscanKey: string, environ
  * for the network that hardhat is configured to
  * and attempt to verify those contracts' source code on Etherscan
  * */
-export async function verifyCoreDeploy(hre: any, etherscanKey: string, environment: string) {
+export async function verifyCoreDeploy(
+  hre: any,
+  etherscanKey: string,
+  environment: string,
+) {
   const path = getPathToDeployConfig(environment);
   return verifyDeploy(path, etherscanKey, hre);
 }

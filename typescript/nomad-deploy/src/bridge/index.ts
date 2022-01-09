@@ -6,7 +6,7 @@ import fs from 'fs';
 import { BridgeDeploy } from './BridgeDeploy';
 import TestBridgeDeploy from './TestBridgeDeploy';
 import assert from 'assert';
-import {getPathToBridgeConfigFromCore} from "../verification/readDeployOutput";
+import { getPathToBridgeConfigFromCore } from '../verification/readDeployOutput';
 
 type AnyBridgeDeploy = BridgeDeploy | TestBridgeDeploy;
 

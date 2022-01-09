@@ -61,7 +61,11 @@ export class ExistingBridgeDeploy extends BridgeDeploy {
 
     if (!addresses) {
       const bridgeConfigPath = getPathToBridgeConfigFromCore(coreDeployPath);
-      addresses = parseFileFromDeploy(bridgeConfigPath, chain.name, "contracts");
+      addresses = parseFileFromDeploy(
+        bridgeConfigPath,
+        chain.name,
+        'contracts',
+      );
     }
 
     this.contracts = BridgeContracts.fromAddresses(addresses!, chain.provider);

@@ -26,7 +26,7 @@ const chainJson: ChainJson = {
   rpc,
   deployerKey,
   domain: 1000,
-  gasPrice: BigNumber.from(10000000000),
+  gas: { price: '10000000000' },
   chunk: 2000,
   timelag: 5,
 };

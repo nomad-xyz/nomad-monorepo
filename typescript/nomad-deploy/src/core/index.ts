@@ -6,7 +6,7 @@ import { CoreDeploy, ExistingCoreDeploy } from './CoreDeploy';
 import * as contracts from '@nomad-xyz/contract-interfaces/dist/core';
 import { checkCoreDeploy } from './checks';
 import { toBytes32, CallData, formatCall } from '../utils';
-import {getPathToDeployConfig} from "../verification/readDeployOutput";
+import { getPathToDeployConfig } from '../verification/readDeployOutput';
 
 function log(isTest: boolean, str: string) {
   if (!isTest) {
@@ -575,7 +575,7 @@ function containsDuplicateDomains(array: any): boolean {
  *
  * @param deploys - An array of chain deploys
  */
-export async function deployNChains(deploys: CoreDeploy[]) {
+export async function deployComplete(deploys: CoreDeploy[]) {
   const domains = deploys.map((deploy) => deploy.chain.domain);
   if (containsDuplicateDomains(domains)) {
     throw new Error(

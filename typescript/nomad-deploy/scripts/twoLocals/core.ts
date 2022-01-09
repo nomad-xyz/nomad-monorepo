@@ -1,4 +1,4 @@
-import { deployNChains } from '../../src/core';
+import { deployComplete } from '../../src/core';
 import * as jerry from '../../config/local/jerry';
 import * as tom from '../../config/local/tom';
 import { CoreDeploy } from '../../src/core/CoreDeploy';
@@ -13,4 +13,4 @@ let jerryConfig =
 const tomDeploy = new CoreDeploy(tom.chain, tomConfig);
 const jerryDeploy = new CoreDeploy(jerry.chain, jerryConfig);
 
-deployNChains([tomDeploy, jerryDeploy]);
+deployComplete([tomDeploy, jerryDeploy]);

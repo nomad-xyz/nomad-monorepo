@@ -4,7 +4,7 @@ import * as daffy from '../../config/local/daffy';
 import { deployNewChain } from '../../src/core';
 import { CoreDeploy, ExistingCoreDeploy } from '../../src/core/CoreDeploy';
 import { deployEnvironment } from '../../src/chain';
-import {getPathToDeployConfig} from "../../src/verification/readDeployOutput";
+import { getPathToDeployConfig } from '../../src/verification/readDeployOutput';
 
 let environment = deployEnvironment();
 const path = getPathToDeployConfig(environment);
