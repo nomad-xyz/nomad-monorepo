@@ -1,4 +1,10 @@
 import { arrayify, BytesLike, hexlify } from '@ethersproject/bytes';
+import Safe, { EthersAdapter } from '@gnosis.pm/safe-core-sdk';
+import {
+  SafeEthersSigner,
+  SafeEthersSignerOptions,
+  SafeService,
+} from '@gnosis.pm/safe-ethers-adapters';
 import { ethers } from 'ethers';
 
 export type Address = string;
@@ -98,4 +104,29 @@ export function evmId(data: BytesLike): Address {
  */
 export function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Wrap an ethers Signer in a Gnosis Safe signer
+ * @param safeAddress The address of the Gnosis Safe
+ * @param signer The ethers signer to wrap. This signer SHOULD have ownership
+ * rights over the safe.
+ * @param serviceUrl The URL of the gnosis transaction service
+ * @param options { pollingDelay?: number; }
+ * @returns An ethers Signer connected to a gnosis safe
+ */
+export async function toSafeSigner(
+  safeAddress: Address,
+  signer: ethers.Signer,
+  serviceUrl: string,
+  options?: SafeEthersSignerOptions,
+): Promise<SafeEthersSigner> {
+  if (!signer.provider) throw new Error('No provider specified');
+  const service = new SafeService(serviceUrl);
+  const ethAdapter = new EthersAdapter({
+    ethers,
+    signer,
+  });
+  const safe = await Safe.create({ ethAdapter, safeAddress });
+  return new SafeEthersSigner(safe, service, signer.provider, options);
 }

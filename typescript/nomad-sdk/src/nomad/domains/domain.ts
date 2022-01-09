@@ -8,6 +8,7 @@ export interface NomadDomain extends Domain {
   home: Address;
   replicas: ReplicaInfo[];
   governanceRouter: Address;
+  safeService?: string;
 }
 
 export interface ReplicaInfo {
