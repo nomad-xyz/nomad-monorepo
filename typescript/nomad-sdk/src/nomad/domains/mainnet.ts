@@ -18,6 +18,7 @@ export const ethereum: NomadDomain = {
     },
   ],
   governanceRouter: 'TODO',
+  safeService: 'https://safe-transaction.gnosis.io/',
 };
 
 export const polygon: NomadDomain = {

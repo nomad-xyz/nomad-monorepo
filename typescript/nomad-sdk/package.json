@@ -35,6 +35,7 @@
   },
   "dependencies": {
     "@gnosis.pm/safe-core-sdk": "^1.3.0",
+    "@gnosis.pm/safe-ethers-adapters": "file:../../../safe-core-sdk/packages/safe-ethers-adapters",
     "@nomad-xyz/contract-interfaces": "file:../typechain",
     "ethers": "^5.4.6",
     "web3": "^1.6.1"

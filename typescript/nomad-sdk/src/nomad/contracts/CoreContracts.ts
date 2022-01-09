@@ -2,7 +2,7 @@ import { ethers } from 'ethers';
 import { core } from '@nomad-xyz/contract-interfaces';
 import { Contracts } from '../../contracts';
 import { ReplicaInfo } from '../domains/domain';
-import Safe, { EthersAdapter } from '@gnosis.pm/safe-core-sdk';
+import { CallBatch } from '../govern';
 
 type Address = string;
 
@@ -105,38 +105,8 @@ export class CoreContracts extends Contracts {
     return this._governor;
   }
 
-  async governorSafe(): Promise<Safe> {
-    if (!this.providerOrSigner) {
-      throw new Error('No provider or signer. Call `connect` first.');
-    }
-
-    // hate all this but Safe requires a signer with a provider
-    let signer: ethers.Signer = new ethers.VoidSigner(
-      ethers.constants.AddressZero,
-    );
-    if (ethers.providers.Provider.isProvider(this.providerOrSigner)) {
-      signer = signer.connect(this.providerOrSigner);
-    } else {
-      signer = this.providerOrSigner as ethers.Signer;
-    }
-
-    const ethAdapter = new EthersAdapter({
-      ethers,
-      signer,
-    });
-    const governor = await this.governor();
-    if (governor.location === 'remote') {
-      throw new Error(
-        'Cannot produce safe for remote governor. Call this method only from the core on the governor domain.',
-      );
-    }
-    try {
-      return Safe.create({ ethAdapter, safeAddress: governor.identifier });
-    } catch (e) {
-      throw new Error(
-        `Unable to connect to safe on domain ${this.domain}. Safe library threw error: ${e}`,
-      );
-    }
+  async newGovernanceBatch(): Promise<CallBatch> {
+    return CallBatch.fromCore(this);
   }
 
   connect(providerOrSigner: ethers.providers.Provider | ethers.Signer): void {

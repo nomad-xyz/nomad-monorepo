@@ -12,6 +12,7 @@
     "src/nomad/domains/*.ts",
     "src/nomad/events/*.ts",
     "src/nomad/messages/*.ts",
-    "src/nomad/tokens/*.ts"
+    "src/nomad/tokens/*.ts",
+    "src/nomad/govern/*.ts"
   ]
 }
