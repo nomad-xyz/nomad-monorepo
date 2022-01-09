@@ -4,7 +4,7 @@ import "@typechain/hardhat";
 import "@nomiclabs/hardhat-etherscan";
 
 import { task } from "hardhat/config";
-import { verifyBridgeDeploy } from "../../typescript/nomad-deploy/src/verification/verifyLatestDeploy";
+import { verifyBridgeDeploy } from "../../typescript/nomad-deploy/src/verification/verifyDeploy";
 
 import * as dotenv from "dotenv";
 dotenv.config();
