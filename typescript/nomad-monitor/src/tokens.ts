@@ -1,4 +1,4 @@
-import { mainnet } from './registerContext';
+import { dev } from './registerContext';
 import { buildConfig } from './config';
 
 import {
@@ -28,7 +28,7 @@ export async function getDomainDeployedTokens(
   nameOrDomain: string | number,
 ): Promise<Deploy[]> {
   const domain = context.resolveDomain(nameOrDomain);
-  const router = context.mustGetBridge(domain).bridgeRouter;
+  const registry = context.mustGetBridge(domain).tokenRegistry;
   // get Send events
   const annotated = await queryAnnotatedEvents<
     TokenDeployedTypes,
@@ -36,8 +36,8 @@ export async function getDomainDeployedTokens(
   >(
     context,
     domain,
-    router as TSContract<TokenDeployedTypes, TokenDeployedArgs>,
-    router.filters.TokenDeployed(),
+    registry as TSContract<TokenDeployedTypes, TokenDeployedArgs>,
+    registry.filters.TokenDeployed(),
     context.mustGetDomain(domain).paginate?.from,
   );
 
@@ -110,6 +110,6 @@ export async function persistDeployedTokens(
 }
 
 (async function main() {
-  const config = buildConfig("tokens.ts")
-  await persistDeployedTokens(mainnet, config.googleCredentialsFile)
+  const config = buildConfig("tokens")
+  await persistDeployedTokens(dev, config.googleCredentialsFile)
 })();
