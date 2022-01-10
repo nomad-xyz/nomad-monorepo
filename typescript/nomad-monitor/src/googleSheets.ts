@@ -31,8 +31,10 @@ async function uploadDeployedTokens(
   credentialsFile: string = './credentials.json',
 ) {
   const credentials = JSON.parse(fs.readFileSync(credentialsFile, 'utf8'));
+  // Production Spreadsheet ID: 1RooLLPTtvFaiiiuJH381fcRRgGTajv7w973xUThy5-4
+  // Development Spreadsheet ID: 1AApo2bkGdCRN2w6CJYRF_rIkEnrIt1Ab4C_YZ_FnSn8
   const doc = new GoogleSpreadsheet(
-    '1tBRMjCtHsxzDw2SOy_q4hRatDNnC64ldZvhUXcqJJKs',
+    '1AApo2bkGdCRN2w6CJYRF_rIkEnrIt1Ab4C_YZ_FnSn8',
   );
   await doc.useServiceAccountAuth(credentials);
   await doc.loadInfo();

@@ -72,6 +72,9 @@ function getMetrics(script: string): MetricsCollector {
     case 'processor':
       metrics = new ProcessLatencyMetrics(environment, createLogger(script));
       break;
+    case 'tokens':
+      metrics = undefined;
+      break;
     default:
       throw new Error('Must define a monitor script to run!');
   }
