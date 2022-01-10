@@ -1,4 +1,5 @@
 import { ethers } from 'ethers';
+import { NomadContext } from '..';
 import { CoreContracts } from '../contracts';
 
 import * as utils from './utils';
@@ -91,5 +92,27 @@ export class CallBatch {
     return await signer.sendTransaction(
       this.built as ethers.PopulatedTransaction,
     );
+  }
+
+  domainHash(domain: number) {
+    const calls = this.remote.get(domain);
+    if (!calls) throw new Error(`Not found calls for remote ${domain}`);
+
+    return utils.batchHash(calls);
+  }
+
+  // Waits for a specified domain to receive its batch
+  async wait(domain: number, context: NomadContext) {
+    await new Promise((resolve) => {
+      const router = context.mustGetCore(domain).governanceRouter;
+      const hash = this.domainHash(domain);
+      router.once(router.filters.BatchReceived(hash), resolve);
+    });
+  }
+
+  // Waits for all participating domains to receive their batches
+  async waitAll(context: NomadContext) {
+    const domains = Array.from(this.remote.keys());
+    await Promise.all(domains.map((domain) => this.wait(domain, context)));
   }
 }
