@@ -1,0 +1,16 @@
+{
+  "name": "kovan",
+  "id": 3000,
+  "paginate": {
+    "from": 29193952,
+    "blocks": 2000
+  },
+  "home": "0xA2d62FbcD779231894586CFC569E8a085662d5Bb",
+  "replicas": [
+    {
+      "domain": 5000,
+      "address": "0x3333744724611Ef93521446670b4cC4009338E58"
+    }
+  ],
+  "governanceRouter": "0x2960C101Cb72eCC35a515e247608b17B46f38bA6"
+}

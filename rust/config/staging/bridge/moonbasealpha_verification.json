@@ -1,0 +1,68 @@
+[
+  {
+    "name": "BridgeToken Implementation",
+    "address": "0xa78f972dCA619b6C8af2CEc8aa3293931A4cAc80",
+    "constructorArguments": []
+  },
+  {
+    "name": "BridgeToken UpgradeBeacon",
+    "address": "0x4ed8c9B40FaBccFeca732D920bC4877d78D32E77",
+    "constructorArguments": [
+      "0xa78f972dCA619b6C8af2CEc8aa3293931A4cAc80",
+      "0x82Ba84E987bb96bC071CE2412B81D96DD0eB261E"
+    ]
+  },
+  {
+    "name": "BridgeToken Proxy",
+    "address": "0xe5222901E25Cb334BfB08A15c68d3bb65e273E30",
+    "constructorArguments": [
+      "0x4ed8c9B40FaBccFeca732D920bC4877d78D32E77",
+      "0x"
+    ],
+    "isProxy": true
+  },
+  {
+    "name": "TokenRegistry Implementation",
+    "address": "0x8c025AEe15bc475991d6B6D645043fC9c4d73463",
+    "constructorArguments": []
+  },
+  {
+    "name": "TokenRegistry UpgradeBeacon",
+    "address": "0x19cA8373e802C527e12dd9C3A5b45f73abEF86C3",
+    "constructorArguments": [
+      "0x8c025AEe15bc475991d6B6D645043fC9c4d73463",
+      "0x82Ba84E987bb96bC071CE2412B81D96DD0eB261E"
+    ]
+  },
+  {
+    "name": "TokenRegistry Proxy",
+    "address": "0x5AFfc0aa97Af0e5de401b156De38CeE7b34cfCA0",
+    "constructorArguments": [
+      "0x19cA8373e802C527e12dd9C3A5b45f73abEF86C3",
+      "0x485cc9550000000000000000000000004ed8c9b40fabccfeca732d920bc4877d78d32e77000000000000000000000000486612b71af4e558d653d2b8f0696e24b1363302"
+    ],
+    "isProxy": true
+  },
+  {
+    "name": "BridgeRouter Implementation",
+    "address": "0xce6DB382Fc785eb6bc90D751081cb79F64D8AE77",
+    "constructorArguments": []
+  },
+  {
+    "name": "BridgeRouter UpgradeBeacon",
+    "address": "0xeC61a85F851833DA177C1Ca39ece1aE9F6566947",
+    "constructorArguments": [
+      "0xce6DB382Fc785eb6bc90D751081cb79F64D8AE77",
+      "0x82Ba84E987bb96bC071CE2412B81D96DD0eB261E"
+    ]
+  },
+  {
+    "name": "BridgeRouter Proxy",
+    "address": "0xEDC1bcB5a6B47483eD9640bbE4c91C3d2A9A6286",
+    "constructorArguments": [
+      "0xeC61a85F851833DA177C1Ca39ece1aE9F6566947",
+      "0x485cc9550000000000000000000000005affc0aa97af0e5de401b156de38cee7b34cfca0000000000000000000000000486612b71af4e558d653d2b8f0696e24b1363302"
+    ],
+    "isProxy": true
+  }
+]

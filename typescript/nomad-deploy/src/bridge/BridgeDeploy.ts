@@ -1,11 +1,10 @@
 import { Chain, ChainJson, CoreContractAddresses, toChain } from '../chain';
 import { BridgeContractAddresses, BridgeContracts } from './BridgeContracts';
 import {
-  getPathToLatestConfig,
+  getPathToBridgeConfigFromCore,
   parseFileFromDeploy,
 } from '../verification/readDeployOutput';
 import { Deploy } from '../deploy';
-import fs from 'fs';
 
 export type BridgeConfig = {
   weth?: string;
@@ -61,13 +60,11 @@ export class ExistingBridgeDeploy extends BridgeDeploy {
     super(chain, config, coreDeployPath, test, coreContracts);
 
     if (!addresses) {
-      const bridgeConfigPath = getPathToLatestConfig(
-        `${coreDeployPath}/bridge`,
-      );
-      addresses = JSON.parse(
-        fs.readFileSync(
-          `${bridgeConfigPath}/${chain.name}_contracts.json`,
-        ) as any as string,
+      const bridgeConfigPath = getPathToBridgeConfigFromCore(coreDeployPath);
+      addresses = parseFileFromDeploy(
+        bridgeConfigPath,
+        chain.name,
+        'contracts',
       );
     }
 

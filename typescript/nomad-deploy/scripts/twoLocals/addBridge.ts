@@ -7,13 +7,10 @@ import {
   ExistingBridgeDeploy,
 } from '../../src/bridge/BridgeDeploy';
 import { deployEnvironment } from '../../src/chain';
+import { getPathToDeployConfig } from '../../src/verification/readDeployOutput';
 
 let environment = deployEnvironment();
-
-const path =
-  process.env.DEPLOY_PATH || environment === 'staging'
-    ? '../../rust/config/staging'
-    : '../../rust/config/development';
+const path = getPathToDeployConfig(environment);
 
 // Instantiate Existing Bridge Deploys
 const tomDeploy = new ExistingBridgeDeploy(tom.chain, tom.bridgeConfig, path);

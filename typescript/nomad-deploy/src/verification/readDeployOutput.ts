@@ -1,6 +1,8 @@
 import fs from 'fs';
 import { ContractVerificationName } from '../deploy';
 
+export const VALID_ENVIRONMENTS = ['dev', 'staging', 'prod'];
+
 type ContractInput = {
   name: ContractVerificationName;
   address: string;
@@ -32,58 +34,49 @@ export function getNetworksFromDeploy(path: string): string[] {
 }
 
 /*
- * Get path to *most recent* config folder
- * of Bridge deploys for the
- * most recent Nomad core system deploy
+ * Get path to bridge config folder
+ * based on environment
  * */
-export function getPathToLatestBridgeConfig() {
-  const configPath = getPathToLatestDeployConfig();
-  const bridgeConfigPath = `${configPath}/bridge`;
-  return getPathToLatestConfig(bridgeConfigPath);
+export function getPathToBridgeConfig(environment: string) {
+  const configPath = getPathToDeployConfig(environment);
+  return getPathToBridgeConfigFromCore(configPath);
+}
+
+/*
+ * Get path to bridge config folder
+ * based on core deploy path
+ * */
+export function getPathToBridgeConfigFromCore(coreConfigPath: string) {
+  return `${coreConfigPath}/bridge`;
 }
 
 /*
  * Get path to *most recent* config folder
  * of Nomad core system deploys
  * */
-export function getPathToLatestDeployConfig() {
-  const configPath = '../../rust/config';
-  const ignoreFolders = ['default'];
-  return getPathToLatestConfig(configPath, ignoreFolders);
+export function getPathToDeployConfig(environment: string) {
+  if (!isValidEnvironment) {
+    throw new Error(
+      `${environment} is not a valid environment. Please choose from ${JSON.stringify(
+        VALID_ENVIRONMENTS,
+        null,
+        2,
+      )}`,
+    );
+  }
+  let folder;
+  if (environment == 'staging') {
+    folder = 'staging';
+  } else if (environment == 'prod') {
+    folder = 'mainnet';
+  } else {
+    folder = 'development';
+  }
+  return `../../rust/config/${folder}`;
 }
 
-/*
- * @notice Return the path to the folder with the greatest name
- * within the folder at configPath,
- * (excluding any folders within ignoreFolders)
- * @param configPath relative path to top directory
- * @param ignoreFolders names of folders to exclude within configPath
- * @return path to folder
- * */
-export function getPathToLatestConfig(
-  configPath: string,
-  ignoreFolders = ['development', 'staging', 'mainnet', 'default'],
-) {
-  // get the names of all non-default config directories within the relative configPath
-  let configFolders: string[] = fs
-    .readdirSync(configPath, { withFileTypes: true })
-    .filter(
-      (dirEntry: fs.Dirent) =>
-        dirEntry.isDirectory() && !ignoreFolders.includes(dirEntry.name),
-    )
-    .map((dirEntry: fs.Dirent) => dirEntry.name);
-
-  // if no non-default config folders are found, return
-  if (configFolders.length == 0) {
-    throw new Error(`No config folders found at ${configPath}`);
-  }
-
-  // get path to newest generated config folder
-  // (config folder names are UTC strings of the date they were generated - the greatest string is newest folder)
-  const newestConfigFolder: string = configFolders.reduce((a, b) => {
-    return a > b ? a : b;
-  });
-  return `${configPath}/${newestConfigFolder}`;
+export function isValidEnvironment(environment: string) {
+  return VALID_ENVIRONMENTS.includes(environment);
 }
 
 /*
@@ -101,25 +94,6 @@ export function getVerificationInputFromDeploy(
   network: any,
 ): VerificationInput {
   return parseFileFromDeploy(path, network, 'verification');
-}
-
-/*
- * @notice Return the path to the *most recent* bridge deploy configs
- * from the *most recent* core contract deploy
- * @return path to folder
- * */
-export function getPathToLatestBridgeDeploy(): string {
-  const latestCoreDeployPath = getPathToLatestDeploy();
-  return getPathToLatestConfig(latestCoreDeployPath);
-}
-
-/*
- * @notice Return the path to the *most recent* contract deploy configs
- * @return path to folder
- * */
-export function getPathToLatestDeploy(): string {
-  const configPath = '../../rust/config';
-  return getPathToLatestConfig(configPath);
 }
 
 /*

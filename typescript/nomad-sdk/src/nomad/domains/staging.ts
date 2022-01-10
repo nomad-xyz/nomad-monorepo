@@ -1,38 +1,42 @@
 import { NomadDomain } from './domain';
 
 export const kovan: NomadDomain = {
-  name: 'kovan',
-  id: 3000,
-  bridgeRouter: '0xB7ED67D47C5A04d8A81a096bEc281785C2a51efD',
-  tokenRegistry: '0x0aA680320d096B4550132b2e8cF4832fF54E9974',
-  ethHelper: '0xEA1472f4c01916471390579aCd43d2289a1624D5',
-  home: '0xF207D7CdAEA189068aae28c441937fdA20DF4016',
-  replicas: [
+  "name": "kovan",
+  "id": 3000,
+  "paginate": {
+    "from": 29193952,
+    "blocks": 2000,
+  },
+  "home": "0xA2d62FbcD779231894586CFC569E8a085662d5Bb",
+  "replicas": [
     {
-      domain: 5000,
-      address: '0x09B6a30de401084e1D355e859061D6C3EB1bC178',
+      "domain": 5000,
+      "address": "0x3333744724611Ef93521446670b4cC4009338E58",
     },
   ],
-  governanceRouter: '0xC87Ef2e93b573C2f366E6CCeE1cc95c7F527A2Db',
+  "governanceRouter": "0x2960C101Cb72eCC35a515e247608b17B46f38bA6",
+  "bridgeRouter": "0x983fC3130002454d0e892ae7a53147B09Fb58fd8",
+  "tokenRegistry": "0x60fB0Ea196F2c0Ba54FBFAB4184cCFb2ce4048BD",
+  "ethHelper": "0xe3717ed5f3F087f3AAbaD4C25ee924EDeB80c9f6",
 };
 
 export const moonbasealpha: NomadDomain = {
-  name: 'moonbasealpha',
-  paginate: {
-    blocks: 2000,
-    from: 1485171,
+  "name": "moonbasealpha",
+  "id": 5000,
+  "paginate": {
+    "from": 1507707,
+    "blocks": 2000,
   },
-  id: 5000,
-  bridgeRouter: '0x8F60dc7117dE62398a801100bfcf613569Dd66d7',
-  tokenRegistry: '0x374e21d37584128881cF385C3D629dd25f5d28b2',
-  home: '0x53B94f2D4a3159b66fcCC4f406Ea388426A3f3cB',
-  replicas: [
+  "home": "0xdc515CB0Ba06c5E058998551C21864ed2e0629Fe",
+  "replicas": [
     {
-      domain: 3000,
-      address: '0x8f8424DC94b4c302984Ab5a03fc4c2d1Ec95DC92',
+      "domain": 3000,
+      "address": "0x2fFEa0eBe27cF63cbE4b8bb621b817F7fe40f27B",
     },
   ],
-  governanceRouter: '0x7C80bd16deb375D833E992Ad3c2DE9E956a11071',
+  "governanceRouter": "0xD3cBBd9fe9Fa81850E2e083C4fe05Cc18B11a4B6",
+  "bridgeRouter": "0xEDC1bcB5a6B47483eD9640bbE4c91C3d2A9A6286",
+  "tokenRegistry": "0x5AFfc0aa97Af0e5de401b156De38CeE7b34cfCA0",
 };
 
 export const stagingDomains = [kovan, moonbasealpha];

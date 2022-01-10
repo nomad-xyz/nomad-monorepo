@@ -6,6 +6,7 @@ import fs from 'fs';
 import { BridgeDeploy } from './BridgeDeploy';
 import TestBridgeDeploy from './TestBridgeDeploy';
 import assert from 'assert';
+import { getPathToBridgeConfigFromCore } from '../verification/readDeployOutput';
 
 type AnyBridgeDeploy = BridgeDeploy | TestBridgeDeploy;
 
@@ -425,11 +426,7 @@ export function writeBridgeDeployOutput(deploys: AnyBridgeDeploy[]) {
   }
 
   // ensure bridge directory exists within core deploy config folder
-  const root = `${deploys[0].coreDeployPath}/bridge`;
-  fs.mkdirSync(root, { recursive: true });
-
-  // create dir for this bridge deploy's outputs
-  const dir = `${root}/${Date.now()}`;
+  const dir = getPathToBridgeConfigFromCore(deploys[0].coreDeployPath);
   fs.mkdirSync(dir, { recursive: true });
 
   // for each deploy, write contracts and verification inputs to file

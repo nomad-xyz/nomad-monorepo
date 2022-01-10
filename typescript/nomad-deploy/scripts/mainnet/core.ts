@@ -1,15 +1,9 @@
-import { deployNChains } from '../../src/core';
-import * as celo from '../../config/mainnets/celo';
+import { deployComplete } from '../../src/core';
 import * as ethereum from '../../config/mainnets/ethereum';
-import * as polygon from '../../config/mainnets/polygon';
+import * as moonbeam from '../../config/mainnets/moonbeam';
 import { CoreDeploy } from '../../src/core/CoreDeploy';
 
-let celoConfig = celo.config;
-let kovanConfig = ethereum.config;
-let polygonConfig = polygon.config;
+const ethereumDeploy = new CoreDeploy(ethereum.chain, ethereum.config);
+const moonbeamDeploy = new CoreDeploy(moonbeam.chain, moonbeam.config);
 
-const celoDeploy = new CoreDeploy(celo.chain, celoConfig);
-const kovanDeploy = new CoreDeploy(ethereum.chain, kovanConfig);
-const polygonDeploy = new CoreDeploy(polygon.chain, polygonConfig);
-
-deployNChains([kovanDeploy, celoDeploy, polygonDeploy]);
+deployComplete([ethereumDeploy, moonbeamDeploy]);

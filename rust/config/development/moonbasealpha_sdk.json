@@ -1,0 +1,16 @@
+{
+  "name": "moonbasealpha",
+  "id": 5000,
+  "paginate": {
+    "from": 1507573,
+    "blocks": 2000
+  },
+  "home": "0x926Df2b652bC8273BB2F06E8de135875bbE1D271",
+  "replicas": [
+    {
+      "domain": 3000,
+      "address": "0x3E8B3E047b6a7B6342E74b15813137b2891817Cd"
+    }
+  ],
+  "governanceRouter": "0x857d6dE0a9e3F985768FE164844b3e621893B904"
+}

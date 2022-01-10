@@ -27,7 +27,7 @@ export const devConfig: CoreConfig = {
   watchers: ['0x20aC2FD664bA5406A7262967C34107e708dCb18E'],
   recoveryManager: '0x24F6c874F56533d9a1422e85e5C7A806ED11c036',
   optimisticSeconds: 10,
-  recoveryTimelock: 180,
+  recoveryTimelock: 180, // 3 minutes
   processGas: 850_000,
   reserveGas: 15_000,
 };
@@ -37,8 +37,8 @@ export const stagingConfig: CoreConfig = {
   updater: '0xD39dd43eFDD867939A2F070469cB3e1252827466',
   watchers: ['0x1795f9A0a6853D6328241e9Dc37203cA545C3b79'],
   recoveryManager: '0x24F6c874F56533d9a1422e85e5C7A806ED11c036',
-  optimisticSeconds: 60 * 15, // 15 minutes
-  recoveryTimelock: 180,
+  optimisticSeconds: 60 * 30, // 30 minutes
+  recoveryTimelock: 180, // 3 minutes
   processGas: 850_000,
   reserveGas: 15_000,
 };

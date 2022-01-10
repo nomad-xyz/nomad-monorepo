@@ -28,7 +28,7 @@ export const devConfig: CoreConfig = {
   updater: '0x4177372FD9581ceb2367e0Ce84adC5DAD9DF8D55',
   optimisticSeconds: 10,
   watchers: ['0x20aC2FD664bA5406A7262967C34107e708dCb18E'],
-  recoveryTimelock: 180,
+  recoveryTimelock: 180, // 3 minutes
   recoveryManager: '0x24F6c874F56533d9a1422e85e5C7A806ED11c036',
   governor: {
     domain: chainJson.domain,
@@ -47,8 +47,8 @@ export const stagingConfig: CoreConfig = {
     domain: chainJson.domain,
     address: '0xa4849f1D96B26066f9C631FCdc8F1457D27Fb5EC',
   },
-  optimisticSeconds: 60 * 60 * 3, // 3 hours
-  recoveryTimelock: 180,
+  optimisticSeconds: 60 * 30, // 30 minutes
+  recoveryTimelock: 180, // 3 minutes
   processGas: 850_000,
   reserveGas: 15_000,
 };

@@ -4,13 +4,10 @@ import * as daffy from '../../config/local/daffy';
 import { deployNewChain } from '../../src/core';
 import { CoreDeploy, ExistingCoreDeploy } from '../../src/core/CoreDeploy';
 import { deployEnvironment } from '../../src/chain';
+import { getPathToDeployConfig } from '../../src/verification/readDeployOutput';
 
 let environment = deployEnvironment();
-
-const path =
-  process.env.DEPLOY_PATH || environment === 'staging'
-    ? '../../rust/config/staging'
-    : '../../rust/config/development';
+const path = getPathToDeployConfig(environment);
 
 // Instantiate Existing Bridge Deploys
 const tomDeploy = ExistingCoreDeploy.withPath(

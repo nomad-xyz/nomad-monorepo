@@ -1,0 +1,76 @@
+[
+  {
+    "name": "BridgeToken Implementation",
+    "address": "0x82E81AbA2b5992973dD45811d96Bd5C1098C8971",
+    "constructorArguments": []
+  },
+  {
+    "name": "BridgeToken UpgradeBeacon",
+    "address": "0x193ef167A7ad3244dbFCdced91E2C88A662A7103",
+    "constructorArguments": [
+      "0x82E81AbA2b5992973dD45811d96Bd5C1098C8971",
+      "0xd5c329745Eb601d1069649a83d2dA61F7d48E2B0"
+    ]
+  },
+  {
+    "name": "BridgeToken Proxy",
+    "address": "0x053F0cA8a8b94964dA76598f2E45555bf45591f9",
+    "constructorArguments": [
+      "0x193ef167A7ad3244dbFCdced91E2C88A662A7103",
+      "0x"
+    ],
+    "isProxy": true
+  },
+  {
+    "name": "TokenRegistry Implementation",
+    "address": "0x25Cce83673E4ED078de20472f7e94a1a5FDDd02b",
+    "constructorArguments": []
+  },
+  {
+    "name": "TokenRegistry UpgradeBeacon",
+    "address": "0x58FF6137cCd7C65d93C1F05dd73e7b4373F4ba38",
+    "constructorArguments": [
+      "0x25Cce83673E4ED078de20472f7e94a1a5FDDd02b",
+      "0xd5c329745Eb601d1069649a83d2dA61F7d48E2B0"
+    ]
+  },
+  {
+    "name": "TokenRegistry Proxy",
+    "address": "0x22f6977Bb15f55D2d8318F3EF4D27e64e5A2bb7F",
+    "constructorArguments": [
+      "0x58FF6137cCd7C65d93C1F05dd73e7b4373F4ba38",
+      "0x485cc955000000000000000000000000193ef167a7ad3244dbfcdced91e2c88a662a7103000000000000000000000000ab243125be2ea3a79167ad203744ef490a0ec568"
+    ],
+    "isProxy": true
+  },
+  {
+    "name": "BridgeRouter Implementation",
+    "address": "0x98c8770D6f50d185a4C6C45582fDa3131aCd8832",
+    "constructorArguments": []
+  },
+  {
+    "name": "BridgeRouter UpgradeBeacon",
+    "address": "0xD512a8E04757D9A1034B38594d6840c1c5153DEB",
+    "constructorArguments": [
+      "0x98c8770D6f50d185a4C6C45582fDa3131aCd8832",
+      "0xd5c329745Eb601d1069649a83d2dA61F7d48E2B0"
+    ]
+  },
+  {
+    "name": "BridgeRouter Proxy",
+    "address": "0x7454A5cce9Ae2C52fB0B1B6D732A6a7d9CABA12C",
+    "constructorArguments": [
+      "0xD512a8E04757D9A1034B38594d6840c1c5153DEB",
+      "0x485cc95500000000000000000000000022f6977bb15f55d2d8318f3ef4d27e64e5a2bb7f000000000000000000000000ab243125be2ea3a79167ad203744ef490a0ec568"
+    ],
+    "isProxy": true
+  },
+  {
+    "name": "ETH Helper",
+    "address": "0x974CD1c543bd144C23bA7963b057eb0E54Fd6c9b",
+    "constructorArguments": [
+      "0xd0a1e359811322d97991e03f863a0c30c2cf029c",
+      "0x7454A5cce9Ae2C52fB0B1B6D732A6a7d9CABA12C"
+    ]
+  }
+]

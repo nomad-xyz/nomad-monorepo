@@ -32,7 +32,7 @@ export const devConfig: CoreConfig = {
   watchers: ['0x20aC2FD664bA5406A7262967C34107e708dCb18E'],
   recoveryManager: '0x24F6c874F56533d9a1422e85e5C7A806ED11c036',
   optimisticSeconds: 10,
-  recoveryTimelock: 180,
+  recoveryTimelock: 180, // 3 minutes
   processGas: 850_000 * 100,
   reserveGas: 15_000 * 100,
 };
@@ -42,8 +42,8 @@ export const stagingConfig: CoreConfig = {
   updater: '0x201dd86063Dc251cA5a576d1b7365C38e5fB4CD5',
   watchers: ['0x22B2855635154Baa41C306BcA979C8c9a077A180'],
   recoveryManager: '0x24F6c874F56533d9a1422e85e5C7A806ED11c036',
-  optimisticSeconds: 10,
-  recoveryTimelock: 180,
+  optimisticSeconds: 60 * 30, // 30 minutes
+  recoveryTimelock: 180, // 3 minutes
   processGas: 850_000 * 100,
   reserveGas: 15_000 * 100,
 };

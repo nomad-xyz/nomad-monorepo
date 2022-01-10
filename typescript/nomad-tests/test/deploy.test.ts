@@ -8,7 +8,7 @@ import { deployBridgesComplete } from '@nomad-xyz/deploy/dist/src/bridge';
 import { BridgeDeploy } from '@nomad-xyz/deploy/dist/src/bridge/BridgeDeploy';
 import {
   deployTwoChains,
-  deployNChains,
+  deployComplete,
   deployHubAndSpoke,
 } from '@nomad-xyz/deploy/dist/src/core';
 import { CoreDeploy } from '@nomad-xyz/deploy/dist/src/core/CoreDeploy';
@@ -48,7 +48,7 @@ describe('core deploy scripts', async () => {
     });
   });
 
-  describe('deployNChains', async () => {
+  describe('deployComplete', async () => {
     // tests deploys for up to 4 chains
     for (let i = 1; i <= 4; i++) {
       it(`${i}-chain deploy`, async () => {
@@ -63,7 +63,7 @@ describe('core deploy scripts', async () => {
 
         // deploy nomad contracts on `i` chains
         // will test inside deploy function
-        await deployNChains(deploys);
+        await deployComplete(deploys);
       });
     }
 
@@ -72,8 +72,8 @@ describe('core deploy scripts', async () => {
       const errMsg = 'Must pass at least one deploy config';
 
       try {
-        await deployNChains(deploys);
-        // `deployNChains` should error and skip to catch block. If it didn't, we need to make it fail
+        await deployComplete(deploys);
+        // `deployComplete` should error and skip to catch block. If it didn't, we need to make it fail
         // here (same as `expect(true).to.be.false`, but more explicit)
         expect('no error').to.equal(errMsg);
       } catch (e: any) {
@@ -168,7 +168,7 @@ describe('core deploy scripts', async () => {
         try {
           // @ts-ignore
           await deployHubAndSpoke(hub, [spoke]);
-          // `deployNChains` should error and skip to catch block. If it didn't, we need to make it fail
+          // `deployHubAndSpoke` should error and skip to catch block. If it didn't, we need to make it fail
           // here (same as `expect(true).to.be.false`, but more explicit)
           expect('no error').to.equal(errMsg);
         } catch (e: any) {
@@ -185,7 +185,7 @@ describe('core deploy scripts', async () => {
 
         try {
           await deployHubAndSpoke(hub, []);
-          // `deployNChains` should error and skip to catch block. If it didn't, we need to make it fail
+          // `deployHubAndSpoke` should error and skip to catch block. If it didn't, we need to make it fail
           // here (same as `expect(true).to.be.false`, but more explicit)
           expect('no error').to.equal(errMsg);
         } catch (e: any) {
@@ -220,7 +220,7 @@ describe('bridge deploy scripts', async () => {
         ]),
       );
     }
-    await deployNChains(deploys);
+    await deployComplete(deploys);
 
     for (let i = 0; i < numChains; i++) {
       coreAddresses.push(deploys[i].contracts.toObject());
