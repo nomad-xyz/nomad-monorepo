@@ -15,6 +15,7 @@ export const chainJson: ChainJson = {
   rpc,
   deployerKey: process.env.MOONBASEALPHA_DEPLOYER_KEY,
   domain: 5000,
+  gas: { price: '10000000000' },
   chunk: 2000,
   timelag: 5,
 };
@@ -43,4 +44,6 @@ export const stagingConfig: CoreConfig = {
   reserveGas: 15_000,
 };
 
-export const bridgeConfig: BridgeConfig = {};
+export const bridgeConfig: BridgeConfig = {
+  weth: '0x674421e9567653ee76e96feea3b2b2966d000dbd',
+};

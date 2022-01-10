@@ -16,6 +16,12 @@ const chainJson: ChainJson = {
   rpc,
   deployerKey: process.env.RINKEBY_DEPLOYER_KEY,
   domain: 2000,
+  gas: {
+    price: {
+      maxFeePerGas: '20000000000', // 20 gwei
+      maxPriorityFeePerGas: '2000000000', // 2 gwei
+    },
+  },
   chunk: 2000,
   timelag: 100,
 };

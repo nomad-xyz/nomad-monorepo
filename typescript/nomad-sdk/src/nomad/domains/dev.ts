@@ -37,6 +37,7 @@ export const moonbasealpha: NomadDomain = {
   "governanceRouter": "0x857d6dE0a9e3F985768FE164844b3e621893B904",
   "bridgeRouter": "0x376017BF1De11dd15c236bB0e36D5e265966c9b8",
   "tokenRegistry": "0xdC6aC677ea9057D0114Ab5609af9E70f71a519BC",
+  "ethHelper": "0x83df3076BbacA1C435ecAbEA2de33dc5d5A404d8",
 };
 
 export const devDomains = [kovan, moonbasealpha];

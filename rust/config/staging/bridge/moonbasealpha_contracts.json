@@ -13,5 +13,6 @@
     "implementation": "0xa78f972dCA619b6C8af2CEc8aa3293931A4cAc80",
     "proxy": "0xe5222901E25Cb334BfB08A15c68d3bb65e273E30",
     "beacon": "0x4ed8c9B40FaBccFeca732D920bC4877d78D32E77"
-  }
+  },
+  "ethHelper": "0x7FacDe7EB8e2B2d4996d9b03AaBD4bA033AD1654"
 }
