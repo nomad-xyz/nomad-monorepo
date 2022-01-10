@@ -102,7 +102,7 @@ export class CallBatch {
   }
 
   // Waits for a specified domain to receive its batch
-  async wait(domain: number, context: NomadContext) {
+  async waitDomain(domain: number, context: NomadContext) {
     await new Promise((resolve) => {
       const router = context.mustGetCore(domain).governanceRouter;
       const hash = this.domainHash(domain);
@@ -111,8 +111,8 @@ export class CallBatch {
   }
 
   // Waits for all participating domains to receive their batches
-  async waitAll(context: NomadContext) {
+  async wait(context: NomadContext) {
     const domains = Array.from(this.remote.keys());
-    await Promise.all(domains.map((domain) => this.wait(domain, context)));
+    await Promise.all(domains.map((domain) => this.waitDomain(domain, context)));
   }
 }
