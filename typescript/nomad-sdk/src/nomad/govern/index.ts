@@ -1,4 +1,6 @@
+import { TypedEvent } from '@nomad-xyz/contract-interfaces/dist/core/commons';
 import { ethers } from 'ethers';
+import { NomadContext } from '..';
 import { CoreContracts } from '../contracts';
 
 import * as utils from './utils';
@@ -11,8 +13,8 @@ export interface Call {
 }
 
 export class CallBatch {
-  private local: Call[];
-  private remote: Map<number, Call[]>;
+  readonly local: Readonly<Call>[];
+  readonly remote: Map<number, Readonly<Call>[]>;
   private core: CoreContracts;
   private built?: ethers.PopulatedTransaction;
 
@@ -39,17 +41,18 @@ export class CallBatch {
   pushLocal(call: Call): void {
     if (this.built)
       throw new Error('Batch has been built. Cannot push more calls');
-    this.local.push(call);
+    this.local.push(Object.freeze(call));
   }
 
   pushRemote(domain: number, call: Call): void {
     if (this.built)
       throw new Error('Batch has been built. Cannot push more calls');
+    const frozen = Object.freeze(call);
     const calls = this.remote.get(domain);
     if (!calls) {
-      this.remote.set(domain, [call]);
+      this.remote.set(domain, [frozen]);
     } else {
-      calls.push(call);
+      calls.push(frozen);
     }
   }
 
@@ -90,6 +93,42 @@ export class CallBatch {
     const signer = this.core.governanceRouter.signer;
     return await signer.sendTransaction(
       this.built as ethers.PopulatedTransaction,
+    );
+  }
+
+  // Return the batch hash for the specified domain
+  domainHash(domain: number): string {
+    const calls = this.remote.get(domain);
+    if (!calls) throw new Error(`Not found calls for remote ${domain}`);
+
+    return utils.batchHash(calls);
+  }
+
+  // Waits for a specified domain to receive its batch
+  // Note that this does not call execute
+  async waitDomain(
+    domain: number,
+    context: NomadContext,
+  ): Promise<ethers.providers.TransactionReceipt> {
+    const router = context.mustGetCore(domain).governanceRouter;
+    const hash = this.domainHash(domain);
+
+    const event: TypedEvent<[] & { batchHash: string }> = await new Promise(
+      (resolve) => {
+        router.once(router.filters.BatchReceived(hash), resolve);
+      },
+    );
+    return await event.getTransactionReceipt();
+  }
+
+  // Waits for all participating domains to receive their batches
+  // Note that this does not call execute
+  async wait(
+    context: NomadContext,
+  ): Promise<ethers.providers.TransactionReceipt[]> {
+    const domains = Array.from(this.remote.keys());
+    return await Promise.all(
+      domains.map((domain) => this.waitDomain(domain, context)),
     );
   }
 }
