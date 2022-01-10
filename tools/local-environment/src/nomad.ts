@@ -26,9 +26,10 @@ import {
 import { getPathToLatestDeploy } from "@nomad-xyz/deploy/src/verification/readDeployOutput";
 import {
   deployBridgesComplete,
+  deployBridgesHubAndSpoke,
   deployNewChainBridge,
 } from "@nomad-xyz/deploy/src/bridge";
-import { deployNChains, deployNewChain } from "@nomad-xyz/deploy/src/core";
+import { deployHubAndSpoke, deployNChains, deployNewChain } from "@nomad-xyz/deploy/src/core";
 import { ContractVerificationInput } from "@nomad-xyz/deploy/src/deploy";
 import {
   connectionGovernanceActions,
@@ -55,13 +56,13 @@ import {
 
 import { batchHash, Updater } from "@nomad-xyz/test/lib/core";
 import { NonceManager } from "@ethersproject/experimental";
-import { zip } from "./utils";
 import { ethers } from "ethers";
 import { Logger, LogLevel } from "./logger";
 import { CallData } from "@nomad-xyz/deploy/src/utils";
 import { checkCoreDeploy } from "@nomad-xyz/deploy/src/core/checks";
 import { checkBridgeDeploy } from "@nomad-xyz/deploy/src/bridge/checks";
 import { checkIncrementalDeploy } from "@nomad-xyz/deploy/src/incremental/checks";
+import { utils } from ".";
 
 export class Nomad {
   id: number;
@@ -74,6 +75,8 @@ export class Nomad {
   private networks: Map<number, Network>;
   private deployArtifacts?: DeployArtifacts;
   private agents: Map<string, Agent>;
+  private coreCache: Map<number, CoreDeploy>;
+  private bridgeCache: Map<number, BridgeDeploy>;
   logger: Logger;
 
   multiprovider?: NomadContext;
@@ -87,6 +90,8 @@ export class Nomad {
     this.watchers = new Map();
     this.networks = new Map();
     this.agents = new Map();
+    this.coreCache = new Map();
+    this.bridgeCache = new Map();
 
     this.host = host;
     this.addNetwork(host);
@@ -262,7 +267,7 @@ export class Nomad {
     return undefined;
   }
 
-  getRemotes(): Network[] {
+  getSpokes(): Network[] {
     return Array.from(this.networks.values()).filter(
       (network) => network != this.host
     );
@@ -402,6 +407,7 @@ export class Nomad {
       id: network.domain,
       name: network.name,
       tokenRegistry: artifact.bridge.contracts!.tokenRegistry!.proxy.address,
+      governanceRouter: artifact.core.contracts!.governance!.proxy.address,
       bridgeRouter: artifact.bridge.contracts!.bridgeRouter!.proxy.address,
       ethHelper,
       home,
@@ -422,12 +428,7 @@ export class Nomad {
       )
     );
 
-    const isNomadDomain = (
-      item: NomadDomain | undefined
-    ): item is NomadDomain => {
-      return !!item;
-    };
-    const filteredDomains = domains.filter(isNomadDomain);
+    const filteredDomains = utils.filterUndefined(domains);//.filter(isNomadDomain);
 
     const ctx = NomadContext.fromDomains(filteredDomains);
 
@@ -529,7 +530,19 @@ export class Nomad {
     return new CoreDeploy(chain, coreConfig);
   }
 
-  getExistingCoreDeploy(network: Network): ExistingCoreDeploy | undefined {
+  cacheCores(...deploys: CoreDeploy[]) {
+    deploys.forEach(deploy => this.coreCache.set(deploy.chain.domain, deploy))
+  }
+
+  cacheBridges(...deploys: BridgeDeploy[]) {
+    deploys.forEach(deploy => this.bridgeCache.set(deploy.chain.domain, deploy))
+  }
+
+  getExistingCoreDeploy(network: Network, fromCache=true): ExistingCoreDeploy | undefined {
+    if (fromCache) {
+      const deploy = this.coreCache.get(network.domain);
+      if (deploy) return deploy;
+    }
     const coreConfig = this.getCoreConfig(network);
     const chain = this.getChain(network);
 
@@ -571,7 +584,11 @@ export class Nomad {
     }
   }
 
-  getExistingBridgeDeploy(network: Network): ExistingBridgeDeploy | undefined {
+  getExistingBridgeDeploy(network: Network, fromCache=true): ExistingBridgeDeploy | undefined {
+    if (fromCache) {
+      const deploy = this.bridgeCache.get(network.domain);
+      if (deploy) return deploy;
+    }
     const path = getPathToLatestDeploy();
     const chain = this.getChain(network);
     const bridgeConfig = this.getBridgeConfig(network);
@@ -616,16 +633,21 @@ export class Nomad {
     );
   }
 
-  async deployChains(networks: Network[]) {
-    const deploys = networks.map((network) => this.getCoreDeploy(network));
-    await deployNChains(deploys);
-    return deploys;
+  async deployHubNSpokeChains(): Promise<[CoreDeploy, CoreDeploy[]]> {
+    const hub = this.getCoreDeploy(this.host);
+    const spokes = this.getSpokes().map((network) => this.getCoreDeploy(network));
+    await deployHubAndSpoke(hub, spokes);
+    this.cacheCores(hub, ...spokes);
+    return [hub, spokes];
   }
 
-  async deployBridges(networks: Network[]) {
-    const deploys = networks.map((network) => this.getBridgeDeploy(network));
-    await deployBridgesComplete(deploys);
-    return deploys;
+  async deployHubNSpokeBridges(): Promise<[BridgeDeploy, BridgeDeploy[]]> {
+    const hub = this.getBridgeDeploy(this.host, this.getExistingCoreDeploy(this.host));
+    const spokes = this.getSpokes().map((network) => this.getBridgeDeploy(network, this.getExistingCoreDeploy(network)));
+    await deployBridgesHubAndSpoke(hub, spokes);
+    this.cacheBridges(hub, ...spokes);
+
+    return [hub, spokes];
   }
 
   isDeployed(networkish: Networkish): boolean {
@@ -635,12 +657,12 @@ export class Nomad {
     return this.deployed.has(network.domain);
   }
 
-  getDeployedRemotes(): Network[] {
-    return this.getRemotes().filter((r) => this.isDeployed(r));
+  getDeployedSpokes(): Network[] {
+    return this.getSpokes().filter((r) => this.isDeployed(r));
   }
 
-  getNotDeployedRemotes(): Network[] {
-    return this.getRemotes().filter((r) => !this.isDeployed(r));
+  getNotDeployedSpokes(): Network[] {
+    return this.getSpokes().filter((r) => !this.isDeployed(r));
   }
 
   /**
@@ -650,17 +672,17 @@ export class Nomad {
    * deployed networks.
    */
   async deploy(options?: DeployOptions): Promise<void> {
-    const newRemotes = this.getNotDeployedRemotes();
+    const newRemotes = this.getNotDeployedSpokes();
 
     if (newRemotes.length === 0) throw new Error(`No networks to deploy`);
 
-    const oldRemotes = this.getDeployedRemotes();
+    const oldRemotes = this.getDeployedSpokes();
     const crossConnect: Network[] = (options?.connectToNew || [])
       .map((n) => this.getNetwork(n)!)
       .filter((n) => !!n);
 
     if (oldRemotes.length === 0) {
-      await this.deployAllNetworks([this.host, ...newRemotes]);
+      await this.deployHubNSpoke();
     } else {
       await this.deployAdditionalNetworks(newRemotes, crossConnect);
     }
@@ -674,30 +696,17 @@ export class Nomad {
     return;
   }
 
-  async deployAllNetworks(networks: Network[]): Promise<void> {
+  async deployHubNSpoke(): Promise<void> {
     if (!this.host.isGovernor()) {
       this.host.setLocalGovernor(this.getDeployerKey(this.host)!.toAddress());
     }
 
-    const coreDeploysDeployed = await this.deployChains(networks);
-    const bridgeDeploysDeployed = await this.deployBridges(networks);
+    const [hubCoreDeployDeployed, spokesCoreDeploysDeployed] = await this.deployHubNSpokeChains();
+    const [hubBridgeDeployDeployed, spokesBridgeDeploysDeployed] = await this.deployHubNSpokeBridges();
 
-    this.updateArtifacts(coreDeploysDeployed, bridgeDeploysDeployed);
+    this.updateArtifacts([hubCoreDeployDeployed, ...spokesCoreDeploysDeployed], [hubBridgeDeployDeployed, ...spokesBridgeDeploysDeployed]);
 
-    // const coreDeployArtifacts =
-    //   this.ejectCoreDeploysArtifacts(coreDeploysDeployed);
-    // const bridgeDeployArtifacts = this.ejectBridgeDeploysArtifacts(
-    //   bridgeDeploysDeployed
-    // );
-
-    // const artifacts = this.mergeCoreAndBridgeArtifacts(
-    //   coreDeployArtifacts,
-    //   bridgeDeployArtifacts
-    // );
-
-    // this.setArtifacts(artifacts);
-
-    this.setDeployed(...networks.map((n) => n.domain));
+    this.setDeployed(...[hubCoreDeployDeployed, ...spokesCoreDeploysDeployed].map((n) => n.chain.domain));
 
     return;
   }
@@ -716,9 +725,8 @@ export class Nomad {
   }
 
   updateArtifacts(updatedCores: CoreDeploy[], updatedBridges: BridgeDeploy[]) {
-    const oldCoreDeploys = this.getNetworks()
-      .map((n) => this.getExistingCoreDeploy(n)!)
-      .filter((d) => !!d);
+    const oldCoreDeploys = utils.filterUndefined(this.getNetworks()
+      .map((n) => this.getExistingCoreDeploy(n)!));
 
     const toEjectCores = [
       ...updatedCores,
@@ -733,12 +741,16 @@ export class Nomad {
     const coreDeployArtifacts = this.ejectCoreDeploysArtifacts(toEjectCores);
 
     const oldBridgeDeploys = this.getNetworks()
-      .map((n) => this.getExistingBridgeDeploy(n)!)
-      .filter((d) => !!d);
+      .map((n) => {
+        const core = this.getExistingCoreDeploy(n);
+        if (core) {
+          return this.getExistingBridgeDeploy(n)!
+        }
+      })
 
     const toEjectBridges = [
       ...updatedBridges,
-      ...oldBridgeDeploys.filter(
+      ...utils.filterUndefined(oldBridgeDeploys).filter(
         (oldBridge) =>
           !updatedBridges.find(
             (newBridge) => newBridge.chain.domain === oldBridge.chain.domain
@@ -762,11 +774,17 @@ export class Nomad {
     const govCoreDeploy = this.getExistingCoreDeploy(this.host)!;
     const govBridgeDeploy = this.getExistingBridgeDeploy(this.host)!;
 
+    const deployer = govCoreDeploy.chain.deployer as NonceManager;
+    const nonce = await deployer.getTransactionCount();
+    deployer.setTransactionCount(nonce);
+
     const newCoreDeploy = this.getCoreDeploy(newNetwork);
     await deployNewChain(newCoreDeploy, govCoreDeploy);
+    this.cacheCores(newCoreDeploy, govCoreDeploy);
 
     const newBridgeDeploy = this.getBridgeDeploy(newNetwork, newCoreDeploy);
     await deployNewChainBridge(newBridgeDeploy, govBridgeDeploy);
+    this.cacheBridges(newBridgeDeploy, govBridgeDeploy);
 
     const actions = connectionGovernanceActions(
       govCoreDeploy,
@@ -805,9 +823,6 @@ export class Nomad {
       const core = this.getExistingCoreDeploy(net)!;
       coreToCalls.push([core, actions[2][i]]);
     });
-
-    // coreToCalls.push([spokeBCore, callsA2B]);
-    // coreToCalls.push([spokeACore, callsB2A]);
 
     return Promise.all(
       coreToCalls.map(async ([deploy, calls]) => {
