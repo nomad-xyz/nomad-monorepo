@@ -87,8 +87,14 @@ export class BridgeContracts extends Contracts {
     const router =
       typeof bridgeRouter === 'string' ? bridgeRouter : bridgeRouter.proxy;
     const registry =
-        typeof tokenRegistry === 'string' ? tokenRegistry : tokenRegistry.proxy;
-    return new BridgeContracts(id, router, registry, ethHelper, providerOrSigner);
+      typeof tokenRegistry === 'string' ? tokenRegistry : tokenRegistry.proxy;
+    return new BridgeContracts(
+      id,
+      router,
+      registry,
+      ethHelper,
+      providerOrSigner,
+    );
   }
 
   toObject(): BridgeInfo {

@@ -1,33 +1,16 @@
 import { GoogleSpreadsheet } from 'google-spreadsheet';
-import { Deploy } from './tokens';
+import {TokenDetails} from './detailsUpdated';
 
 import fs from 'fs';
 
-function uniqueTokens(details: Deploy[]) {
-  const tokens = details.map((details) => {
-    const {
-      token: { name, symbol, decimals },
-      event: {
-        args: { domain, id, representation },
-      },
-    } = details;
-    return {
-      name,
-      symbol,
-      decimals,
-      address: representation,
-      id,
-      domain,
-    };
-  });
-
-  return [...new Set(tokens)];
+function uniqueTokens(details: TokenDetails[]) {
+  return [...new Set(details)];
 }
 
 // https://www.npmjs.com/package/google-spreadsheet
-async function uploadDeployedTokens(
+async function uploadTokens(
   network: string,
-  deploys: Deploy[],
+  deploys: TokenDetails[],
   credentialsFile: string = './credentials.json',
 ) {
   const credentials = JSON.parse(fs.readFileSync(credentialsFile, 'utf8'));
@@ -76,4 +59,4 @@ async function uploadDeployedTokens(
   }
 }
 
-export { uploadDeployedTokens };
+export { uploadTokens };

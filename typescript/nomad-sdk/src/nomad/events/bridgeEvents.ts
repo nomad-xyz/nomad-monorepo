@@ -22,8 +22,22 @@ export type TokenDeployedEvent = TypedEvent<
   TokenDeployedTypes & TokenDeployedArgs
 >;
 
+export type UpdateDetailsTypes = [string, string, number];
+export type UpdateDetailsArgs = {
+  name: string;
+  symbol: string;
+  decimals: number;
+};
+export type UpdateDetailsEvent = TypedEvent<
+  UpdateDetailsTypes & UpdateDetailsArgs
+>;
+
 export type AnnotatedSend = Annotated<SendTypes, SendEvent>;
 export type AnnotatedTokenDeployed = Annotated<
   TokenDeployedTypes,
   TokenDeployedEvent
+>;
+export type AnnotatedUpdateDetails = Annotated<
+  UpdateDetailsTypes,
+  UpdateDetailsEvent
 >;

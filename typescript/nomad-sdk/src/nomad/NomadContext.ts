@@ -155,6 +155,7 @@ export class NomadContext extends MultiProvider {
     if (!core) {
       throw new Error(`Missing core for domain: ${nameOrDomain}`);
     }
+    core.connect(this.mustGetProvider(nameOrDomain));
     return core;
   }
 
@@ -180,6 +181,7 @@ export class NomadContext extends MultiProvider {
     if (!bridge) {
       throw new Error(`Missing bridge for domain: ${nameOrDomain}`);
     }
+    bridge.connect(this.mustGetProvider(nameOrDomain));
     return bridge;
   }
 
@@ -251,13 +253,33 @@ export class NomadContext extends MultiProvider {
     if (!address || address == ethers.constants.AddressZero) {
       return;
     }
-    const connection = this.getConnection(domain);
+    return this.connectRepresentation(domain, evmId(address));
+  }
+
+  /**
+   * Connect to a token representation contract given its domain and address
+   *
+   * WARNING: do not hold references to these contracts, as they will not be
+   * reconnected in the event the chain connection changes.
+   *
+   * @param nameOrDomain the target domain, which hosts the representation
+   * @param representationAddress the address of the representation token on that domain
+   * @returns An interface for the representation token
+   */
+  async connectRepresentation(
+    nameOrDomain: string | number,
+    representationAddress: Address,
+  ): Promise<bridge.BridgeToken> {
+    const connection = this.getConnection(nameOrDomain);
     if (!connection) {
       throw new Error(
-        `No provider or signer for ${domain}. Register a connection first before calling resolveRepresentation.`,
+        `No provider or signer for ${nameOrDomain}. Register a connection first before calling connectRepresentation.`,
       );
     }
-    return bridge.BridgeToken__factory.connect(evmId(address), connection);
+    return bridge.BridgeToken__factory.connect(
+      representationAddress,
+      connection,
+    );
   }
 
   /**
@@ -460,7 +482,12 @@ export class NomadContext extends MultiProvider {
 
     overrides.value = amount;
 
-    const tx = await ethHelper.sendToEVMLike(toDomain, recipient, enableFast, overrides);
+    const tx = await ethHelper.sendToEVMLike(
+      toDomain,
+      recipient,
+      enableFast,
+      overrides,
+    );
     const receipt = await tx.wait();
 
     const message = TransferMessage.singleFromReceipt(this, from, receipt);
@@ -469,6 +496,28 @@ export class NomadContext extends MultiProvider {
     }
 
     return message as TransferMessage;
+  }
+
+  /**
+   * Queries the name, symbol and details of a canonical token.
+   *
+   * @param token The token to query details for
+   * @returns {name, symbol, details}
+   */
+  async getCanonicalTokenDetails(
+    token: TokenIdentifier,
+  ): Promise<{ name: string; symbol: string; decimals: number }> {
+    // WARNING: "canonical" is NOT a representation token;
+    // HOWEVER, we are using that interface to query name, symbol and decimals
+    // because ERC20 interface doesn't have these fields
+    const canonical = await this.connectRepresentation(
+      token.domain,
+      evmId(token.id),
+    );
+    const name = await canonical.name();
+    const symbol = await canonical.symbol();
+    const decimals = await canonical.decimals();
+    return { name, symbol, decimals };
   }
 }
 
