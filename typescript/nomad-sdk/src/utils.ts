@@ -3,6 +3,54 @@ import { ethers } from 'ethers';
 
 export type Address = string;
 
+// Hex domains calculated using `getHexDomainFromString`
+const chainIdToDomainMapping: Map<number, number> = new Map([
+  [1, 0x657468], // Ethereum ('eth interpreted as int)
+  [1284, 0x6265616d], // Moonbeam ('beam interpreted as int)
+]);
+
+/**
+ * Converts a chain id (listed at at chainlist.org) to a Nomad domain.
+ *
+ * @param chainId A chain id number
+ * @returns A Nomad domain number in decimal
+ */
+export function chainIdToDomain(chainId: number): number {
+  const domain = chainIdToDomainMapping.get(chainId);
+  if (!domain)
+    throw new Error(
+      `Cannot find corresponding Nomad domain for chainId ${chainId}`,
+    );
+
+  return domain;
+}
+
+/**
+ * Converts a string (e.g. "eth" for Ethereum) to a Nomad domain displayed as
+ * a hex string.
+ * @dev Interprets string bytes as int.
+ * @param name The chain string
+ * @returns A 0x prefixed Nomad domain in hex (string)
+ */
+export function getHexDomainFromString(name: string): string {
+  const domain = getDomainFromString(name);
+  return '0x' + domain.toString(16);
+}
+
+/**
+ * Converts a string (e.g. "eth" for Ethereum) to a decimal formatted Nomad
+ * domain.
+ * @dev Interprets string bytes as int.
+ * @param name The chain string
+ * @returns A Nomad domain number in decimal
+ */
+export function getDomainFromString(name: string): number {
+  const buf = Buffer.alloc(4);
+  const offset = 4 - name.length;
+  buf.write(name, offset > 0 ? offset : 0, 'utf8');
+  return buf.readUInt32BE(0);
+}
+
 /**
  * Converts a 20-byte (or other length) ID to a 32-byte ID.
  * Ensures that a bytes-like is 32 long. left-padding with 0s if not.
