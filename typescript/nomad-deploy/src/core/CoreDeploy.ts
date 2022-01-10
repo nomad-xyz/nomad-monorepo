@@ -108,7 +108,7 @@ export class CoreDeploy extends Deploy<CoreContracts> {
       replicas: remotes.map((remote) => {
         return {
           domain: remote.chain.domain,
-          address: remote.contracts.replicas[local.chain.domain].proxy.address,
+          address: local.contracts.replicas[remote.chain.domain].proxy.address,
         };
       }),
       governanceRouter: local.contracts.governance!.proxy.address,
