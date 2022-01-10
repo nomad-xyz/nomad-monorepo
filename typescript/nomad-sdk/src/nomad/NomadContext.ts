@@ -499,6 +499,48 @@ export class NomadContext extends MultiProvider {
   }
 
   /**
+   * Send tokens from one domain to another. Approves the bridge if necessary.
+   *
+   * @param token The token to update details for
+   * @param domains An array of the domains to updateDetails on
+   * @param overrides Any tx overrides (e.g. gas price)
+   * @returns a {@link TransferMessage} object representing the in-flight
+   *          transfer
+   * @throws On missing signers, missing tokens, tx issues, etc.
+   */
+  async setDetails(
+    token: TokenIdentifier,
+    domains: (string | number)[],
+    overrides: ethers.Overrides = {},
+  ): Promise<ethers.ContractReceipt[]> {
+    // get canonical token contract & query canonical details
+    const { name, symbol, decimals } = await this.getCanonicalTokenDetails(
+      token,
+    );
+    // for each domain, setDetails
+    const receiptPromises: Promise<ethers.ContractReceipt>[] = [];
+    for (const domain of domains) {
+      // get the token representation on that chain
+      const representation = await this.resolveRepresentation(domain, token);
+      if (!representation) {
+        throw new Error(`Token not available on ${domain}`);
+      }
+      // send setDetails transaction
+      const tx = await representation.setDetails(
+        name,
+        symbol,
+        decimals,
+        overrides,
+      );
+      // push transaction receipt promise
+      const receiptPromise = tx.wait();
+      receiptPromises.push(receiptPromise);
+    }
+    // return all transaction promises
+    return Promise.all(receiptPromises);
+  }
+
+  /**
    * Queries the name, symbol and details of a canonical token.
    *
    * @param token The token to query details for
