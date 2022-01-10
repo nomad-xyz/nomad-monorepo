@@ -4,39 +4,39 @@ export const kovan: NomadDomain = {
   "name": "kovan",
   "id": 3000,
   "paginate": {
-    "from": 29176685,
+    "from": 29193952,
     "blocks": 2000,
   },
-  "home": "0x6fAdB7EcBf784c5862ee34839F7379911a5b3038",
+  "home": "0xA2d62FbcD779231894586CFC569E8a085662d5Bb",
   "replicas": [
     {
       "domain": 5000,
-      "address": "0x0f358a5977FCF8cC3c065489530ba40d38ae1c69",
+      "address": "0x3333744724611Ef93521446670b4cC4009338E58",
     },
   ],
-  "governanceRouter": "0xfD2aE1Db4226fc5b7A093c02e6587D44191B4fb9",
-  "bridgeRouter": "0x2fDbf493b20C920E1e943eD5B7d9A8C16a48Ccc0",
-  "tokenRegistry": "0xdE51871a7b90e5552fbE7D334735908Bea68224A",
-  "ethHelper": "0xEb02Ea8e066106AF4D9C995e703b8bA06CD2aA32",
+  "governanceRouter": "0x2960C101Cb72eCC35a515e247608b17B46f38bA6",
+  "bridgeRouter": "0x983fC3130002454d0e892ae7a53147B09Fb58fd8",
+  "tokenRegistry": "0x60fB0Ea196F2c0Ba54FBFAB4184cCFb2ce4048BD",
+  "ethHelper": "0xe3717ed5f3F087f3AAbaD4C25ee924EDeB80c9f6",
 };
 
 export const moonbasealpha: NomadDomain = {
   "name": "moonbasealpha",
   "id": 5000,
   "paginate": {
-    "from": 1501043,
+    "from": 1507707,
     "blocks": 2000,
   },
-  "home": "0xf5364400B6180d03e295F99A2D8AFc2dE5968133",
+  "home": "0xdc515CB0Ba06c5E058998551C21864ed2e0629Fe",
   "replicas": [
     {
       "domain": 3000,
-      "address": "0x4260dd1f0F70c31aB917FC89Fc2EAA46CAef3A46",
+      "address": "0x2fFEa0eBe27cF63cbE4b8bb621b817F7fe40f27B",
     },
   ],
-  "governanceRouter": "0xDf4c0d67489F945C1e52440Ef8F203F4CE6e4176",
-  "bridgeRouter": "0xdFeAd12447618EB409a47fDF9C687909ABBAbfB3",
-  "tokenRegistry": "0xad465F3F9195ff9f1E3828dE1D7f816ec9F1CA3a",
+  "governanceRouter": "0xD3cBBd9fe9Fa81850E2e083C4fe05Cc18B11a4B6",
+  "bridgeRouter": "0xEDC1bcB5a6B47483eD9640bbE4c91C3d2A9A6286",
+  "tokenRegistry": "0x5AFfc0aa97Af0e5de401b156De38CeE7b34cfCA0",
 };
 
 export const stagingDomains = [kovan, moonbasealpha];
