@@ -111,6 +111,7 @@ export class CoreDeploy extends Deploy<CoreContracts> {
           address: remote.contracts.replicas[local.chain.domain].proxy.address,
         };
       }),
+      governanceRouter: local.contracts.governance!.proxy.address,
       bridgeRouter: 'n/a',
       tokenRegistry: 'n/a',
     };
