@@ -91,7 +91,7 @@ async function verifyDeploy(path: string, etherscanKey: string, hre: any) {
   for (let verificationInput of verificationInputs) {
     // attempt to verify contract on etherscan
     // (await one-by-one so that Etherscan doesn't rate limit)
-    await verifyDeploy(network, etherscanKey, verificationInput, hre);
+    await verifySingleDeploy(network, etherscanKey, verificationInput, hre);
   }
 }
 
@@ -99,7 +99,7 @@ async function verifyDeploy(path: string, etherscanKey: string, hre: any) {
  * Given one contract verification input,
  * attempt to verify the contracts' source code on Etherscan
  * */
-async function verifyDeploy(
+async function verifySingleDeploy(
   network: string,
   etherscanKey: string,
   verificationInput: any,
