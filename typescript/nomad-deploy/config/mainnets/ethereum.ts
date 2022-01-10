@@ -29,11 +29,11 @@ export const chain = toChain(chainJson);
 
 export const config: CoreConfig = {
   environment: 'prod',
-  updater: 'TODO: verify',
+  updater: '0x71dC76C07E92325e7Cc09117AB94310Da63Fc2b9',
   recoveryTimelock: 60 * 60 * 24, // 1 day
   recoveryManager: 'TODO: deploy',
   optimisticSeconds: 60 * 30, // 30 minutes
-  watchers: ['TODO: verify'],
+  watchers: ['0x9782A3C8128f5D1BD3C9655d03181ba5b420883E'],
   governor: {
     domain: chainJson.domain,
     address: 'TODO: deploy',
