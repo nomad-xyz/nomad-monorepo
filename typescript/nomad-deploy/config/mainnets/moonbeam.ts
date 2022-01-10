@@ -14,7 +14,7 @@ export const chainJson: ChainJson = {
   name: 'moonbeam',
   rpc,
   deployerKey: process.env.MOONBEAM_DEPLOYER_KEY,
-  domain: 0x1234, // TODO!!!!
+  domain: 0x6265616d,
   gas: {
     price: {
       maxFeePerGas: '40000000000', // 40 gwei TODO: verify
