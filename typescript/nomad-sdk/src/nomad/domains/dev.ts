@@ -11,7 +11,7 @@ export const kovan: NomadDomain = {
   "replicas": [
     {
       "domain": 5000,
-      "address": "0x1d77eDee9bb5EA223ab83B7a1B67F931879D6e5B",
+      "address": "0x3E8B3E047b6a7B6342E74b15813137b2891817Cd",
     },
   ],
   "governanceRouter": "0x45F8c10cC8077081e062A7F643ADD6EABc7464C2",
@@ -31,7 +31,7 @@ export const moonbasealpha: NomadDomain = {
   "replicas": [
     {
       "domain": 3000,
-      "address": "0x3E8B3E047b6a7B6342E74b15813137b2891817Cd",
+      "address": "0x1d77eDee9bb5EA223ab83B7a1B67F931879D6e5B",
     },
   ],
   "governanceRouter": "0x857d6dE0a9e3F985768FE164844b3e621893B904",
