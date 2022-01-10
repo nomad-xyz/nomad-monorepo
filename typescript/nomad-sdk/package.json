@@ -1,6 +1,6 @@
 {
   "name": "@nomad-xyz/sdk",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "description": "Nomad SDK",
   "main": "index.js",
   "types": "index.d.ts",
