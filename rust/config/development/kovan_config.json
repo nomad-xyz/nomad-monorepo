@@ -12,7 +12,7 @@
   },
   "replicas": {
     "moonbasealpha": {
-      "address": "0x84683c2d02FF9DfC65cc2c18Cf668773b318B224",
+      "address": "0x1d77eDee9bb5EA223ab83B7a1B67F931879D6e5B",
       "domain": "5000",
       "name": "moonbasealpha",
       "rpcStyle": "ethereum",
@@ -24,7 +24,7 @@
     }
   },
   "home": {
-    "address": "0x5635b4B8Ea091b56A64317A89512ad9564BbcafB",
+    "address": "0x706b4e61018793bA84BF23A314524c511170Ce07",
     "domain": "3000",
     "name": "kovan",
     "rpcStyle": "ethereum",
@@ -40,7 +40,7 @@
   },
   "db": "db_path",
   "index": {
-    "from": "29135880",
+    "from": "29193581",
     "chunk": "2000"
   }
 }

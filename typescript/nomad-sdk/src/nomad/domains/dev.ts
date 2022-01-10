@@ -1,46 +1,42 @@
 import { NomadDomain } from './domain';
 
 export const kovan: NomadDomain = {
-  name: 'kovan',
-  paginate: {
-    blocks: 2000,
-    from: 28759727,
+  "name": "kovan",
+  "id": 3000,
+  "paginate": {
+    "from": 29193581,
+    "blocks": 2000,
   },
-  id: 3000,
-  bridgeRouter: '0x3A3f8d6741f106ACb76763299CEF9239C3A0e929',
-  tokenRegistry: '0x53e6d34fc51034923d78D5Cf2a687063b6703096',
-  ethHelper: '0x250B6C2C13ab44e67Ed584d324e6d1568B6505be',
-  home: '0x5635b4B8Ea091b56A64317A89512ad9564BbcafB',
-  // replicas of remote homes deployed to Kovan
-  // NOT  Kovan replicas deployed to remote chains
-  replicas: [
+  "home": "0x706b4e61018793bA84BF23A314524c511170Ce07",
+  "replicas": [
     {
-      domain: 5000,
-      address: '0xF90FbAc8F2ddc0BAc21A09494c9FD1b94d3311e2',
+      "domain": 5000,
+      "address": "0x1d77eDee9bb5EA223ab83B7a1B67F931879D6e5B",
     },
   ],
-  governanceRouter: '0xC86666B3523c20b00c7F3BAa3d019d40E1b7c9b8',
+  "governanceRouter": "0x45F8c10cC8077081e062A7F643ADD6EABc7464C2",
+  "bridgeRouter": "0x7454A5cce9Ae2C52fB0B1B6D732A6a7d9CABA12C",
+  "tokenRegistry": "0x22f6977Bb15f55D2d8318F3EF4D27e64e5A2bb7F",
+  "ethHelper": "0x974CD1c543bd144C23bA7963b057eb0E54Fd6c9b",
 };
 
 export const moonbasealpha: NomadDomain = {
-  name: 'moonbasealpha',
-  paginate: {
-    blocks: 2000,
-    from: 1485048,
+  "name": "moonbasealpha",
+  "id": 5000,
+  "paginate": {
+    "from": 1507573,
+    "blocks": 2000,
   },
-  id: 5000,
-  bridgeRouter: '0x7F0Ee81930DdaeDB77cA2FF569Fe0A9963D95627',
-  tokenRegistry: '0xca445BA4554cB9f2cA90f63d14A73D568dE67cc6',
-  home: '0x20f63643D5E521E8C1d6D73a2dd09D3C5e752Cbe',
-  // replicas of remote homes deployed to Moonbasealpha
-  // NOT  Moonbasealpha replicas deployed to remote chains
-  replicas: [
+  "home": "0x926Df2b652bC8273BB2F06E8de135875bbE1D271",
+  "replicas": [
     {
-      domain: 3000,
-      address: '0x84683c2d02FF9DfC65cc2c18Cf668773b318B224',
+      "domain": 3000,
+      "address": "0x3E8B3E047b6a7B6342E74b15813137b2891817Cd",
     },
   ],
-  governanceRouter: '0xC72B0CBA22aC0d790B567E806E6e3257aAB103Fe',
+  "governanceRouter": "0x857d6dE0a9e3F985768FE164844b3e621893B904",
+  "bridgeRouter": "0x376017BF1De11dd15c236bB0e36D5e265966c9b8",
+  "tokenRegistry": "0xdC6aC677ea9057D0114Ab5609af9E70f71a519BC",
 };
 
 export const devDomains = [kovan, moonbasealpha];
