@@ -7,7 +7,7 @@ import { Signer } from 'lib/types';
 import {
   TestNomadBase__factory,
   TestNomadBase,
-} from '@nomad-xyz/contract-interfaces/dist/core';
+} from '@nomad-xyz/contract-interfaces/core';
 
 const signedUpdateTestCases = require('../../../vectors/signedUpdate.json');
 const localDomain = 1000;

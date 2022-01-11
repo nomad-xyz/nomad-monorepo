@@ -8,7 +8,7 @@ import * as types from 'lib/types';
 import {
   TestBridgeMessage__factory,
   TestBridgeMessage,
-} from '@nomad-xyz/contract-interfaces/dist/bridge';
+} from '@nomad-xyz/contract-interfaces/bridge';
 import { TokenIdentifier } from '@nomad-xyz/sdk/dist/nomad';
 
 describe('BridgeMessage', async () => {

@@ -5,7 +5,7 @@ import { BytesArray } from 'lib/types';
 import {
   TestMerkle,
   TestMerkle__factory,
-} from '@nomad-xyz/contract-interfaces/dist/core';
+} from '@nomad-xyz/contract-interfaces/core';
 
 const merkleTestCases = require('../../../vectors/merkle.json');
 

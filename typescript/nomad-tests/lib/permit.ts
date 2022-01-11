@@ -1,5 +1,5 @@
 import { BigNumber, BigNumberish, ethers } from 'ethers';
-import { BridgeToken } from '@nomad-xyz/contract-interfaces/dist/bridge';
+import { BridgeToken } from '@nomad-xyz/contract-interfaces/bridge';
 
 const PERMIT_TYPEHASH = ethers.utils.keccak256(
   ethers.utils.toUtf8Bytes(

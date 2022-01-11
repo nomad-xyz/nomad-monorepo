@@ -7,7 +7,7 @@ import { permitDigest } from 'lib/permit';
 import {
   BridgeToken__factory,
   BridgeToken,
-} from '@nomad-xyz/contract-interfaces/dist/bridge';
+} from '@nomad-xyz/contract-interfaces/bridge';
 
 const VALUE = 100;
 

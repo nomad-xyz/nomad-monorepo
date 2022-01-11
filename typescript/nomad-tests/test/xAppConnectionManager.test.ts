@@ -6,7 +6,7 @@ import { Updater } from 'lib/core';
 import { Signer } from 'lib/types';
 import { CoreDeploy as Deploy } from '@nomad-xyz/deploy/dist/src/core/CoreDeploy';
 import * as deploys from '@nomad-xyz/deploy/dist/src/core';
-import * as contracts from '@nomad-xyz/contract-interfaces/dist/core';
+import * as contracts from '@nomad-xyz/contract-interfaces/core';
 
 const signedFailureTestCases = require('../../../vectors/signedFailure.json');
 

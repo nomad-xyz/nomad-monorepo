@@ -15,7 +15,7 @@ import { CoreDeploy } from '@nomad-xyz/deploy/dist/src/core/CoreDeploy';
 import {
   MockWeth,
   MockWeth__factory,
-} from '@nomad-xyz/contract-interfaces/dist/bridge';
+} from '@nomad-xyz/contract-interfaces/bridge';
 import {toBytes32} from "lib/utils";
 
 const domains = [1000, 2000, 3000, 4000];

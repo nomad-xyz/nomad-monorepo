@@ -2,7 +2,7 @@ import { BytesLike, ethers, Signer } from 'ethers';
 import {
   UpgradeBeaconController,
   UpgradeBeaconController__factory,
-} from '@nomad-xyz/contract-interfaces/dist/core';
+} from '@nomad-xyz/contract-interfaces/core';
 import {
   BridgeRouter,
   BridgeToken,
@@ -12,13 +12,13 @@ import {
   MockWeth,
   MockWeth__factory,
   TokenRegistry,
-} from '@nomad-xyz/contract-interfaces/dist/bridge';
+} from '@nomad-xyz/contract-interfaces/bridge';
 import { ContractVerificationInput } from '../deploy';
 import { BridgeContracts } from './BridgeContracts';
 import * as process from '.';
 import { Chain, DEFAULT_GAS } from '../chain';
 
-import { TokenIdentifier } from '@nomad-xyz/sdk/dist/nomad/tokens';
+import { TokenIdentifier } from '@nomad-xyz/sdk/nomad/tokens';
 import { CoreConfig } from '../core/CoreDeploy';
 
 function toBytes32(address: string): string {

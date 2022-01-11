@@ -5,7 +5,7 @@ import { Result } from '@ethersproject/abi';
 import {
   TypedEvent,
   TypedEventFilter,
-} from '@nomad-xyz/contract-interfaces/dist/core/commons';
+} from '@nomad-xyz/contract-interfaces/core/commons';
 
 // specifies an interface shared by the TS generated contracts
 export interface TSContract<T extends Result, U> {

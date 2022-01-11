@@ -8,7 +8,7 @@ import TestBridgeDeploy from '@nomad-xyz/deploy/dist/src/bridge/TestBridgeDeploy
 import {
   BridgeToken,
   BridgeToken__factory,
-} from '@nomad-xyz/contract-interfaces/dist/bridge';
+} from '@nomad-xyz/contract-interfaces/bridge';
 const { BridgeMessageTypes } = bridge;
 
 [true, false].map((ENABLE_FAST) => {

@@ -9,7 +9,7 @@ import { Updater } from 'lib/core';
 import { Signer } from 'lib/types';
 import {CoreDeploy} from '@nomad-xyz/deploy/dist/src/core/CoreDeploy';
 import {deployHubAndSpoke} from '@nomad-xyz/deploy/dist/src/core';
-import * as contracts from '@nomad-xyz/contract-interfaces/dist/core';
+import * as contracts from '@nomad-xyz/contract-interfaces/core';
 
 async function expectNotInRecovery(
   updaterManager: contracts.UpdaterManager,

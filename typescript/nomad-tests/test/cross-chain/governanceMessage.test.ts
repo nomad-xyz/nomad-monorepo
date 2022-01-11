@@ -1,4 +1,4 @@
-import * as contracts from '@nomad-xyz/contract-interfaces/dist/core';
+import * as contracts from '@nomad-xyz/contract-interfaces/core';
 import { ethers } from 'hardhat';
 import { Signer } from 'lib/types';
 import { expect } from 'chai';

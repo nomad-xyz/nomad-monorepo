@@ -17,9 +17,9 @@
     "typescript": "^4.3.2"
   },
   "dependencies": {
-    "@nomad-xyz/contract-interfaces": "file:../typechain",
+    "@nomad-xyz/contract-interfaces": "1.1.0",
+    "@nomad-xyz/sdk": "0.1.16",
     "@nomad-xyz/deploy": "file:../nomad-deploy",
-    "@nomad-xyz/sdk": "file:../nomad-sdk",
     "@types/node": "^15.14.7",
     "dotenv": "^10.0.0",
     "ethers": "^5.4.7"
@@ -31,12 +31,8 @@
   "scripts": {
     "check": "tsc --noEmit",
     "prettier": "prettier --write ./test ./lib",
-    "test": "npm run relink-all && hardhat test",
+    "test": "npm run relink-deploy && hardhat test",
     "testNoCompile": "hardhat test",
-    "relink-all": "npm run relink-contracts && npm run relink-sdk && npm run prepare-deploy && npm run relink-deploy",
-    "prepare-deploy": "cd ../nomad-deploy && npm run relink-all && cd ../nomad-tests",
-    "relink-contracts": "cd ../typechain && npm run build && npm link && cd ../nomad-tests && npm link @nomad-xyz/contract-interfaces",
-    "relink-sdk": "cd ../nomad-sdk && npm run build && npm link && cd ../nomad-tests && npm link @nomad-xyz/sdk",
     "relink-deploy": "cd ../nomad-deploy && npm run build && npm link && cd ../nomad-tests && npm link @nomad-xyz/deploy"
   },
   "author": "Illusory Systems Inc.",
