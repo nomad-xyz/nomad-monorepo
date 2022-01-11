@@ -1,0 +1,16 @@
+{
+  "name": "ethereum",
+  "id": 6648936,
+  "paginate": {
+    "from": 13983724,
+    "blocks": 2000
+  },
+  "home": "0x92d3404a7E6c91455BbD81475Cd9fAd96ACFF4c8",
+  "replicas": [
+    {
+      "domain": 1650811245,
+      "address": "0x049b51e531Fd8f90da6d92EA83dC4125002F20EF"
+    }
+  ],
+  "governanceRouter": "0x3009C99D370B780304D2098196f1EBF779a4777a"
+}

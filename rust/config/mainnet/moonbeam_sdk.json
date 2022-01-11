@@ -1,0 +1,16 @@
+{
+  "name": "moonbeam",
+  "id": 1650811245,
+  "paginate": {
+    "from": 171256,
+    "blocks": 2000
+  },
+  "home": "0x8F184D6Aa1977fd2F9d9024317D0ea5cF5815b6f",
+  "replicas": [
+    {
+      "domain": 6648936,
+      "address": "0x7F58bb8311DB968AB110889F2Dfa04ab7E8E831B"
+    }
+  ],
+  "governanceRouter": "0x569D80f7FC17316B4C83f072b92EF37B72819DE0"
+}
