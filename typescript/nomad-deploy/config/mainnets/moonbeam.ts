@@ -34,5 +34,5 @@ export const config: CoreConfig = {
 };
 
 export const bridgeConfig: BridgeConfig = {
-  weth: 'TODO - deploy',
+  weth: '0xAcc15dC74880C9944775448304B263D191c6077F',
 };
