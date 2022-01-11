@@ -1,6 +1,6 @@
 {
   "name": "@nomad-xyz/sdk",
-  "version": "0.1.12",
+  "version": "0.1.16",
   "description": "Nomad SDK",
   "main": "index.js",
   "types": "index.d.ts",
@@ -26,7 +26,7 @@
     "typescript": "^4.4.3"
   },
   "dependencies": {
-    "@nomad-xyz/contract-interfaces": "file:../typechain",
+    "@nomad-xyz/contract-interfaces": "^1.0.2",
     "ethers": "^5.4.6"
   },
   "keywords": [

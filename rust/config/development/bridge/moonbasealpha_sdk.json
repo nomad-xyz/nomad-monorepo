@@ -1,4 +1,5 @@
 {
   "bridgeRouter": "0x376017BF1De11dd15c236bB0e36D5e265966c9b8",
-  "tokenRegistry": "0xdC6aC677ea9057D0114Ab5609af9E70f71a519BC"
+  "tokenRegistry": "0xdC6aC677ea9057D0114Ab5609af9E70f71a519BC",
+  "ethHelper": "0x83df3076BbacA1C435ecAbEA2de33dc5d5A404d8"
 }

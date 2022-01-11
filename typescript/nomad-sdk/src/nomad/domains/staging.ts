@@ -11,7 +11,7 @@ export const kovan: NomadDomain = {
   "replicas": [
     {
       "domain": 5000,
-      "address": "0x3333744724611Ef93521446670b4cC4009338E58",
+      "address": "0x2fFEa0eBe27cF63cbE4b8bb621b817F7fe40f27B",
     },
   ],
   "governanceRouter": "0x2960C101Cb72eCC35a515e247608b17B46f38bA6",
@@ -31,12 +31,13 @@ export const moonbasealpha: NomadDomain = {
   "replicas": [
     {
       "domain": 3000,
-      "address": "0x2fFEa0eBe27cF63cbE4b8bb621b817F7fe40f27B",
+      "address": "0x3333744724611Ef93521446670b4cC4009338E58",
     },
   ],
   "governanceRouter": "0xD3cBBd9fe9Fa81850E2e083C4fe05Cc18B11a4B6",
   "bridgeRouter": "0xEDC1bcB5a6B47483eD9640bbE4c91C3d2A9A6286",
   "tokenRegistry": "0x5AFfc0aa97Af0e5de401b156De38CeE7b34cfCA0",
+  "ethHelper": "0x7FacDe7EB8e2B2d4996d9b03AaBD4bA033AD1654",
 };
 
 export const stagingDomains = [kovan, moonbasealpha];

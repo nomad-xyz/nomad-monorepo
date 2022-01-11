@@ -64,5 +64,13 @@
       "0x485cc955000000000000000000000000dc6ac677ea9057d0114ab5609af9e70f71a519bc000000000000000000000000314cc8432f4ee03df5a11ee55eedfcfe7f5fee72"
     ],
     "isProxy": true
+  },
+  {
+    "name": "ETH Helper",
+    "address": "0x83df3076BbacA1C435ecAbEA2de33dc5d5A404d8",
+    "constructorArguments": [
+      "0x674421e9567653ee76e96feea3b2b2966d000dbd",
+      "0x376017BF1De11dd15c236bB0e36D5e265966c9b8"
+    ]
   }
 ]
