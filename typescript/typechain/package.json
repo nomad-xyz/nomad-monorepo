@@ -8,7 +8,7 @@
     "ethers": "^5.4.7"
   },
   "name": "@nomad-xyz/contract-interfaces",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "Nomad contract interfaces",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
