@@ -1,33 +1,28 @@
 {
-  "upgradeBeaconController": "0xbB6d6333FAFd2cae7ef4c5EFBF8f048F2F109D1B",
-  "xAppConnectionManager": "0xcEc158A719d11005Bd9339865965bed938BEafA3",
-  "updaterManager": "0x2CC80EE8a3f9c85309866F4C6BDF82f6846891EC",
+  "upgradeBeaconController": "0xdB378579c2Af11817EEA21474A39F95B5b9DfD7e",
+  "xAppConnectionManager": "0xFe8874778f946Ac2990A29eba3CFd50760593B2F",
+  "updaterManager": "0x9272C9d5fa902Ef3804EC81e0333Ae420D57f715",
   "governance": {
-    "implementation": "0xDFb2A95900d6b7c8AA95F2E46563a5FCFb5505A1",
-    "proxy": "0x42303634F37956687fB7ff2c6146AC842481A052",
-    "beacon": "0x681Edb6d52138cEa8210060C309230244BcEa61b"
+    "implementation": "0x569D80f7FC17316B4C83f072b92EF37B72819DE0",
+    "proxy": "0x3009C99D370B780304D2098196f1EBF779a4777a",
+    "beacon": "0x67833a48b3F509d4252ac2c19cd604556eD6c981"
   },
   "home": {
-    "implementation": "0xfAc41463ef1E01546F2130F92184a053A0E3Fa14",
-    "proxy": "0xf25C5932bb6EFc7afA4895D9916F2abD7151BF97",
-    "beacon": "0x9E4C2547307e221383A4bcba6065389C69Bd4628"
+    "implementation": "0x8F184D6Aa1977fd2F9d9024317D0ea5cF5815b6f",
+    "proxy": "0x92d3404a7E6c91455BbD81475Cd9fAd96ACFF4c8",
+    "beacon": "0x063e871f8DB991CEAd34B557A00B157B360084cc"
   },
   "replicas": {
-    "1667591279": {
-      "implementation": "0xFC4060e4Fd5979f848b8EDc8505d2f89D83b9E04",
-      "proxy": "0x07b5B57b08202294E657D51Eb453A189290f6385",
-      "beacon": "0x10a432946e24C49866c243a13BE7205B3EF929ee"
-    },
-    "1886350457": {
-      "implementation": "0xFC4060e4Fd5979f848b8EDc8505d2f89D83b9E04",
-      "proxy": "0x7725EadaC5Ee986CAc8317a1d2fB16e59e079E8b",
-      "beacon": "0x10a432946e24C49866c243a13BE7205B3EF929ee"
+    "1650811245": {
+      "implementation": "0x7F58bb8311DB968AB110889F2Dfa04ab7E8E831B",
+      "proxy": "0x049b51e531Fd8f90da6d92EA83dC4125002F20EF",
+      "beacon": "0x0876dFe4AcAe0e1c0a43302716483f5752298b71"
     }
   },
-  "recoveryManager": "0x3D9330014952Bf0A3863FEB7a657bfFA5C9D40B9",
-  "updater": "0xDB2091535eb0Ee447Ce170DDC25204FEA822dd81",
+  "recoveryManager": "0xda2f881f7f4e9d2b9559f97c7670472a85c1986a",
+  "updater": "0x71dC76C07E92325e7Cc09117AB94310Da63Fc2b9",
   "governor": {
-    "address": "0x5Fa96B622D1F4e920b92040c10fA297ca496ad37",
+    "address": "0x93277b8f5939975b9e6694d5fd2837143afbf68a",
     "domain": 6648936
   }
 }

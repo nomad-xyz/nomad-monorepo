@@ -1,20 +1,20 @@
 {
   "environment": "prod",
   "signers": {
-    "ethereum": {
+    "moonbeam": {
       "key": "",
       "type": "hexKey"
     },
-    "moonbeam": {
+    "ethereum": {
       "key": "",
       "type": "hexKey"
     }
   },
   "replicas": {
-    "moonbeam": {
-      "address": "0x7F58bb8311DB968AB110889F2Dfa04ab7E8E831B",
-      "domain": "1650811245",
-      "name": "moonbeam",
+    "ethereum": {
+      "address": "0x049b51e531Fd8f90da6d92EA83dC4125002F20EF",
+      "domain": "6648936",
+      "name": "ethereum",
       "rpcStyle": "ethereum",
       "timelag": 20,
       "connection": {
@@ -24,9 +24,9 @@
     }
   },
   "home": {
-    "address": "0x92d3404a7E6c91455BbD81475Cd9fAd96ACFF4c8",
-    "domain": "6648936",
-    "name": "ethereum",
+    "address": "0x8F184D6Aa1977fd2F9d9024317D0ea5cF5815b6f",
+    "domain": "1650811245",
+    "name": "moonbeam",
     "rpcStyle": "ethereum",
     "timelag": 20,
     "connection": {
@@ -40,7 +40,7 @@
   },
   "db": "db_path",
   "index": {
-    "from": "13983724",
+    "from": "171256",
     "chunk": "2000"
   }
 }
