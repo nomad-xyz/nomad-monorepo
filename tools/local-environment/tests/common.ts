@@ -1,6 +1,6 @@
 import { Nomad, utils, Network } from "../src";
 import type { TokenIdentifier } from "@nomad-xyz/sdk/src/nomad/tokens";
-import { ERC20 } from "@nomad-xyz/contracts/dist/bridge/ERC20";
+import { ERC20 } from "@nomad-xyz/contract-interfaces/bridge/ERC20";
 import { ethers } from "ethers";
 import { TransferMessage } from "@nomad-xyz/sdk/src/nomad";
 
