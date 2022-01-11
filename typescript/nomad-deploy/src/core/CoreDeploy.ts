@@ -101,7 +101,6 @@ export class CoreDeploy extends Deploy<CoreContracts> {
     return {
       name: local.chain.name,
       id: local.chain.domain,
-      governanceRouter: local.contracts.governance!.proxy.address,
       paginate: {
         from: local.config.fromBlock || 0,
         blocks: local.chain.config.chunk || 2000,
