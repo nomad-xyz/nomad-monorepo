@@ -1079,6 +1079,7 @@ export class Nomad {
             domain: network.domain.toString(),
             name: network.name,
             rpcStyle: "ethereum",
+            timelag: this.getChain(network).config.timelag,
             connection: {
               url: network.location.toString(),
               type: network.location.scheme,
