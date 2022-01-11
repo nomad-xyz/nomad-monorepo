@@ -1,3 +1,4 @@
+import * as dotenv from 'dotenv';
 import { ethers } from 'ethers';
 import { BridgeToken__factory } from '@nomad-xyz/contract-interfaces/dist/bridge';
 
@@ -21,6 +22,9 @@ function getRpcProviderFromNetwork(
     case 'moonbeam':
       rpcUrl = process.env.MOONBEAM_RPC!;
       break;
+    case 'moonbasealpha':
+      rpcUrl = process.env.MOONBASEALPHA_RPC!;
+      break;
     default:
       throw new Error(`No RPC url for network ${network}`);
   }
@@ -31,7 +35,7 @@ function getRpcProviderFromNetwork(
 function getSigner(network: string): ethers.Signer {
   const privKey = process.env.SET_DETAILS_KEY!;
   const provider = getRpcProviderFromNetwork(network);
-  return new ethers.Wallet(privKey!.toString(), provider);
+  return new ethers.Wallet(privKey, provider);
 }
 
 async function setDetailsForToken(
@@ -42,7 +46,11 @@ async function setDetailsForToken(
   const { address, name, symbol, decimals } = details;
 
   const token = BridgeToken__factory.connect(address, signer);
+
+  console.log('Calling set details on contract...');
   const tx = await token.setDetails(name, symbol, decimals);
+
+  console.log('Waiting for 3 confirmations...');
   await tx.wait(3);
 
   console.log('Successfully set details for token!');
@@ -60,6 +68,8 @@ async function setDetailsForToken(
  * 2. npm run set-details <network> <token_address> <token_name> <symbol> <decimals>
  */
 (async () => {
+  dotenv.config({ path: process.env.CONFIG_PATH ?? '.env' });
+
   const args = process.argv.slice(2);
   const network = args[0];
   const address = args[1];
