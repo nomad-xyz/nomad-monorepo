@@ -155,6 +155,7 @@ export class NomadContext extends MultiProvider {
     if (!core) {
       throw new Error(`Missing core for domain: ${nameOrDomain}`);
     }
+    core.connect(this.mustGetProvider(nameOrDomain));
     return core;
   }
 
@@ -180,6 +181,7 @@ export class NomadContext extends MultiProvider {
     if (!bridge) {
       throw new Error(`Missing bridge for domain: ${nameOrDomain}`);
     }
+    bridge.connect(this.mustGetProvider(nameOrDomain));
     return bridge;
   }
 
@@ -251,13 +253,33 @@ export class NomadContext extends MultiProvider {
     if (!address || address == ethers.constants.AddressZero) {
       return;
     }
-    const connection = this.getConnection(domain);
+    return this.connectRepresentation(domain, evmId(address));
+  }
+
+  /**
+   * Connect to a token representation contract given its domain and address
+   *
+   * WARNING: do not hold references to these contracts, as they will not be
+   * reconnected in the event the chain connection changes.
+   *
+   * @param nameOrDomain the target domain, which hosts the representation
+   * @param representationAddress the address of the representation token on that domain
+   * @returns An interface for the representation token
+   */
+  async connectRepresentation(
+    nameOrDomain: string | number,
+    representationAddress: Address,
+  ): Promise<bridge.BridgeToken> {
+    const connection = this.getConnection(nameOrDomain);
     if (!connection) {
       throw new Error(
-        `No provider or signer for ${domain}. Register a connection first before calling resolveRepresentation.`,
+        `No provider or signer for ${nameOrDomain}. Register a connection first before calling connectRepresentation.`,
       );
     }
-    return bridge.BridgeToken__factory.connect(evmId(address), connection);
+    return bridge.BridgeToken__factory.connect(
+      representationAddress,
+      connection,
+    );
   }
 
   /**
@@ -460,7 +482,12 @@ export class NomadContext extends MultiProvider {
 
     overrides.value = amount;
 
-    const tx = await ethHelper.sendToEVMLike(toDomain, recipient, enableFast, overrides);
+    const tx = await ethHelper.sendToEVMLike(
+      toDomain,
+      recipient,
+      enableFast,
+      overrides,
+    );
     const receipt = await tx.wait();
 
     const message = TransferMessage.singleFromReceipt(this, from, receipt);
@@ -469,6 +496,70 @@ export class NomadContext extends MultiProvider {
     }
 
     return message as TransferMessage;
+  }
+
+  /**
+   * Send tokens from one domain to another. Approves the bridge if necessary.
+   *
+   * @param token The token to update details for
+   * @param domains An array of the domains to updateDetails on
+   * @param overrides Any tx overrides (e.g. gas price)
+   * @returns a {@link TransferMessage} object representing the in-flight
+   *          transfer
+   * @throws On missing signers, missing tokens, tx issues, etc.
+   */
+  async setDetails(
+    token: TokenIdentifier,
+    domains: (string | number)[],
+    overrides: ethers.Overrides = {},
+  ): Promise<ethers.ContractReceipt[]> {
+    // get canonical token contract & query canonical details
+    const { name, symbol, decimals } = await this.getCanonicalTokenDetails(
+      token,
+    );
+    // for each domain, setDetails
+    const receiptPromises: Promise<ethers.ContractReceipt>[] = [];
+    for (const domain of domains) {
+      // get the token representation on that chain
+      const representation = await this.resolveRepresentation(domain, token);
+      if (!representation) {
+        throw new Error(`Token not available on ${domain}`);
+      }
+      // send setDetails transaction
+      const tx = await representation.setDetails(
+        name,
+        symbol,
+        decimals,
+        overrides,
+      );
+      // push transaction receipt promise
+      const receiptPromise = tx.wait();
+      receiptPromises.push(receiptPromise);
+    }
+    // return all transaction promises
+    return Promise.all(receiptPromises);
+  }
+
+  /**
+   * Queries the name, symbol and details of a canonical token.
+   *
+   * @param token The token to query details for
+   * @returns {name, symbol, details}
+   */
+  async getCanonicalTokenDetails(
+    token: TokenIdentifier,
+  ): Promise<{ name: string; symbol: string; decimals: number }> {
+    // WARNING: "canonical" is NOT a representation token;
+    // HOWEVER, we are using that interface to query name, symbol and decimals
+    // because ERC20 interface doesn't have these fields
+    const canonical = await this.connectRepresentation(
+      token.domain,
+      evmId(token.id),
+    );
+    const name = await canonical.name();
+    const symbol = await canonical.symbol();
+    const decimals = await canonical.decimals();
+    return { name, symbol, decimals };
   }
 }
 

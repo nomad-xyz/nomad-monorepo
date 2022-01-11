@@ -4,7 +4,6 @@ import * as contexts from './registerContext';
 import { NomadContext } from '@nomad-xyz/sdk';
 import { HealthMetricsCollector } from './bridgeHealth/healthMetrics';
 import { MetricsCollector } from './metrics';
-import { setRpcProviders } from './registerContext';
 import { RelayLatencyMetrics } from './latencies/relayer/metrics';
 import { ProcessLatencyMetrics } from './latencies/processor/metrics';
 import { E2ELatencyMetrics } from './latencies/e2e/metrics';
@@ -21,8 +20,6 @@ export class MonitorConfig {
   googleCredentialsFile: string;
 
   constructor(script: string, origin: string) {
-    prepareContext();
-
     const environment = process.env.ENVIRONMENT ?? 'development';
 
     this.origin = origin;
@@ -103,24 +100,14 @@ function getNetworks() {
 
 export function getRpcsFromEnv() {
   return {
-    celoRpc: process.env.CELO_RPC ?? '',
     ethereumRpc: process.env.ETHEREUM_RPC ?? '',
-    polygonRpc: process.env.POLYGON_RPC ?? '',
-    alfajoresRpc: process.env.ALFAJORES_RPC ?? '',
     kovanRpc: process.env.KOVAN_RPC ?? '',
     rinkebyRpc: process.env.RINKEBY_RPC ?? '',
     moonbasealphaRpc: process.env.MOONBASEALPHA_RPC ?? '',
   };
 }
 
-export function prepareContext() {
-  const rpcs = getRpcsFromEnv();
-  setRpcProviders(rpcs);
-}
-
 export function buildConfig(script: string) {
-  prepareContext();
-
   return {
     baseLogger: createLogger(script),
     metrics: getMetrics(script),
