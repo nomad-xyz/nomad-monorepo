@@ -21,11 +21,12 @@
     "check": "rm tsconfig.tsbuildinfo & tsc --noEmit",
     "prettier": "prettier --write .",
     "relink": "cd ../nomad-sdk && npm run build && cd dist && npm link && cd ../../nomad-monitor && npm link @nomad-xyz/sdk",
+    "unlink": "npm unlink --no-save @nomad-xyz/sdk && cd ../nomad-sdk && npm unlink",
     "release-docker": "docker buildx build --platform linux/amd64,linux/arm64 --push -t gcr.io/nomad-xyz/nomad-monitor:sha-$(git rev-parse --short HEAD) ."
   },
   "dependencies": {
     "@nomad-xyz/contract-interfaces": "^1.0.2",
-    "@nomad-xyz/sdk": "^0.1.15",
+    "@nomad-xyz/sdk": "^0.1.16",
     "@types/bunyan": "^1.8.7",
     "@types/express": "^4.17.13",
     "@types/google-spreadsheet": "^3.1.5",
