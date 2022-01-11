@@ -1,5 +1,5 @@
 import { ethers } from 'ethers';
-import { TypedEvent } from '@nomad-xyz/contract-interfaces/dist/core/commons';
+import { TypedEvent } from '@nomad-xyz/contract-interfaces/core/commons';
 import { EventType, IndexType, MonitorSingle } from '../../monitorSingle';
 import {
   getFraudWindowSeconds,

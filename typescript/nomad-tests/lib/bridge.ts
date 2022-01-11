@@ -1,4 +1,4 @@
-import { TokenIdentifier } from '@nomad-xyz/sdk/dist/nomad';
+import { TokenIdentifier } from '@nomad-xyz/sdk/nomad';
 import { assert } from 'chai';
 import { ethers } from 'ethers';
 

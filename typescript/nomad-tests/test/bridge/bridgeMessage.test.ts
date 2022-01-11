@@ -9,7 +9,7 @@ import {
   TestBridgeMessage__factory,
   TestBridgeMessage,
 } from '@nomad-xyz/contract-interfaces/bridge';
-import { TokenIdentifier } from '@nomad-xyz/sdk/dist/nomad';
+import { TokenIdentifier } from '@nomad-xyz/sdk/nomad';
 
 describe('BridgeMessage', async () => {
   let bridgeMessage: TestBridgeMessage;

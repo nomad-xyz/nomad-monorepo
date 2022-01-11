@@ -5,7 +5,7 @@ import { expect } from 'chai';
 import * as types from 'lib/types';
 import { toBytes32 } from 'lib/utils';
 import TestBridgeDeploy from '@nomad-xyz/deploy/dist/src/bridge/TestBridgeDeploy';
-import { TokenIdentifier } from '@nomad-xyz/sdk/dist/nomad';
+import { TokenIdentifier } from '@nomad-xyz/sdk/nomad';
 
 const { BridgeMessageTypes } = bridge;
 [true, false].map((ENABLE_FAST) => {
