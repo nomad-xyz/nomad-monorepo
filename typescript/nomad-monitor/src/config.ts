@@ -86,7 +86,7 @@ function getNetworks() {
   let networks = [];
   switch (environment) {
     case 'production':
-      networks = ['ethereum', 'celo', 'polygon'];
+      networks = ['ethereum', 'moonbeam'];
       break;
 
     case 'staging':
@@ -110,6 +110,7 @@ export function getRpcsFromEnv() {
     kovanRpc: process.env.KOVAN_RPC ?? '',
     rinkebyRpc: process.env.RINKEBY_RPC ?? '',
     moonbasealphaRpc: process.env.MOONBASEALPHA_RPC ?? '',
+    moonbeamRpc: process.env.MOONBEAM_RPC ?? ''
   };
 }
 

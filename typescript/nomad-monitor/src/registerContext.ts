@@ -2,9 +2,8 @@ import { dev, mainnet, staging } from '@nomad-xyz/sdk';
 
 export function setRpcProviders(rpcs: any) {
   // register mainnet
-  mainnet.registerRpcProvider('celo', rpcs.celoRpc);
   mainnet.registerRpcProvider('ethereum', rpcs.ethereumRpc);
-  mainnet.registerRpcProvider('polygon', rpcs.polygonRpc);
+  mainnet.registerRpcProvider('moonbeam', rpcs.moonbeamRpc);
 
   // register staging
   staging.registerRpcProvider('moonbasealpha', rpcs.moonbasealphaRpc);
