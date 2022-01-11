@@ -3,7 +3,7 @@ import { expect } from 'chai';
 import {
   TestQueue,
   TestQueue__factory,
-} from '@nomad-xyz/contract-interfaces/dist/core';
+} from '@nomad-xyz/contract-interfaces/core';
 
 // create a proper hex encoded bytes32 filled with number. e.g 0x01010101...
 const bytes32 = (num: number) => `0x${Buffer.alloc(32, num).toString('hex')}`;

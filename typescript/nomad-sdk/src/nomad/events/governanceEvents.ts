@@ -1,5 +1,5 @@
 import { BigNumber } from '@ethersproject/bignumber';
-import { TypedEvent } from '@nomad-xyz/contract-interfaces/dist/core/commons';
+import { TypedEvent } from '@nomad-xyz/contract-interfaces/core/commons';
 import { Annotated } from '.';
 
 // copied from GovernanceRouter.d.ts

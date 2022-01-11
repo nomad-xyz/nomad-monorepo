@@ -3,7 +3,7 @@ import fs from 'fs';
 import { ethers } from 'ethers';
 import * as proxyUtils from '../proxyUtils';
 import { CoreDeploy, ExistingCoreDeploy } from './CoreDeploy';
-import * as contracts from '@nomad-xyz/contract-interfaces/dist/core';
+import * as contracts from '@nomad-xyz/contract-interfaces/core';
 import { checkCoreDeploy } from './checks';
 import { toBytes32, CallData, formatCall } from '../utils';
 import { getPathToDeployConfig } from '../verification/readDeployOutput';

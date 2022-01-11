@@ -1,6 +1,6 @@
 import { ethers } from 'ethers';
 import { compareEvents, blocksToSeconds } from '../../utils';
-import { TypedEvent } from '@nomad-xyz/contract-interfaces/dist/core/commons';
+import { TypedEvent } from '@nomad-xyz/contract-interfaces/core/commons';
 import { EventType, IndexType, MonitorSingle } from '../../monitorSingle';
 import { E2ELatencyMetrics } from './metrics';
 import { MonitorConfig } from '../../config';

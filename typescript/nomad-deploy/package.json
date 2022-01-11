@@ -20,17 +20,14 @@
     "deploy-dev-core": "npx ts-node scripts/development/core.ts",
     "deploy-dev-bridges": "npx ts-node scripts/development/bridge.ts",
     "deploy-staging-core": "npx ts-node scripts/staging/core.ts",
-    "deploy-staging-bridges": "npx ts-node scripts/staging/bridge.ts",
-    "relink-all": "npm run relink-contracts && npm run relink-sdk",
-    "relink-contracts": "cd ../typechain && npm run build && npm link && cd ../nomad-deploy && npm link @nomad-xyz/contract-interfaces",
-    "relink-sdk": "cd ../nomad-sdk && npm run build && npm link && cd ../nomad-deploy && npm link @nomad-xyz/sdk"
+    "deploy-staging-bridges": "npx ts-node scripts/staging/bridge.ts"
   },
   "author": "Illusory Systems Inc.",
   "license": "Apache-2.0",
   "dependencies": {
     "@ethersproject/experimental": "^5.3.0",
-    "@nomad-xyz/contract-interfaces": "file:../typechain",
-    "@nomad-xyz/sdk": "file:../nomad-sdk",
+    "@nomad-xyz/contract-interfaces": "1.1.0",
+    "@nomad-xyz/sdk": "1.0.0",
     "@types/node": "^16.9.1",
     "axios": "^0.21.3",
     "chai": "^4.3.4",

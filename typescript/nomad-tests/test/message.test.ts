@@ -3,7 +3,7 @@ import { expect } from 'chai';
 import {
   TestMessage,
   TestMessage__factory,
-} from '@nomad-xyz/contract-interfaces/dist/core';
+} from '@nomad-xyz/contract-interfaces/core';
 
 const testCases = require('../../../vectors/message.json');
 

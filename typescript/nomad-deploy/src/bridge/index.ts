@@ -1,6 +1,6 @@
 import * as proxyUtils from '../proxyUtils';
 import { checkBridgeDeploy } from './checks';
-import * as xAppContracts from '@nomad-xyz/contract-interfaces/dist/bridge';
+import * as xAppContracts from '@nomad-xyz/contract-interfaces/bridge';
 import { toBytes32, CallData, formatCall } from '../utils';
 import fs from 'fs';
 import { BridgeDeploy } from './BridgeDeploy';

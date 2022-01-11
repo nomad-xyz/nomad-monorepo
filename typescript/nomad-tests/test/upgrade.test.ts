@@ -3,7 +3,7 @@ import { ethers } from 'hardhat';
 import { getTestDeploy } from './testChain';
 import { UpgradeTestHelpers, MysteryMathUpgrade } from './utils';
 import { Signer } from 'lib/types';
-import * as contracts from '@nomad-xyz/contract-interfaces/dist/core';
+import * as contracts from '@nomad-xyz/contract-interfaces/core';
 
 describe('Upgrade', async () => {
   const utils = new UpgradeTestHelpers();

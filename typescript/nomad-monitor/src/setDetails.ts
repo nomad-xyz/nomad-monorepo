@@ -1,6 +1,6 @@
 import * as dotenv from 'dotenv';
 import { ethers } from 'ethers';
-import { BridgeToken__factory } from '@nomad-xyz/contract-interfaces/dist/bridge';
+import { BridgeToken__factory } from '@nomad-xyz/contract-interfaces/bridge';
 
 // TODO: move to SDK
 interface TokenDetails {

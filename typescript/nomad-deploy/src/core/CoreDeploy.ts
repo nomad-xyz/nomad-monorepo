@@ -11,7 +11,7 @@ import { CoreContracts } from './CoreContracts';
 import { Deploy } from '../deploy';
 import { BigNumberish } from '@ethersproject/bignumber';
 import fs from 'fs';
-import { NomadDomain } from '@nomad-xyz/sdk/dist/nomad';
+import { NomadDomain } from '@nomad-xyz/sdk/nomad';
 
 type Address = string;
 

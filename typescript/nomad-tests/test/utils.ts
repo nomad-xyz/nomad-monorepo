@@ -7,7 +7,7 @@ import {
   deployUpdaterManager,
   deployUpgradeBeaconController,
 } from '@nomad-xyz/deploy/dist/src/core';
-import * as contracts from '@nomad-xyz/contract-interfaces/dist/core';
+import * as contracts from '@nomad-xyz/contract-interfaces/core';
 
 export const increaseTimestampBy = async (
   provider: ethers.providers.JsonRpcProvider,

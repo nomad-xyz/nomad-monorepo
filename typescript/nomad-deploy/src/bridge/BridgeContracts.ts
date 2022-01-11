@@ -1,8 +1,8 @@
-import * as xAppContracts from '@nomad-xyz/contract-interfaces/dist/bridge';
+import * as xAppContracts from '@nomad-xyz/contract-interfaces/bridge';
 import { BeaconProxy, ProxyAddresses } from '../proxyUtils';
 import { Contracts } from '../contracts';
 import * as ethers from 'ethers';
-import * as contracts from '@nomad-xyz/contract-interfaces/dist/core';
+import * as contracts from '@nomad-xyz/contract-interfaces/core';
 
 type SignerOrProvider = ethers.ethers.providers.Provider | ethers.ethers.Signer;
 

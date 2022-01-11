@@ -1,7 +1,7 @@
 import { ethers } from 'ethers';
 import { bridge } from '@nomad-xyz/contract-interfaces';
 import { Contracts } from '../../contracts';
-import { BridgeRouter, TokenRegistry, ETHHelper } from '@nomad-xyz/contract-interfaces/dist/bridge';
+import { BridgeRouter, TokenRegistry, ETHHelper } from '@nomad-xyz/contract-interfaces/bridge';
 
 type Address = string;
 

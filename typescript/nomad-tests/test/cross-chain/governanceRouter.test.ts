@@ -11,7 +11,7 @@ import {
   deployHubAndSpoke,
   deployUnenrolledReplica,
 } from '@nomad-xyz/deploy/dist/src/core';
-import * as contracts from '@nomad-xyz/contract-interfaces/dist/core';
+import * as contracts from '@nomad-xyz/contract-interfaces/core';
 
 const governorDomain = 1000;
 const nonGovernorDomain = 2000;

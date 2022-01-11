@@ -9,7 +9,7 @@ import {
   TestReplica,
   Home,
   TestGovernanceRouter,
-} from '@nomad-xyz/contract-interfaces/dist/core';
+} from '@nomad-xyz/contract-interfaces/core';
 
 type MessageDetails = {
   message: string;

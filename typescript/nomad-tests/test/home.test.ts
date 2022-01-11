@@ -10,7 +10,7 @@ import {
   TestHome,
   UpdaterManager__factory,
   UpdaterManager,
-} from '@nomad-xyz/contract-interfaces/dist/core';
+} from '@nomad-xyz/contract-interfaces/core';
 
 const homeDomainHashTestCases = require('../../../vectors/homeDomainHash.json');
 const destinationNonceTestCases = require('../../../vectors/destinationNonce.json');

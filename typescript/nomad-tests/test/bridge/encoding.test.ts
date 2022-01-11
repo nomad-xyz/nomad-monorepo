@@ -1,6 +1,6 @@
 import { ethers } from 'hardhat';
 
-import * as contracts from '@nomad-xyz/contract-interfaces/dist/bridge';
+import * as contracts from '@nomad-xyz/contract-interfaces/bridge';
 
 describe('Encoding', async () => {
   it('encodes', async () => {

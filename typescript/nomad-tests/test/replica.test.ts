@@ -11,7 +11,7 @@ import {
   deployUpdaterManager,
 } from '@nomad-xyz/deploy/dist/src/core';
 
-import * as contracts from '@nomad-xyz/contract-interfaces/dist/core';
+import * as contracts from '@nomad-xyz/contract-interfaces/core';
 
 const homeDomainHashTestCases = require('../../../vectors/homeDomainHash.json');
 const merkleTestCases = require('../../../vectors/merkle.json');
