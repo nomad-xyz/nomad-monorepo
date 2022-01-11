@@ -1,60 +1,43 @@
 import { NomadDomain } from './domain';
 
 export const ethereum: NomadDomain = {
-  name: 'ethereum',
-  id: 6648936,
-  bridgeRouter: '0x6a39909e805A3eaDd2b61fFf61147796ca6aBB47',
-  tokenRegistry: 'TODO',
-  ethHelper: '0xf1c1413096ff2278C3Df198a28F8D54e0369cF3A',
-  home: '0xf25C5932bb6EFc7afA4895D9916F2abD7151BF97',
-  replicas: [
-    {
-      domain: 1667591279,
-      address: '0x07b5B57b08202294E657D51Eb453A189290f6385',
-    },
-    {
-      domain: 1886350457,
-      address: '0x7725EadaC5Ee986CAc8317a1d2fB16e59e079E8b',
-    },
-  ],
-  governanceRouter: 'TODO',
-};
-
-export const polygon: NomadDomain = {
-  name: 'polygon',
-  id: 1886350457,
-  paginate: {
-    blocks: 100,
-    from: 18895794,
+  "name": "ethereum",
+  "id": 6648936,
+  "paginate": {
+    "from": 13983724,
+    "blocks": 2000
   },
-  bridgeRouter: '0xf244eA81F715F343040569398A4E7978De656bf6',
-  tokenRegistry: 'TODO',
-  ethHelper: '0xc494bFEE14b5E1E118F93CfedF831f40dFA720fA',
-  home: '0x97bbda9A1D45D86631b243521380Bc070D6A4cBD',
-  replicas: [
-    { domain: 6648936, address: '0xf25C5932bb6EFc7afA4895D9916F2abD7151BF97' },
+  "home": "0x92d3404a7E6c91455BbD81475Cd9fAd96ACFF4c8",
+  "replicas": [
     {
-      domain: 1667591279,
-      address: '0x681Edb6d52138cEa8210060C309230244BcEa61b',
-    },
+      "domain": 1650811245,
+      "address": "0x049b51e531Fd8f90da6d92EA83dC4125002F20EF"
+    }
   ],
-  governanceRouter: 'TODO',
+  "governanceRouter": "0x3009C99D370B780304D2098196f1EBF779a4777a",
+  "bridgeRouter": "0x88A69B4E698A4B090DF6CF5Bd7B2D47325Ad30A3",
+  "tokenRegistry": "0x0A6f564C5c9BeBD66F1595f1B51D1F3de6Ef3b79",
+  "ethHelper": "0x2d6775C1673d4cE55e1f827A0D53e62C43d1F304"
 };
 
-export const celo: NomadDomain = {
-  name: 'celo',
-  id: 1667591279,
-  bridgeRouter: '0xf244eA81F715F343040569398A4E7978De656bf6',
-  tokenRegistry: 'TODO',
-  home: '0x97bbda9A1D45D86631b243521380Bc070D6A4cBD',
-  replicas: [
-    { domain: 6648936, address: '0xf25c5932bb6efc7afa4895d9916f2abd7151bf97' },
+export const moonbeam: NomadDomain = {
+  "name": "moonbeam",
+  "id": 1650811245,
+  "paginate": {
+    "from": 171256,
+    "blocks": 2000
+  },
+  "home": "0x8F184D6Aa1977fd2F9d9024317D0ea5cF5815b6f",
+  "replicas": [
     {
-      domain: 1886350457,
-      address: '0x681Edb6d52138cEa8210060C309230244BcEa61b',
-    },
+      "domain": 6648936,
+      "address": "0x7F58bb8311DB968AB110889F2Dfa04ab7E8E831B"
+    }
   ],
-  governanceRouter: 'TODO',
+  "governanceRouter": "0x569D80f7FC17316B4C83f072b92EF37B72819DE0",
+  "bridgeRouter": "0xD3dfD3eDe74E0DCEBC1AA685e151332857efCe2d",
+  "tokenRegistry": "0xa7E4Fea3c1468D6C1A3A77e21e6e43Daed855C1b",
+  "ethHelper": "0xB70588b1A51F847d13158ff18E9Cac861dF5Fb00"
 };
 
-export const mainnetDomains = [ethereum, celo, polygon];
+export const mainnetDomains = [ethereum, moonbeam];
