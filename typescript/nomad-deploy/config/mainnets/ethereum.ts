@@ -31,12 +31,12 @@ export const config: CoreConfig = {
   environment: 'prod',
   updater: '0x71dC76C07E92325e7Cc09117AB94310Da63Fc2b9',
   recoveryTimelock: 60 * 60 * 24, // 1 day
-  recoveryManager: 'TODO: deploy',
+  recoveryManager: '0xda2f881f7f4e9d2b9559f97c7670472a85c1986a',
   optimisticSeconds: 60 * 30, // 30 minutes
   watchers: ['0x9782A3C8128f5D1BD3C9655d03181ba5b420883E'],
   governor: {
     domain: chainJson.domain,
-    address: 'TODO: deploy',
+    address: '0x93277b8f5939975b9e6694d5fd2837143afbf68a',
   },
   processGas: 850_000,
   reserveGas: 15_000,

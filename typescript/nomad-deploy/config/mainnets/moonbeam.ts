@@ -26,7 +26,7 @@ export const config: CoreConfig = {
   environment: 'prod',
   updater: '0x40FD91557B318BD5d52D12535795265c88702681',
   recoveryTimelock: 60 * 60 * 24, // 1 day
-  recoveryManager: 'TODO',
+  recoveryManager: '0xea24Ac04DEFb338CA8595C3750E20166F3b4998A',
   optimisticSeconds: 60 * 30, // 30 minutes
   watchers: ['0x297BBC2F2EAAEB17Ee53F514020bC8173F0570dC'],
   processGas: 850_000,
