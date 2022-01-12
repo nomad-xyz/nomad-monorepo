@@ -3,10 +3,11 @@ use color_eyre::{eyre::bail, Report, Result};
 use thiserror::Error;
 
 use ethers::core::types::H256;
-use futures_util::future::{join, join_all, select_all};
+use futures_util::future::{join, join_all};
 use std::{collections::HashMap, fmt::Display, sync::Arc, time::Duration};
 use tokio::{
-    sync::{mpsc, oneshot, RwLock},
+    select,
+    sync::{mpsc, RwLock},
     task::JoinHandle,
     time::sleep,
 };
@@ -307,18 +308,9 @@ impl Watcher {
         }
     }
 
-    async fn shutdown(&self) {
-        for (_, v) in self.watch_tasks.write().await.drain() {
-            cancel_task!(v);
-        }
-        for (_, v) in self.sync_tasks.write().await.drain() {
-            cancel_task!(v);
-        }
-    }
-
     // Handle a double-update once it has been detected.
     #[tracing::instrument]
-    async fn handle_failure(
+    async fn handle_double_update_failure(
         &self,
         double: &DoubleUpdate,
     ) -> Vec<Result<TxOutcome, ChainCommunicationError>> {
@@ -357,10 +349,7 @@ impl Watcher {
             .collect()
     }
 
-    fn run_watch_tasks(
-        &self,
-        double_update_tx: oneshot::Sender<DoubleUpdate>,
-    ) -> Instrumented<JoinHandle<Result<()>>> {
+    fn watch_double_update(&self) -> Instrumented<JoinHandle<Result<Option<DoubleUpdate>>>> {
         let home = self.home();
         let replicas = self.replicas().clone();
         let watcher_db_name = format!("{}_{}", home.name(), AGENT_NAME);
@@ -405,7 +394,7 @@ impl Watcher {
                 .spawn()
                 .in_current_span();
 
-            // Wait for update handler to finish (should only happen watcher is 
+            // Wait for update handler to finish (should only happen watcher is
             // manually shut down)
             let double_update_res = handler.await?;
 
@@ -414,16 +403,10 @@ impl Watcher {
             cancel_task!(home_watcher);
             cancel_task!(home_sync);
 
-            // If update receiver channel was closed we will error out. The only
-            // reason we pass this point is that we successfully found double 
-            // update.
-            let double_update = double_update_res?;
-            error!("Double update found! Sending through through double update tx! Double update: {:?}.", &double_update);
-            if let Err(e) = double_update_tx.send(double_update) {
-                bail!("Failed to send double update through oneshot: {:?}", e);
-            }
-
-            Ok(())
+            // Map Result<DoubleUpdate> into Option. If handler returned error
+            // no double update. If handler returned Ok(double_update), map into
+            // Some(double_update).
+            Ok(double_update_res.ok())
         })
         .in_current_span()
     }
@@ -502,50 +485,48 @@ impl NomadAgent for Watcher {
             let home_sync_task = self
                 .home()
                 .sync(Self::AGENT_NAME.to_owned(), indexer.from(), indexer.chunk_size(), sync_metrics.clone(), IndexDataTypes::Updates);
+
             let replica_sync_tasks: Vec<Instrumented<JoinHandle<Result<()>>>> = self.replicas().values().map(|replica| {
                 replica.sync(Self::AGENT_NAME.to_owned(), indexer.from(), indexer.chunk_size(), sync_metrics.clone())
             }).collect();
 
-            // Watcher watch tasks setup
-            let (double_update_tx, mut double_update_rx) = oneshot::channel::<DoubleUpdate>();
-            let watch_tasks = self.run_watch_tasks(double_update_tx);
+            let mut sync_tasks = vec![home_sync_task];
+            sync_tasks.extend(replica_sync_tasks);
+            let sync_task_unified = join_all(sync_tasks);
+
+            let double_update_watch_task = self.watch_double_update();
 
             // Race index and run tasks
-            info!("selecting");
-            let mut tasks = vec![home_sync_task, watch_tasks];
-            tasks.extend(replica_sync_tasks);
-            let (_, _, remaining) = select_all(tasks).await;
+            info!("Selecting across tasks...");
+            select! {
+                _ = sync_task_unified => info!("Syncing tasks finished early!"),
+                double_res = double_update_watch_task => {
+                    let opt_double = double_res??;
+                    if let Some(double) = opt_double {
+                        tracing::error!(
+                            double_update = ?double,
+                            "Double update detected! Notifying all contracts and unenrolling replicas! Double update: {:?}",
+                            double
+                        );
 
-            // Cancel lagging task and watcher polling/syncing tasks
-            for task in remaining.into_iter() {
-                cancel_task!(task);
+                        self.handle_double_update_failure(&double)
+                            .await
+                            .iter()
+                            .for_each(|res| tracing::info!("{:#?}", res));
+
+                            bail!(
+                                r#"
+                                Double update detected!
+                                All contracts notified!
+                                Replicas unenrolled!
+                                Watcher has been shut down!
+                            "#
+                            )
+                    }
+                },
             }
-            self.shutdown().await;
 
-            // Check if double update was sent during run task
-            match double_update_rx.try_recv() {
-                Ok(double_update) => {
-                    tracing::error!(
-                        double_update = ?double_update,
-                        "Double update detected! Notifying all contracts and unenrolling replicas! Double update: {:?}",
-                        double_update
-                    );
-                    self.handle_failure(&double_update)
-                        .await
-                        .iter()
-                        .for_each(|res| tracing::info!("{:#?}", res));
-
-                    bail!(
-                        r#"
-                        Double update detected!
-                        All contracts notified!
-                        Replicas unenrolled!
-                        Watcher has been shut down!
-                    "#
-                    )
-                }
-                Err(_) => Ok(()),
-            }
+            Ok(())
         })
         .instrument(info_span!("Watcher::run_all"))
     }
@@ -965,7 +946,7 @@ mod test {
                 };
 
                 let mut watcher = Watcher::new(updater.into(), 1, connection_managers, core);
-                watcher.handle_failure(&double).await;
+                watcher.handle_double_update_failure(&double).await;
 
                 // Checkpoint connection managers
                 for connection_manager in watcher.connection_managers.iter_mut() {
