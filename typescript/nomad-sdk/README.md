@@ -15,7 +15,8 @@ systems have pre-built objects for quick development.
 ```ts
 import * as ethers from 'ethers';
 
-import { mainnet } from 'nomad-sdk';
+import { mainnet } from '@nomad-xyz/sdk';
+import { MessageStatus } from '@nomad-xyz/sdk/nomad';
 
 // Set up providers and signers
 const someEthersProvider = ethers.providers.WsProvider('...');
@@ -24,43 +25,69 @@ mainnet.registerProvider('ethereum', someEthersProvider);
 mainnet.registerSigner('ethereum', someEthersSigner);
 
 // We have shortcuts for common provider/signer types
-mainnet.registerRpcProvider('celo', 'https://forno.celo.org');
-mainnet.registerWalletSigner('celo', '0xabcd...');
+mainnet.registerRpcProvider('moonbeam', 'https://rpc.api.moonbeam.network');
+mainnet.registerWalletSigner('moonbeam', '0x1234...');
 
-// Interact with the Nomad Bridge
-// Send ETH from ethereum to celo
+// Send 1 ETH from ethereum to moonbeam (auto-converted to WETH on transfer).
+// See https://github.com/nomad-xyz/nomad-monorepo/tree/main/typescript/nomad-sdk/src/nomad/domains
+// for supported dev, staging, and mainnet networks.
 await mainnet.sendNative(
-    'ethereum', // source
-    'celo',  // destination
-    ethers.constants.WeiPerEther, // amount
-    '0x1234...',  // recipient
+    'ethereum', // source network
+    'moonbeam',  // destination network
+    1 * ethers.constants.WeiPerEther, // amount in smallest unit (amount * 10^decimals)
+    '0x1234...',  // recipient address on moonbeam
 );
 
-// Send Tokens from celo to ethereum
-await mainnet.send(
-    'celo',  // source
-    'ethereum', // destination
-    { domain: 'ethereum', id: "0xabcd..."} // token information
-    ethers.constants.WeiPerEther, // amount
-    '0x1234...'  // recipient
+// Send 1 WETH back from moonbeam to ethereum. When specifying token info (3rd param),
+// use the domain and address of the canonical token on the originating chain. Our 1 WETH
+// is now on moonbeam but we still specify the domain 'ethereum' and the address
+// of the WETH contract on Ethereum.
+const transferMessage = await mainnet.send(
+    'moonbeam',  // source network
+    'ethereum', // destination network
+    { domain: 'ethereum', id: "0xc02a..."} // canonical token info
+    1 * ethers.constants.WeiPerEther, // amount
+    '0x1234...'  // recipient address on ethereum
     { gasLimit: 300_000 } // standard ethers tx overrides
 );
+
+// Print tx hash of transaction that dispatched transfer on moonbeam
+console.log(`Tx hash on moonbeam: ${transferMessage.transactionHash()}`);
+
+// Track the status of your transfer from moonbeam to ethereum
+const interval = 10 * 1000; // 10 second polling interval
+let status = (await message.events()).status;
+while (status != MessageStatus.Processed) {
+    await new Promise((resolve) => setTimeout(resolve, interval)); // pause
+
+    status = (await message.events()).status; // update status
+
+    const statusAsString = MessageStatus[status];
+    console.log(`Current status of transfer: ${statusAsString}`); // print status
+}
+
+// Print tx hash of transaction that processed transfer on ethereum
+const processTxHash = transferMessage.getProcess().transactionHash();
+console.log(`Success! Transfer processed on Ethereum with tx hash ${processTxHash}.`)
 
 // so easy.
 ```
 
 # Updating SDK Contracts
+
 When we deploy a new non-prod environment, the contract addresses must be updated in `nomad-sdk/src/nomad/domains/${environment}.ts`
 
-Here's a checklist for you when doing so: 
+Here's a checklist for you when doing so:
+
 - Update Contract Addresses
 - Update Deployed Block Height
 - Bump SDK Version `npm version patch`
 - Release SDK `npm publish`
 - Update SDK Version pin anywhere it needs to be (ex. `nomad-monitor`)
 
-# Release Process 
+# Release Process
+
 ```
-$ npm version patch 
+$ npm version patch
 $ npm publish
 ```
