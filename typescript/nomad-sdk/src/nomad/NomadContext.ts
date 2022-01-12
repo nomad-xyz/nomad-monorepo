@@ -373,7 +373,7 @@ export class NomadContext extends MultiProvider {
    *
    * @param from The domain to send from
    * @param to The domain to send to
-   * @param token The token to send
+   * @param token The canonical token to send (details from originating chain)
    * @param amount The amount (in smallest unit) to send
    * @param recipient The identifier to send to on the `to` domain
    * @param enableFast TRUE to enable fast liquidity; FALSE to require no fast liquidity
@@ -460,7 +460,12 @@ export class NomadContext extends MultiProvider {
 
     overrides.value = amount;
 
-    const tx = await ethHelper.sendToEVMLike(toDomain, recipient, enableFast, overrides);
+    const tx = await ethHelper.sendToEVMLike(
+      toDomain,
+      recipient,
+      enableFast,
+      overrides,
+    );
     const receipt = await tx.wait();
 
     const message = TransferMessage.singleFromReceipt(this, from, receipt);
