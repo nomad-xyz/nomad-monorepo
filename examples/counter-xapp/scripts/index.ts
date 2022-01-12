@@ -1,131 +1,140 @@
+// import * as dotenv from "dotenv";
 import { ethers } from "hardhat";
 import { CounterRouter } from "../typechain";
 import { toBytes32 } from "./utils";
+import { dev } from "@nomad-xyz/sdk/dist";
 
 // Chain-specific identifiers arbitrarily chosen by Nomad team (do not change)
 const KOVAN_DOMAIN = 3000;
-const RINKEBY_DOMAIN = 2000;
+const MOONBASEALPHA_DOMAIN = 5000;
 
 // Provider/signer info
-const KOVAN_URL = process.env.KOVAN_URL;
-const RINKEBY_URL = process.env.RINKEBY_URL;
+const KOVAN_URL = process.env.KOVAN_RPC;
+const MOONBASEALPHA_URL = process.env.MOONBASEALPHA_RPC;
 const KOVAN_DEPLOYER_KEY = process.env.KOVAN_DEPLOYER_KEY;
-const RINKEBY_DEPLOYER_KEY = process.env.RINKEBY_DEPLOYER_KEY;
+const MOONBASEALPHA_DEPLOYER_KEY = process.env.MOONBASEALPHA_DEPLOYER_KEY;
 
 interface Deploys {
   kovanRouter: CounterRouter;
-  rinkebyRouter: CounterRouter;
+  moonbasealphaRouter: CounterRouter;
 }
 
 async function main() {
+  instantiateNomad();
   const deploys = await deploy();
   await enrollRemoteRouters(deploys);
-  await sendMessages(deploys);
+  const txHash = await sendMessage(deploys);
 }
 
-// Deploy Counter routers on both Kovan and Rinkeby.
-async function deploy(): Promise<Deploys> {
-  // Addresses of Nomad XAppConnectionManager contracts on Kovan and Rinkeby
-  const kovanXAppConnectionManagerAddress =
-    "0xfF1B322995fee7F71ac5AD495d61aD7910655300";
-  const rinkebyXAppConnectionManagerAddress =
-    "0x011b839eadcc1cb8a70d0b23BCe3F8819D410732";
+function instantiateNomad() {
+  dev.registerRpcProvider("kovan", KOVAN_URL!);
+  dev.registerRpcProvider("moonbasealpha", MOONBASEALPHA_URL!);
 
-  // Instantiate and connect signers for each chain
-  const kovanProvider = new ethers.providers.JsonRpcProvider(KOVAN_URL);
   const kovanSigner = new ethers.Wallet(
     KOVAN_DEPLOYER_KEY!.toString(),
-    kovanProvider
+    new ethers.providers.JsonRpcProvider(KOVAN_URL)
   );
-  const rinkebyProvider = new ethers.providers.JsonRpcProvider(RINKEBY_URL);
-  const rinkebySigner = new ethers.Wallet(
-    RINKEBY_DEPLOYER_KEY!.toString(),
-    rinkebyProvider
+  const moonbasealphaSigner = new ethers.Wallet(
+    MOONBASEALPHA_DEPLOYER_KEY!.toString(),
+    new ethers.providers.JsonRpcProvider(MOONBASEALPHA_URL)
   );
+
+  dev.registerSigner("kovan", kovanSigner);
+  dev.registerSigner("moonbasealpha", moonbasealphaSigner);
+}
+
+// Deploy Counter routers on both Kovan and Moonbasealpha.
+async function deploy(): Promise<Deploys> {
+  // Addresses of Nomad XAppConnectionManager contracts on Kovan and Moonbasealpha
+  const kovanXAppConnectionManagerAddress =
+    dev.mustGetCore("kovan")._xAppConnectionManager;
+  const moonbasealphaXAppConnectionManagerAddress =
+    dev.mustGetCore("moonbasealpha")._xAppConnectionManager;
+
+  // const kovanSigner = dev.getSigner("kovan");
+  // const moonbasealphaSigner = dev.getSigner("moonbasealpha");
 
   // Deploy routers to each chain
   const KovanCounterRouter = await ethers.getContractFactory(
     "CounterRouter",
-    kovanSigner
+    dev.getSigner("kovan")
   );
   let kovanRouter = await KovanCounterRouter.deploy(
     kovanXAppConnectionManagerAddress
   );
-  const RinkebyCounterRouter = await ethers.getContractFactory(
+  const MoonbasealphaCounterRouter = await ethers.getContractFactory(
     "CounterRouter",
-    rinkebySigner
+    dev.getSigner("moonbasealpha")
   );
-  let rinkebyRouter = await RinkebyCounterRouter.deploy(
-    rinkebyXAppConnectionManagerAddress
+  let moonbasealphaRouter = await MoonbasealphaCounterRouter.deploy(
+    moonbasealphaXAppConnectionManagerAddress
   );
 
   // Wait for deployments to finish
-  console.log("\nDeploying routers to Kovan and Rinkeby...");
-  [kovanRouter, rinkebyRouter] = await Promise.all([
-    kovanRouter.deployed(),
-    rinkebyRouter.deployed(),
-  ]).then(([kovan, rinkeby]) => {
-    console.log(`Kovan router deployed to address: ${kovan.address}`);
-    console.log(`Rinkeby router deployed to address: ${rinkeby.address}`);
+  console.log("Deploying Kovan router...");
+  kovanRouter = await kovanRouter.deployed();
+  console.log(`Kovan router deployed to address: ${kovanRouter.address}`);
 
-    return [kovan, rinkeby];
-  });
+  console.log("Deploying Moonbasealpha router...");
+  moonbasealphaRouter = await moonbasealphaRouter.deployed();
+  console.log(
+    `Moonbasealpha router deployed to address: ${moonbasealphaRouter.address}`
+  );
 
   return {
     kovanRouter,
-    rinkebyRouter,
+    moonbasealphaRouter,
   };
 }
 
-// Enroll Rinkeby router on Kovan router and Kovan router on Rinkeby router.
-// Enrolling a remote router on a local router allows the local router to
-// accept messages from the remote router. Note that addresses are formatted as
-// bytes 32 (prepend 0s to 20-byte Ethereum address).
+// Enroll Moonbasealpha router on Kovan router and Kovan router on Moonbasealpha
+// router. Enrolling a remote router on a local router allows the local router
+// to accept messages from the remote router. Note that addresses are formatted
+// as bytes 32 (prepend 0s to 20-byte Ethereum address).
 async function enrollRemoteRouters(deploys: Deploys) {
-  const { kovanRouter, rinkebyRouter } = deploys;
+  const { kovanRouter, moonbasealphaRouter } = deploys;
 
-  console.log("\nEnrolling Rinkeby router on Kovan router...");
+  console.log("\nEnrolling Moonbasealpha router on Kovan router...");
   const kovanEnrollTx = await kovanRouter.enrollRemoteRouter(
-    RINKEBY_DOMAIN,
-    toBytes32(rinkebyRouter.address)
+    MOONBASEALPHA_DOMAIN,
+    toBytes32(moonbasealphaRouter.address)
   );
   await kovanEnrollTx.wait(2);
-  console.log("Kovan router can now accept messages from Rinkeby router.");
+  console.log(
+    "Kovan router can now accept messages from Moonbasealpha router."
+  );
 
-  console.log("\nEnrolling Kovan router on Rinkeby router...");
-  const rinkebyEnrollTx = await rinkebyRouter.enrollRemoteRouter(
+  console.log("\nEnrolling Kovan router on Moonbasealpha router...");
+  const moonbasealphaEnrollTx = await moonbasealphaRouter.enrollRemoteRouter(
     KOVAN_DOMAIN,
     toBytes32(kovanRouter.address)
   );
-  await rinkebyEnrollTx.wait(2);
-  console.log("Rinkeby router can now accept messages from Kovan router.");
+  await moonbasealphaEnrollTx.wait(2);
+  console.log(
+    "Moonbasealpha router can now accept messages from Kovan router."
+  );
 }
 
-// Send increment message from Kovan to Rinkeby (~5 min). Note that sending a
-// message from Rinkeby to Kovan (other direction) will take approximately 50
-// min for the message  to process on Rinkeby. The long delay is due to
-// Rinkeby's slow finality and frequency of reorgs.
-async function sendMessages(deploys: Deploys) {
+// Send increment message from Kovan to Moonbasealpha (~5 min)
+async function sendMessage(deploys: Deploys): Promise<string> {
   const { kovanRouter } = deploys;
   const incrementAmount = 100;
 
-  // Send an increment message from Kovan to Rinkeby. Should increment the
-  // Rinkeby router's count by 100. Will take approximately 5 min for the
-  // message to process on Rinkeby.
+  // Send an increment message from Kovan to Moonbasealpha. Should increment the
+  // Moonbasealpha router's count by 100. Will take approximately 5 min for the
+  // message to process on Moonbasealpha.
   console.log(
-    `\nDispatching Increment(${incrementAmount}) message from Kovan --> Rinkeby. This will increment the Rinkeby router's count by ${incrementAmount}.`
+    `\nDispatching Increment(${incrementAmount}) message from Kovan --> Moonbasealpha. This will increment the Moonbasealpha router's count by ${incrementAmount}.`
   );
-  const kovanDispatchToRinkebyTx = await kovanRouter.dispatchIncrement(
-    RINKEBY_DOMAIN,
+  const kovanDispatchToMoonbasealphaTx = await kovanRouter.dispatchIncrement(
+    MOONBASEALPHA_DOMAIN,
     incrementAmount
   );
   console.log(
-    `Kovan --> Rinkeby Dispatch tx hash: ${kovanDispatchToRinkebyTx.hash}`
+    `Kovan --> Moonbasealpha Dispatch tx hash: ${kovanDispatchToMoonbasealphaTx.hash}`
   );
 
-  console.log(
-    `\nThe Kovan --> Rinkeby message should be processed on Rinkeby within ~5 min. \nTrack the status of your message at: https://development.app.nomad.xyz/transaction/kovan/${kovanDispatchToRinkebyTx.hash}`
-  );
+  return kovanDispatchToMoonbasealphaTx.hash;
 }
 
 main().catch((error) => {

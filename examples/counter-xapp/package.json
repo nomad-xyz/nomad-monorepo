@@ -16,7 +16,6 @@
     "prettier-plugin-solidity": "^1.0.0-beta.5",
     "solhint": "^3.3.2",
     "solhint-plugin-prettier": "^0.0.5",
-    "solidity-coverage": "^0.7.14",
     "ts-node": "^10.1.0",
     "typechain": "^5.0.0",
     "typescript": "^4.3.5"
@@ -33,6 +32,7 @@
   "author": "Luke Tchang",
   "license": "MIT OR Apache-2.0",
   "dependencies": {
+    "@nomad-xyz/sdk": "file:../../typescript/nomad-sdk",
     "@nomad-xyz/nomad-sol": "file:../../solidity/nomad-core",
     "@openzeppelin/contracts": "~3.4.2",
     "@openzeppelin/contracts-upgradeable": "~3.4.2",

@@ -12,5 +12,6 @@
       "address": "0x3333744724611Ef93521446670b4cC4009338E58"
     }
   ],
-  "governanceRouter": "0xD3cBBd9fe9Fa81850E2e083C4fe05Cc18B11a4B6"
+  "governanceRouter": "0xD3cBBd9fe9Fa81850E2e083C4fe05Cc18B11a4B6",
+  "xAppConnectionManager": "0x486612b71aF4E558D653d2b8F0696e24b1363302"
 }

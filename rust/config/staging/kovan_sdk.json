@@ -9,8 +9,9 @@
   "replicas": [
     {
       "domain": 5000,
-      "address": "0x2fFEa0eBe27cF63cbE4b8bb621b817F7fe40f27B",
+      "address": "0x2fFEa0eBe27cF63cbE4b8bb621b817F7fe40f27B"
     }
   ],
-  "governanceRouter": "0x2960C101Cb72eCC35a515e247608b17B46f38bA6"
+  "governanceRouter": "0x2960C101Cb72eCC35a515e247608b17B46f38bA6",
+  "xAppConnectionManager": "0x9A4fF79203e3E06BbCD468872c79011F1CDA8435"
 }

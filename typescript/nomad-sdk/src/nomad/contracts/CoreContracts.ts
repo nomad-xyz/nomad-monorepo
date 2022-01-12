@@ -14,6 +14,7 @@ interface Core {
   id: number;
   home: Address;
   replicas: ReplicaInfo[];
+  xAppConnectionManager: Address;
   governanceRouter: Address;
 }
 
@@ -21,6 +22,7 @@ export class CoreContracts extends Contracts {
   readonly domain;
   readonly _home: Address;
   readonly _replicas: Map<number, InternalReplica>;
+  readonly _xAppConnectionManager: Address;
   readonly _governanceRouter: Address;
   private providerOrSigner?: ethers.providers.Provider | ethers.Signer;
 
@@ -28,6 +30,7 @@ export class CoreContracts extends Contracts {
     domain: number,
     home: Address,
     replicas: ReplicaInfo[],
+    xAppConnectionManager: Address,
     governaceRouter: Address,
     providerOrSigner?: ethers.providers.Provider | ethers.Signer,
   ) {
@@ -36,7 +39,7 @@ export class CoreContracts extends Contracts {
     this.domain = domain;
     this._home = home;
     this._governanceRouter = governaceRouter;
-
+    this._xAppConnectionManager = xAppConnectionManager;
     this._replicas = new Map();
     replicas.forEach((replica) => {
       this._replicas.set(replica.domain, {
@@ -63,6 +66,16 @@ export class CoreContracts extends Contracts {
       throw new Error('No provider or signer. Call `connect` first.');
     }
     return core.Home__factory.connect(this._home, this.providerOrSigner);
+  }
+
+  get xAppConnectionManager(): core.XAppConnectionManager {
+    if (!this.providerOrSigner) {
+      throw new Error('No provider or signer. Call `connect` first.');
+    }
+    return core.XAppConnectionManager__factory.connect(
+      this._xAppConnectionManager,
+      this.providerOrSigner,
+    );
   }
 
   get governanceRouter(): core.GovernanceRouter {
@@ -93,15 +106,24 @@ export class CoreContracts extends Contracts {
       id: this.domain,
       home: this._home,
       replicas: replicas,
+      xAppConnectionManager: this._xAppConnectionManager,
       governanceRouter: this._governanceRouter,
     };
   }
 
   static fromObject(data: Core, signer?: ethers.Signer): CoreContracts {
-    const { id, home, replicas, governanceRouter } = data;
+    const { id, home, replicas, xAppConnectionManager, governanceRouter } =
+      data;
     if (!id || !home || !replicas) {
       throw new Error('Missing key');
     }
-    return new CoreContracts(id, home, replicas, governanceRouter, signer);
+    return new CoreContracts(
+      id,
+      home,
+      replicas,
+      xAppConnectionManager,
+      governanceRouter,
+      signer,
+    );
   }
 }
