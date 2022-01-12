@@ -112,6 +112,7 @@ export class CoreDeploy extends Deploy<CoreContracts> {
         };
       }),
       governanceRouter: local.contracts.governance!.proxy.address,
+      xAppConnectionManager: local.contracts.xAppConnectionManager!.address,
       bridgeRouter: 'n/a',
       tokenRegistry: 'n/a',
     };

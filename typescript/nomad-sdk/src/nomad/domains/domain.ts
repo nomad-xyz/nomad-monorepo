@@ -8,6 +8,7 @@ export interface NomadDomain extends Domain {
   home: Address;
   replicas: ReplicaInfo[];
   governanceRouter: Address;
+  xAppConnectionManager: Address;
 }
 
 export interface ReplicaInfo {
