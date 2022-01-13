@@ -18,6 +18,7 @@ export const kovan: NomadDomain = {
   bridgeRouter: '0x983fC3130002454d0e892ae7a53147B09Fb58fd8',
   tokenRegistry: '0x60fB0Ea196F2c0Ba54FBFAB4184cCFb2ce4048BD',
   ethHelper: '0xe3717ed5f3F087f3AAbaD4C25ee924EDeB80c9f6',
+  xAppConnectionManager: '0x9A4fF79203e3E06BbCD468872c79011F1CDA8435',
 };
 
 export const moonbasealpha: NomadDomain = {
@@ -38,6 +39,7 @@ export const moonbasealpha: NomadDomain = {
   bridgeRouter: '0xEDC1bcB5a6B47483eD9640bbE4c91C3d2A9A6286',
   tokenRegistry: '0x5AFfc0aa97Af0e5de401b156De38CeE7b34cfCA0',
   ethHelper: '0x7FacDe7EB8e2B2d4996d9b03AaBD4bA033AD1654',
+  xAppConnectionManager: '0x486612b71aF4E558D653d2b8F0696e24b1363302',
 };
 
 export const stagingDomains = [kovan, moonbasealpha];
