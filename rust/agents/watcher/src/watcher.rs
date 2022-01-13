@@ -3,7 +3,7 @@ use color_eyre::{eyre::bail, Report, Result};
 use thiserror::Error;
 
 use ethers::core::types::H256;
-use futures_util::future::{join, join_all};
+use futures_util::future::{join, join_all, select_all};
 use std::{collections::HashMap, fmt::Display, sync::Arc, time::Duration};
 use tokio::{
     select,
@@ -19,7 +19,7 @@ use nomad_base::{
 };
 use nomad_core::{
     ChainCommunicationError, Common, CommonEvents, ConnectionManager, DoubleUpdate,
-    FailureNotification, Home, SignedUpdate, Signers, TxOutcome,
+    FailureNotification, Home, SignedFailureNotification, SignedUpdate, Signers, State, TxOutcome,
 };
 
 use crate::settings::WatcherSettings as Settings;
@@ -308,47 +308,9 @@ impl Watcher {
         }
     }
 
-    // Handle a double-update once it has been detected.
-    #[tracing::instrument]
-    async fn handle_double_update_failure(
-        &self,
-        double: &DoubleUpdate,
-    ) -> Vec<Result<TxOutcome, ChainCommunicationError>> {
-        // Create vector of double update futures
-        let mut double_update_futs: Vec<_> = self
-            .core
-            .replicas
-            .values()
-            .map(|replica| replica.double_update(double))
-            .collect();
-        double_update_futs.push(self.core.home.double_update(double));
-
-        // Created signed failure notification
-        let signed_failure = FailureNotification {
-            home_domain: self.home().local_domain(),
-            updater: self.home().updater().await.unwrap().into(),
-        }
-        .sign_with(self.signer.as_ref())
-        .await
-        .expect("!sign");
-
-        // Create vector of futures for unenrolling replicas (one per
-        // connection manager)
-        let mut unenroll_futs = Vec::new();
-        for connection_manager in self.connection_managers.iter() {
-            unenroll_futs.push(connection_manager.unenroll_replica(&signed_failure));
-        }
-
-        // Join both vectors of double update and unenroll futures and
-        // return vector containing all results
-        let (double_update_res, unenroll_res) =
-            join(join_all(double_update_futs), join_all(unenroll_futs)).await;
-        double_update_res
-            .into_iter()
-            .chain(unenroll_res.into_iter())
-            .collect()
-    }
-
+    /// Spawn UpdateHandler and sync tasks. Have sync tasks send UpdateHandler
+    /// signed updates through mpsc. Return Some(double_update) if any
+    /// conflicting updates are found.
     fn watch_double_update(&self) -> Instrumented<JoinHandle<Result<Option<DoubleUpdate>>>> {
         let home = self.home();
         let replicas = self.replicas().clone();
@@ -409,6 +371,95 @@ impl Watcher {
             Ok(double_update_res.ok())
         })
         .in_current_span()
+    }
+
+    /// Periodically poll `home.state()` to check for failure due to improper
+    /// update. If failed state detected, return `State::Failed`.
+    fn watch_improper_update(&self) -> Instrumented<JoinHandle<Result<State>>> {
+        let home = self.home();
+        let interval = self.interval_seconds;
+
+        tokio::spawn(async move {
+            loop {
+                let state = home.state().await?;
+                if state == State::Failed {
+                    return Ok(state);
+                }
+
+                sleep(Duration::from_secs(interval)).await;
+            }
+        })
+        .in_current_span()
+    }
+
+    async fn create_signed_failure(&self) -> SignedFailureNotification {
+        FailureNotification {
+            home_domain: self.home().local_domain(),
+            updater: self.home().updater().await.unwrap().into(),
+        }
+        .sign_with(self.signer.as_ref())
+        .await
+        .expect("!sign")
+    }
+
+    /// Handle a double-update once it has been detected. Submit double updates
+    /// and failure notifications to all homes/replicas.
+    #[tracing::instrument]
+    async fn handle_double_update_failure(
+        &self,
+        double: &DoubleUpdate,
+    ) -> Vec<Result<TxOutcome, ChainCommunicationError>> {
+        // Create vector of double update futures
+        let mut double_update_futs: Vec<_> = self
+            .core
+            .replicas
+            .values()
+            .map(|replica| replica.double_update(double))
+            .collect();
+        double_update_futs.push(self.core.home.double_update(double));
+
+        // Created signed failure notification
+        let signed_failure = self.create_signed_failure().await;
+
+        // Create vector of futures for unenrolling replicas (one per
+        // connection manager)
+        let mut unenroll_futs = Vec::new();
+        for connection_manager in self.connection_managers.iter() {
+            unenroll_futs.push(connection_manager.unenroll_replica(&signed_failure));
+        }
+
+        // Join both vectors of double update and unenroll futures and
+        // return vector containing all results
+        let (double_update_res, unenroll_res) =
+            join(join_all(double_update_futs), join_all(unenroll_futs)).await;
+        double_update_res
+            .into_iter()
+            .chain(unenroll_res.into_iter())
+            .collect()
+    }
+
+    /// Handle a double-update once it has been detected. Submit double updates
+    /// and failure notifications to all homes/replicas.
+    #[tracing::instrument]
+    async fn handle_improper_update_failure(
+        &self,
+    ) -> Vec<Result<TxOutcome, ChainCommunicationError>> {
+        let signed_failure = self.create_signed_failure().await;
+        let mut unenroll_futs = Vec::new();
+        for connection_manager in self.connection_managers.iter() {
+            unenroll_futs.push(connection_manager.unenroll_replica(&signed_failure));
+        }
+
+        join_all(unenroll_futs).await
+    }
+
+    async fn shutdown(&self) {
+        for (_, v) in self.watch_tasks.write().await.drain() {
+            cancel_task!(v);
+        }
+        for (_, v) in self.sync_tasks.write().await.drain() {
+            cancel_task!(v);
+        }
     }
 }
 
@@ -492,14 +543,18 @@ impl NomadAgent for Watcher {
 
             let mut sync_tasks = vec![home_sync_task];
             sync_tasks.extend(replica_sync_tasks);
-            let sync_task_unified = join_all(sync_tasks);
+            let sync_task_unified = select_all(sync_tasks);
 
             let double_update_watch_task = self.watch_double_update();
+            let improper_update_watch_task = self.watch_improper_update();
 
             // Race index and run tasks
             info!("Selecting across tasks...");
             select! {
-                _ = sync_task_unified => info!("Syncing tasks finished early!"),
+                _ = sync_task_unified => {
+                    info!("Syncing tasks finished early!");
+                    self.shutdown().await;
+                },
                 double_res = double_update_watch_task => {
                     let opt_double = double_res??;
                     if let Some(double) = opt_double {
@@ -514,16 +569,33 @@ impl NomadAgent for Watcher {
                             .iter()
                             .for_each(|res| tracing::info!("{:#?}", res));
 
-                            bail!(
-                                r#"
-                                Double update detected!
-                                All contracts notified!
-                                Replicas unenrolled!
-                                Watcher has been shut down!
-                            "#
-                            )
+                        bail!(
+                            r#"
+                            Double update detected!
+                            All contracts notified!
+                            Replicas unenrolled!
+                            Watcher has been shut down!
+                        "#
+                        )
                     }
                 },
+                improper_res = improper_update_watch_task => {
+                    let state = improper_res??;
+                    if state == State::Failed {
+                        self.handle_improper_update_failure()
+                            .await
+                            .iter()
+                            .for_each(|res| tracing::info!("{:#?}", res));
+
+                        bail!(
+                            r#"
+                            Improper update detected!
+                            Replicas unenrolled!
+                            Watcher has been shut down!
+                        "#
+                        )
+                    }
+                }
             }
 
             Ok(())
