@@ -233,7 +233,7 @@ export class NomadContext extends MultiProvider {
       return this._governorDomain;
     }
 
-    const core: CoreContracts = this.cores.entries().next().value;
+    const core: CoreContracts = this.cores.values().next().value;
     if (!core) throw new Error('empty core map');
 
     const governorDomain = await core.governanceRouter.governorDomain();
