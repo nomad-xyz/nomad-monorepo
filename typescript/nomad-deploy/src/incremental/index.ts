@@ -1,9 +1,10 @@
 import * as ethers from 'ethers';
 
 import { NomadContext } from '@nomad-xyz/sdk/src';
+import { toBytes32 } from '../utils';
 
-function toCall(t: ethers.ethers.PopulatedTransaction) {
-  return { to: t.to!, data: ethers.utils.toUtf8Bytes(t.data!) };
+function toCall(t: ethers.ethers.PopulatedTransaction): {to: string, data: string} {
+  return { to: toBytes32(t.to!), data: t.data! };
 }
 
 /**
@@ -50,14 +51,14 @@ export async function enrollSpoke(
   const setRouterCall =
     await hubCore.governanceRouter.populateTransaction.setRouterLocal(
       spokeDomain,
-      spokeCore.governanceRouter.address,
+      toBytes32(spokeCore.governanceRouter.address),
     );
   batch.pushLocal(toCall(setRouterCall));
   // enroll bridge
   const enrollBridgeCall =
     await hubBridge.bridgeRouter.populateTransaction.enrollRemoteRouter(
       spokeDomain,
-      spokeBridge.bridgeRouter.address,
+      toBytes32(spokeBridge.bridgeRouter.address),
     );
   batch.pushLocal(toCall(enrollBridgeCall));
 
