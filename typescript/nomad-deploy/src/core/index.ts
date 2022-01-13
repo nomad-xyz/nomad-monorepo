@@ -5,8 +5,9 @@ import * as proxyUtils from '../proxyUtils';
 import { CoreDeploy, ExistingCoreDeploy } from './CoreDeploy';
 import * as contracts from '@nomad-xyz/contract-interfaces/core';
 import { checkCoreDeploy } from './checks';
-import { toBytes32, CallData, formatCall } from '../utils';
+import { CallData, formatCall } from '../utils';
 import { getPathToDeployConfig } from '../verification/readDeployOutput';
+import { canonizeId } from '@nomad-xyz/sdk/utils';
 
 function log(isTest: boolean, str: string) {
   if (!isTest) {
@@ -427,7 +428,7 @@ export async function enrollGovernanceRouter(
   );
   let tx = await local.contracts.governance!.proxy.setRouterLocal(
     remote.chain.domain,
-    toBytes32(remote.contracts.governance!.proxy.address),
+    canonizeId(remote.contracts.governance!.proxy.address),
     local.overrides,
   );
   await tx.wait(local.chain.confirmations);

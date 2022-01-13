@@ -63,12 +63,13 @@ export function getDomainFromString(name: string): number {
  *
  * @param data A string or array of bytes to canonize
  * @returns A Uint8Array of length 32
+ * @throws if the input is undefined, or not exactly 20 or 32 bytes long
  */
-export function canonizeId(data: BytesLike): Uint8Array {
+export function canonizeId(data?: BytesLike): Uint8Array {
+  if (!data) throw new Error('Bad input. Undefined');
+
   const buf = ethers.utils.arrayify(data);
-  if (buf.length > 32) {
-    throw new Error('Too long');
-  }
+  if (buf.length > 32) throw new Error('Too long');
   if (buf.length !== 20 && buf.length != 32) {
     throw new Error('bad input, expect address or bytes32');
   }

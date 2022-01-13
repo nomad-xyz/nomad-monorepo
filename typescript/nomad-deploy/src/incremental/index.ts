@@ -1,11 +1,5 @@
-import * as ethers from 'ethers';
-
-import { NomadContext } from '@nomad-xyz/sdk/src';
-import { toBytes32 } from '../utils';
-
-function toCall(t: ethers.ethers.PopulatedTransaction): {to: string, data: string} {
-  return { to: toBytes32(t.to!), data: t.data! };
-}
+import { NomadContext } from '@nomad-xyz/sdk';
+import { canonizeId } from '@nomad-xyz/sdk/utils';
 
 /**
  * Prepares and executes necessary calls to governing
@@ -35,7 +29,7 @@ export async function enrollSpoke(
           watcher,
           spokeDomain,
         );
-      batch.pushLocal(toCall(call));
+      batch.pushLocal(call);
     }),
   );
 
@@ -46,21 +40,21 @@ export async function enrollSpoke(
       hubReplicaOfSpoke!,
       spokeDomain,
     );
-  batch.pushLocal(toCall(enrollReplicaCall));
+  batch.pushLocal(enrollReplicaCall);
   // set router remote
   const setRouterCall =
     await hubCore.governanceRouter.populateTransaction.setRouterLocal(
       spokeDomain,
-      toBytes32(spokeCore.governanceRouter.address),
+      canonizeId(spokeCore.governanceRouter.address),
     );
-  batch.pushLocal(toCall(setRouterCall));
+  batch.pushLocal(setRouterCall);
   // enroll bridge
   const enrollBridgeCall =
     await hubBridge.bridgeRouter.populateTransaction.enrollRemoteRouter(
       spokeDomain,
-      toBytes32(spokeBridge.bridgeRouter.address),
+      canonizeId(spokeBridge.bridgeRouter.address),
     );
-  batch.pushLocal(toCall(enrollBridgeCall));
+  batch.pushLocal(enrollBridgeCall);
 
   // turn into a tx request
   await batch.build();
