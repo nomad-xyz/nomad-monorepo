@@ -19,6 +19,7 @@ export const ethereum: NomadDomain = {
   ],
   governanceRouter: 'TODO',
   safeService: 'https://safe-transaction.gnosis.io/',
+  xAppConnectionManager:"TODO",
 };
 
 export const polygon: NomadDomain = {
@@ -40,6 +41,7 @@ export const polygon: NomadDomain = {
     },
   ],
   governanceRouter: 'TODO',
+  xAppConnectionManager:"TODO",
 };
 
 export const celo: NomadDomain = {
@@ -56,6 +58,7 @@ export const celo: NomadDomain = {
     },
   ],
   governanceRouter: 'TODO',
+  xAppConnectionManager:"TODO",
 };
 
 export const mainnetDomains = [ethereum, celo, polygon];
