@@ -6,11 +6,19 @@ function toCall(t: ethers.ethers.PopulatedTransaction) {
   return { to: t.to!, data: ethers.utils.toUtf8Bytes(t.data!) };
 }
 
+/**
+ * Prepares and executes necessary calls to governing
+ * router for enrolling a spoke after core and
+ * bridge have been deployed
+ * @param sdk SDK containing new spoke domain
+ * @param spokeDomain domain of the spoke
+ * @param watchers set of watchers to be enrolled
+ */
 export async function enrollSpoke(
   sdk: NomadContext,
   spokeDomain: number,
   watchers: string[],
-) {
+): Promise<void> {
   let hubCore = await sdk.governorCore();
   let hubBridge = sdk.mustGetBridge(hubCore.domain);
 
@@ -31,10 +39,10 @@ export async function enrollSpoke(
   );
 
   // enroll replica
-  const newReplicaAtOldChainAddress = hubCore.getReplica(spokeDomain)?.address;
+  const hubReplicaOfSpoke = hubCore.getReplica(spokeDomain)?.address;
   const enrollReplicaCall =
     await hubCore.xAppConnectionManager.populateTransaction.ownerEnrollReplica(
-      newReplicaAtOldChainAddress!,
+      hubReplicaOfSpoke!,
       spokeDomain,
     );
   batch.pushLocal(toCall(enrollReplicaCall));
