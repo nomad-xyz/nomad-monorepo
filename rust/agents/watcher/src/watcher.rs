@@ -579,6 +579,8 @@ impl NomadAgent for Watcher {
                         "#
                         )
                     }
+
+                    self.shutdown().await;
                 },
                 improper_res = improper_update_watch_task => {
                     let state = improper_res??;
@@ -596,6 +598,8 @@ impl NomadAgent for Watcher {
                         "#
                         )
                     }
+
+                    self.shutdown().await;
                 }
             }
 
