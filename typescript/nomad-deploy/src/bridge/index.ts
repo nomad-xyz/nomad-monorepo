@@ -1,12 +1,13 @@
 import * as proxyUtils from '../proxyUtils';
 import { checkBridgeDeploy } from './checks';
 import * as xAppContracts from '@nomad-xyz/contract-interfaces/bridge';
-import { toBytes32, CallData, formatCall } from '../utils';
+import { CallData, formatCall } from '../utils';
 import fs from 'fs';
 import { BridgeDeploy } from './BridgeDeploy';
 import TestBridgeDeploy from './TestBridgeDeploy';
 import assert from 'assert';
 import { getPathToBridgeConfigFromCore } from '../verification/readDeployOutput';
+import { canonizeId } from '@nomad-xyz/sdk/utils';
 
 type AnyBridgeDeploy = BridgeDeploy | TestBridgeDeploy;
 
@@ -338,7 +339,7 @@ export async function enrollBridgeRouter(
 
   let tx = await local.contracts.bridgeRouter!.proxy.enrollRemoteRouter(
     remote.chain.domain,
-    toBytes32(remote.contracts.bridgeRouter!.proxy.address),
+    canonizeId(remote.contracts.bridgeRouter!.proxy.address),
     local.overrides,
   );
 
@@ -401,7 +402,7 @@ export function getEnrollBridgeCall(
   // enroll remote (new) Bridge Router at old chain
   return formatCall(oldBridgeRouter, 'enrollRemoteRouter', [
     newDeploy.chain.domain,
-    toBytes32(newBridgeRouterAddress),
+    canonizeId(newBridgeRouterAddress),
   ]);
 }
 

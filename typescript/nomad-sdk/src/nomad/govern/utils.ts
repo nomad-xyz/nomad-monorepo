@@ -1,5 +1,6 @@
 import { ethers } from 'ethers';
 import { Call } from '.';
+import { canonizeId } from '../../utils';
 
 // Returns the length (in bytes) of a BytesLike.
 export function byteLength(bytesLike: ethers.utils.BytesLike): number {
@@ -56,4 +57,14 @@ export function associateRemotes(
     calls.push(value);
   }
   return [domains, calls];
+}
+
+export function normalizeCall(partial: Partial<Call>): Readonly<Call> {
+  const to = ethers.utils.hexlify(canonizeId(partial.to));
+  const data = partial.data ?? '0x';
+
+  return Object.freeze({
+    to,
+    data,
+  });
 }

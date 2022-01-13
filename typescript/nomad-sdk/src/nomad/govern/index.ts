@@ -38,21 +38,21 @@ export class CallBatch {
     return new CallBatch(core, true);
   }
 
-  pushLocal(call: Call): void {
+  pushLocal(call: Partial<Call>): void {
     if (this.built)
       throw new Error('Batch has been built. Cannot push more calls');
-    this.local.push(Object.freeze(call));
+    this.local.push(utils.normalizeCall(call));
   }
 
-  pushRemote(domain: number, call: Call): void {
+  pushRemote(domain: number, call: Partial<Call>): void {
     if (this.built)
       throw new Error('Batch has been built. Cannot push more calls');
-    const frozen = Object.freeze(call);
     const calls = this.remote.get(domain);
+    const normalized = utils.normalizeCall(call);
     if (!calls) {
-      this.remote.set(domain, [frozen]);
+      this.remote.set(domain, [normalized]);
     } else {
-      calls.push(frozen);
+      calls.push(normalized);
     }
   }
 
