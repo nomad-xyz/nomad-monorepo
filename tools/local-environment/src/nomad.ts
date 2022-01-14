@@ -787,6 +787,17 @@ export class Nomad {
     await deployNewChainBridge(newBridgeDeploy, govBridgeDeploy);
     this.cacheDeploy(newBridgeDeploy, govBridgeDeploy);
 
+    this.setDeployed(newNetwork.domain);
+
+    this.updateArtifacts(
+      [newCoreDeploy, govCoreDeploy],
+      [newBridgeDeploy, govBridgeDeploy]
+    );
+
+    await this.updateMultiProvider();
+
+    // from here SDK will be used to send governance actions
+
     const actions = connectionGovernanceActions(
       govCoreDeploy,
       govBridgeDeploy,
@@ -796,10 +807,14 @@ export class Nomad {
 
     await executeGovernanceActions(govCoreDeploy, actions);
 
+    // till here
+
     this.updateArtifacts(
       [newCoreDeploy, govCoreDeploy],
       [newBridgeDeploy, govBridgeDeploy]
     );
+
+    await this.updateMultiProvider();
 
     await checkCoreDeploy(
       newCoreDeploy,
@@ -811,7 +826,7 @@ export class Nomad {
       [govCoreDeploy, govBridgeDeploy],
     ]);
 
-    this.setDeployed(newNetwork.domain);
+    // this.setDeployed(newNetwork.domain);
   }
 
   // Not TESTED
