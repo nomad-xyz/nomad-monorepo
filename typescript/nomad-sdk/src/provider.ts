@@ -184,6 +184,21 @@ export class MultiProvider {
   }
 
   /**
+   * Get the Signer associated with a doman (or error)
+   *
+   * @param nameOrDomain A domain name or number.
+   * @returns A Signer
+   * @throws If no provider has been registered for the specified domain
+   */
+  mustGetSigner(nameOrDomain: string | number): ethers.Signer {
+    const signer = this.getSigner(nameOrDomain);
+    if (!signer) {
+      throw new Error('unregistered name or domain');
+    }
+    return signer;
+  }
+
+  /**
    * Register an ethers Signer for a specified domain.
    *
    * @param nameOrDomain A domain name or number.
