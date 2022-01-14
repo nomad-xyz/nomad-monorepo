@@ -1,4 +1,4 @@
-import { NomadContext } from '@nomad-xyz/sdk';
+import { NomadContext } from '@nomad-xyz/sdk/';
 import { canonizeId } from '@nomad-xyz/sdk/utils';
 
 /**

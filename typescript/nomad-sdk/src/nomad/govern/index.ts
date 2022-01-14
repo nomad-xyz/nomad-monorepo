@@ -69,7 +69,6 @@ export class CallBatch {
         this.local,
         domains,
         remoteCalls,
-        overrides,
       );
 
     return this.built;

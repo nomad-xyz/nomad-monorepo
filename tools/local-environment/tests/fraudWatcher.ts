@@ -64,6 +64,8 @@ import { sleep } from "../src/utils";
       )
     ).wait();
 
+    console.log(`Dispatched test transaction to home`);
+
     const [commitedRoot, newRoot] = await home.suggestUpdate();
 
     const updater = await n.getNomadUpdater(tom);
@@ -72,7 +74,9 @@ import { sleep } from "../src/utils";
 
     await (await home.update(commitedRoot, newRoot, signature)).wait();
 
-    const replica = n.getCore(jerry).replicas.get(tom.domain)?.contract;
+    console.log(`Submitted niceee update to home`);
+
+    const replica = n.getCore(jerry).getReplica(tom.domain)!;
     if (!replica) throw new Error(`no replica`);
 
     const fraudRoot =
@@ -85,6 +89,8 @@ import { sleep } from "../src/utils";
     await (
       await replica.update(commitedRoot, fraudRoot, fraudletSignature)
     ).wait();
+
+    console.log(`Submitted fraudlet update to replica`);
 
     const [homeCommitedRoot, homeRoot, replicaCommitedRoot] = await Promise.all(
       [home.committedRoot(), home.root(), replica.committedRoot()]

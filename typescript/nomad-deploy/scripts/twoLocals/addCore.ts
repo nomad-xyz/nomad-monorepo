@@ -14,11 +14,13 @@ const tomDeploy = ExistingCoreDeploy.withPath(
   tom.chain,
   environment === 'staging' ? tom.stagingConfig : tom.devConfig,
   path,
+  tom.chain.deployer,
 );
 const jerryDeploy = ExistingCoreDeploy.withPath(
   jerry.chain,
   environment === 'staging' ? jerry.stagingConfig : jerry.devConfig,
   path,
+  jerry.chain.deployer,
 );
 
 // Instantiate New Bridge Deploy
