@@ -4,7 +4,7 @@ import { ethers } from "ethers";
 import { Key } from ".";
 import { sleep } from "./utils";
 import { DockerizedActor } from "./actors";
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import { SignerWithAddress } from "@nomad-xyz/test/node_modules/@nomiclabs/hardhat-ethers/signers";
 import { Governor } from "@nomad-xyz/deploy/src/core/CoreDeploy";
 
 export type Networkish = string | number | Network;

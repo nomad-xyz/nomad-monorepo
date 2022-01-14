@@ -373,30 +373,6 @@ export async function transferOwnershipOfBridge(deploy: AnyBridgeDeploy) {
   console.log(`transferred ownership of ${deploy.chain.name} BridgeRouter`);
 }
 
-/**
- * Gets enroll bridge call from fresh deploy
- * to existing network. Call
- * should be delegated to governing router.
- *
- * @param newDeploy - Bridge deploy of newly deployed chain
- * @param oldDeploy - Bridge deploy of existing chain
- */
-export function getEnrollBridgeCall(
-  newDeploy: BridgeDeploy,
-  oldDeploy: BridgeDeploy,
-): CallData {
-  const oldBridgeRouter = oldDeploy.contracts.bridgeRouter!.proxy;
-  // Bridge Router address at newly deployed chain
-  const newBridgeRouterAddress =
-    newDeploy.contracts.bridgeRouter!.proxy!.address;
-
-  // enroll remote (new) Bridge Router at old chain
-  return formatCall(oldBridgeRouter, 'enrollRemoteRouter', [
-    newDeploy.chain.domain,
-    canonizeId(newBridgeRouterAddress),
-  ]);
-}
-
 function buildSDK(deploy: AnyBridgeDeploy) {
   const config = {
     bridgeRouter: deploy.contracts.bridgeRouter?.proxy!.address,
