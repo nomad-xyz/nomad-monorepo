@@ -419,7 +419,10 @@ export class NomadContext extends MultiProvider {
       enableFast,
       overrides,
     );
-    const receipt = await tx.wait();
+    // kludge: increase gas limit by 10%
+    tx.gasLimit = tx.gasLimit?.mul(110).div(100);
+    const dispatch = await this.mustGetSigner(from).sendTransaction(tx);
+    const receipt = await dispatch.wait();
 
     const message = TransferMessage.singleFromReceipt(this, from, receipt);
     if (!message) {
@@ -466,7 +469,10 @@ export class NomadContext extends MultiProvider {
       enableFast,
       overrides,
     );
-    const receipt = await tx.wait();
+    // patch fix: increase gas limit by 10%
+    tx.gasLimit = tx.gasLimit?.mul(110).div(100);
+    const dispatch = await this.mustGetSigner(from).sendTransaction(tx);
+    const receipt = await dispatch.wait();
 
     const message = TransferMessage.singleFromReceipt(this, from, receipt);
     if (!message) {
