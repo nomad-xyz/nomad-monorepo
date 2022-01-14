@@ -61,11 +61,7 @@ async function setup() {
   n.setSigner(tom, t.signer.processor, "processor"); // Need for home.dispatch
 
   await n.deploy({ injectSigners: true });
-  await n.startAgents([
-    'updater',
-    'relayer',
-    'processor',
-  ]);
+  await n.startAgents(["updater", "relayer", "processor"]);
 
   fs.writeFileSync("/tmp/nomad.json", JSON.stringify(n.toObject()));
 
@@ -116,11 +112,7 @@ async function setupDaffy(n: Nomad) {
   await n.deploy({ injectSigners: true });
 
   await n.stopAllAgents(true);
-  await n.startAgents([
-    'updater',
-    'relayer',
-    'processor',
-  ]);
+  await n.startAgents(["updater", "relayer", "processor"]);
 
   fs.writeFileSync("/tmp/nomad.json", JSON.stringify(n.toObject()));
 
@@ -211,6 +203,103 @@ async function sendTokensTriangular(
   }
 }
 
+async function sendTokensHubAndSpoke(
+  a: Network,
+  b: Network,
+  c: Network,
+  aActor: Key,
+  bActor: Key,
+  cActor: Key,
+  n: Nomad
+) {
+  const tokenFactory = getCustomToken();
+  const tokenOnA = await a.deployToken(
+    tokenFactory,
+    aActor.toAddress(),
+    "MyToken",
+    "MTK"
+  );
+
+  const token = {
+    domain: a.domain,
+    id: tokenOnA.address,
+  };
+
+  const ctx = n.getMultiprovider();
+
+  ctx.registerWalletSigner(a.name, aActor.toString());
+  ctx.registerWalletSigner(b.name, bActor.toString());
+
+  ctx.registerWalletSigner(c.name, cActor.toString());
+
+  // get 3 random amounts which will be bridged
+  const amount1 = randomTokens();
+  const amount2 = randomTokens();
+  const amount3 = randomTokens();
+
+
+  const [successA2C] = await sendTokensAndConfirm(
+    n,
+    a,
+    c,
+    token,
+    cActor.toAddress(),
+    [amount2, amount3, amount1]
+  );
+
+  if (!successA2C)
+    throw new Error(`Tokens transfer from ${a.name} to ${b.name} failed`);
+  console.log(`Tokens arrived at ${b.name}`);
+
+  const [successA2B] = await sendTokensAndConfirm(
+    n,
+    a,
+    b,
+    token,
+    bActor.toAddress(),
+    [amount1, amount2]
+  );
+
+  if (!successA2B)
+    throw new Error(`Tokens transfer from ${a.name} to ${b.name} failed`);
+  console.log(`Tokens arrived at ${b.name}`);
+
+  const [successB2A, tokenContract1] = await sendTokensAndConfirm(
+    n,
+    b,
+    a,
+    token,
+    new Key().toAddress(),
+    [amount1, amount2]
+  );
+
+  if (!successB2A)
+    throw new Error(`Tokens transfer from ${a.name} to ${b.name} failed`);
+  console.log(`Tokens arrived at ${b.name}`);
+
+  const [successC2A, tokenContract2] = await sendTokensAndConfirm(
+    n,
+    c,
+    a,
+    token,
+    new Key().toAddress(),
+    [amount2, amount3, amount1]
+  );
+
+  if (!successC2A)
+    throw new Error(`Tokens transfer from ${a.name} to ${b.name} failed`);
+  console.log(`Tokens arrived at ${b.name}`);
+
+  if (
+    tokenContract1.address.toLowerCase() !== token.id.toString().toLowerCase() ||
+    tokenContract2.address.toLowerCase() !== token.id.toString().toLowerCase()
+  ) {
+    throw new Error(
+      `Resolved asset at destination Jerry is not the same as the token`
+    );
+  }
+}
+
 async function teardown(n: Nomad) {
   await n.end();
 
@@ -220,13 +309,15 @@ async function teardown(n: Nomad) {
 (async () => {
   // Normally setup and deploy 2 local networks
   const { tom, jerry, tomActor, jerryActor, n } = await setup();
+  console.log(`Tom and Jerry setup complete`);
 
   let success = false;
   try {
     // Perform incremental deploy of new network daffy
     const { daffy, daffyActor } = await setupDaffy(n);
+    console.log(`Daffy setup complete`);
 
-    await sendTokensTriangular(
+    await sendTokensHubAndSpoke(
       tom,
       jerry,
       daffy,
