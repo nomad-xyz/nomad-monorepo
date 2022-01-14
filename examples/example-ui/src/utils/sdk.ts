@@ -1,15 +1,17 @@
 import { NomadContext, dev } from '@nomad-xyz/sdk'
 import { TokenIdentifier } from '@nomad-xyz/sdk/nomad'
+import { Web3Provider } from '@ethersproject/providers'
+import { BigNumber, providers } from 'ethers'
 import { TransferMessage } from '@nomad-xyz/sdk/nomad/messages/BridgeMessage'
 
-import { ethers, BigNumber, BytesLike } from 'ethers'
+import { networks, tokens, NetworkName, TokenName, NetworkMetadata } from '../config'
+import { getNetworkByChainID } from '../utils/index'
+import { ERC20__factory } from '@nomad-xyz/contract-interfaces/bridge'
 
-import { TXData } from './transactions'
-import { networks, NetworkMetadata } from '../config'
-import { getBalance, getNativeBalance, getERC20Balance } from '@/utils/balance'
-import { isNativeToken, getNetworkByDomainID } from '../utils/index'
+let nomad: NomadContext = instantiateNomad()
+const { ethereum } = window as any
 
-const _instantiateNomad = (): NomadContext => {
+function instantiateNomad(): NomadContext {
   // configure for mainnet/testnet
   const nomadContext: NomadContext = dev
 
@@ -21,9 +23,6 @@ const _instantiateNomad = (): NomadContext => {
   return nomadContext
 }
 
-let nomad: NomadContext = _instantiateNomad()
-
-
 export interface SendData {
   isNative: boolean
   originNetwork: number
@@ -31,85 +30,96 @@ export interface SendData {
   asset: TokenIdentifier
   amnt: number
   recipient: string
-  gasLimit?: number
+  ethersOverrides: object
 }
 
-export interface SDKState {
-  balance: BigNumber | null
-  sending: boolean
+export type TXData = {
+  network: NetworkName
+  hash: string
 }
 
-const state: SDKState = {
-  balance: null,
-  sending: false,
+export function getNetworkByDomainID(domainID: number): NetworkMetadata {
+  const name = Object.keys(networks).find(n => {
+    return networks[n].domainID === domainID
+  })
+  return networks[name]
 }
 
-async function getBalanceFromWallet(userInput, wallet) {
+export async function getNomadBalances(
+  token: TokenIdentifier,
+  address: string
+): Promise<Record<number, BigNumber> | undefined> {
+  // get representations of token
+  const representations = await nomad.resolveRepresentations(token)
+  const balances: Record<number, BigNumber> = {}
+  let domain, instance
+
+  for ([domain, instance] of representations.tokens.entries()) {
+    console.log({ instance })
+    balances[domain] = await instance.balanceOf(address)
+  }
+  return balances
+}
+
+export async function getNomadBalance(
+  token: TokenIdentifier,
+  address: string,
+  domain: number
+): Promise<BigNumber | undefined> {
+  let key, instance, balance
+  const representations = await nomad.resolveRepresentations(token)
+  const tokenEntries = representations.tokens.entries()
+
+  for ([key, instance] of tokenEntries) {
+    if (domain === key) {
+      balance = await instance.balanceOf(address)
+      return balance
+    }
+  }
+}
+
+export async function getBalanceFromWallet(networkName: NetworkName, tokenName: TokenName, address: string) {
   console.log('gettingbalanceFromwallet')
 
-  // if not on supported network, don't get balance
-  if (!userInput.originNetwork) return
-
-  // get current network domain
-  const networkName = userInput.originNetwork
   const network = networks[networkName]
   const domain = network.domainID
-  const address = wallet.address
-  const token = userInput.token
+  const token = tokens[tokenName]
 
   let balance
+  // native assets
   if (token.tokenIdentifier.domain === networkName) {
-    if (isNativeToken(networkName, token)) {
+    const provider = nomad.getProvider(networkName)
+    if (network.nativeToken === token) {
+      // get balance of primary native asset
       console.log('getting native token balance')
-      try {
-        balance = await getNativeBalance(nomad, network.name, address)
-      } catch (e) {
-        balance = 0
-        console.error(e)
-        console.log(`no balance for ${token.name}`)
-      }
+      balance = provider?.getBalance(address)
     } else {
-      console.log('getting balance of ERC20 token: ', token.name)
-      const provider = nomad.getProvider(network.name)
-      try {
-        balance = await getERC20Balance(
-          provider as ethers.providers.Web3Provider,
-          token.tokenIdentifier.id as string,
-          address
-        )
-      } catch (e) {
-        balance = 0
-        console.error(e)
-        console.log(`no balance for ${token.name}`)
-      }
+      // get balance of ERC20 token
+      console.log('getting balance of ERC20 token: ', tokenName)
+      const tokenAddress = token.tokenIdentifier.id
+      const tokenContract = ERC20__factory.connect(tokenAddress as string, provider)
+      balance = await tokenContract.balanceOf(address)
     }
   } else {
+    // get balance ofNomad representational assets
     console.log('getting representational token balance')
-    try {
-      balance = await getBalance(
-        nomad,
-        token.tokenIdentifier,
-        address,
-        domain
-      )
-    } catch (e) {
-      // there is no balance so it errors
-      // should return 0
-      balance = 0
-      console.error(e)
-      console.log(`no balance for ${token.name}`)
-    }
+    balance = await getNomadBalance(
+      token.tokenIdentifier,
+      address,
+      domain
+    )
   }
 
   return balance
 }
 
-function registerSigner(network: NetworkMetadata) {
-  console.log('registering signer for ', network)
-  const networkName = network.name
-  const provider = new ethers.providers.Web3Provider(window.ethereum)
+export function registerNewSigner(networkName: NetworkName) {
+  console.log('registering signer for ', networkName)
+  // get current provider and signer
+  const provider = new providers.Web3Provider(ethereum)
   const newSigner = provider.getSigner()
 
+  // clear current signers and re-register
   nomad.clearSigners()
   const missingProviders = nomad.missingProviders
   missingProviders.forEach((domain: number) => {
@@ -120,12 +130,8 @@ function registerSigner(network: NetworkMetadata) {
   nomad.registerSigner(networkName, newSigner)
 }
 
-async send(
-  { commit },
-  payload: SendData
-): Promise<TransferMessage | null> {
+export async function send(payload: SendData): Promise<TransferMessage> {
   console.log('sending...', payload)
-  commit(types.SET_SENDING, true)
   const {
     isNative,
     originNetwork,
@@ -135,121 +141,122 @@ async send(
     recipient,
   } = payload
 
+  // get Nomad domain
   const originDomain = nomad.resolveDomain(originNetwork)
   const destDomain = nomad.resolveDomain(destNetwork)
 
-  let transferMessage
+  let transferMessage: TransferMessage
+  // if ETH Helper contract exists, native token must be wrapped
+  // before sending, use sendNative
+  const ethHelper = nomad.getBridge(originDomain)?.ethHelper
+  if (ethHelper && isNative) {
+    console.log('send native')
+    transferMessage = await nomad.sendNative(
+      originDomain,
+      destDomain,
+      amnt,
+      recipient
+    )
+  } else {
+    console.log('send ERC-20')
+    transferMessage = await nomad.send(
+      originDomain,
+      destDomain,
+      asset,
+      amnt,
+      recipient,
+    )
+  }
+  console.log('tx sent!!!', transferMessage)
+  return transferMessage
+}
+
+export async function getGasPrice(network: string | number) {
+  const provider = nomad.getProvider(network)
+  const gasPrice = await provider?.getGasPrice()
+  return gasPrice
+}
+
+export async function getTxMessage(tx: TXData): Promise<TransferMessage> {
+  const { network, hash } = tx
+  return await TransferMessage.singleFromTransactionHash(
+    nomad,
+    network,
+    hash
+  )
+}
+
+export async function switchNetwork(networkName: string) {
+  console.log('set wallet network')
+
+  if (!ethereum) return
+
+  const network = networks[networkName]
+  const hexChainId = '0x' + network.chainID.toString(16)
   try {
-    // if ETH Helper contract exists, native token must be wrapped
-    // before sending, use sendNative
-    const ethHelper = nomad.getBridge(originDomain)?.ethHelper
-    if (ethHelper && isNative) {
-      console.log('send native')
-      transferMessage = await nomad.sendNative(
-        originDomain,
-        destDomain,
-        amnt,
-        recipient
-      )
-    } else {
-      console.log('send ERC-20')
-      transferMessage = await nomad.send(
-        originDomain,
-        destDomain,
-        asset,
-        amnt,
-        recipient,
-      )
-    }
-    console.log('tx sent!!!!!!!!!!!!', transferMessage)
-    commit(types.SET_SENDING, false)
-    return transferMessage
-  } catch (e) {
-    console.error(e)
+    await ethereum.request({
+      method: 'wallet_switchEthereumChain',
+      params: [{ chainId: hexChainId }],
+    })
+  } catch (switchError: any) {
+    // This error code indicates that the chain has not been added to MetaMask.
+    if (switchError.code === 4902) {
+      await ethereum.request({
+        method: 'wallet_addEthereumChain',
+        params: [
+          {
+            chainId: hexChainId,
+            rpcUrls: [network.rpcUrl],
+            chainName: network.name,
+            nativeCurrency: {
+              name: network.nativeToken.symbol,
+              symbol: network.nativeToken.symbol,
+              decimals: network.nativeToken.decimals,
+            },
+          },
+        ],
+      })
+    } 
+
+    throw switchError
   }
 
-  commit(types.SET_SENDING, false)
-  return null
-},
-async processTx ({ dispatch }, tx: any) {
-  // get transfer message
-  const { origin, hash } = tx
-  const message = await TransferMessage.singleFromTransactionHash(nomad, origin, hash)
+  return network.name
+}
 
-  const destNetwork = getNetworkByDomainID(message.destination)
-  await dispatch('switchNetwork', destNetwork.name)
-  // register signer
-  await dispatch('registerSigner', destNetwork)
+export async function connectWallet() {
+  // if window.ethereum does not exist, do not connect
+  if (!ethereum) return
 
-  // get proof
-  const res = await fetch(`${s3URL}${origin}_${message.leafIndex.toString()}`)
-  const data = (await res.json()) as any
-  console.log('proof: ', data)
+  await ethereum.request({ method: 'eth_requestAccounts' })
 
-  // get replica contract
-  const core = nomad.getCore(message.destination)
-  const replica = core?.getReplica(message.origin)
+  // get provider/signer
+  const provider = await getMetamaskProvider()
+  const signer = await provider.getSigner()
 
-  // connect signer
-  const signer = nomad.getSigner(message.origin)
-  replica!.connect(signer!)
+  // set network, if supported
+  const { chainId } = await provider.ready
 
-  // prove and process
-  try {
-    const receipt = await replica!.proveAndProcess(data.message as BytesLike, data.proof.path, data.proof.index)
-    console.log('PROCESSED!!!!')
-    return receipt
-  } catch(e) {
-    console.log(e)
+  // get and set address
+  const address = await signer.getAddress()
+  const network = getNetworkByChainID(chainId)!
+
+  return {
+    walletAddress: address,
+    walletNetwork: network.name,
   }
-},
+}
 
+export async function getMetamaskProvider(): Promise<Web3Provider> {
+  const provider = new Web3Provider(ethereum)
+  await provider.ready
+  const signer = provider.getSigner()
+  console.log({ provider, signer })
+  return Promise.resolve(provider)
+}
 
-const getters = <GetterTree<SDKState, RootState>>{
-  getGasPrice: () => async (network: string | number) => {
-    try {
-      const provider = nomad.getProvider(network)
-      const gasPrice = await provider?.getGasPrice()
-      return gasPrice
-    } catch (e) {
-      console.error(e)
-    }
-  },
-
-  getTxMessage: () => async (tx: TXData): Promise<TransferMessage> => {
-    const { network, hash } = tx
-    let message
-
-    try {
-      message = await TransferMessage.singleFromTransactionHash(
-        nomad,
-        network,
-        hash
-      )
-    } catch (e) {
-      console.error(e)
-    }
-
-    return message as TransferMessage
-  },
-
-  resolveDomain: (state: SDKState) => (network: string) => {
-    return nomad.resolveDomain(network)
-  },
-
-  resolveDomainName: (state: SDKState) => (network: number) => {
-    return nomad.resolveDomainName(network)
-  },
-
-  resolveRepresentation: (state: SDKState) => async (network: string, token: TokenIdentifier) => {
-    let bridgeToken
-
-    try {
-      bridgeToken = await nomad.resolveRepresentation(network, token)
-    } catch (e) {
-      console.error(e)
-    }
-
-    return bridgeToken
-  },
+export async function getNetwork(provider: Web3Provider): Promise<string> {
+  const { chainId, name } = await provider.ready
+  const network = getNetworkByChainID(chainId) || { name }
+  return network.name
 }

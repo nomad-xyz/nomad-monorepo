@@ -4,10 +4,11 @@ import DEVIcon from './assets/DEV.png'
 
 import { TokenIdentifier } from '@nomad-xyz/sdk/nomad'
 
-export type TestnetNetwork = 'kovan' | 'moonbasealpha'
+export type NetworkName = 'kovan' | 'moonbasealpha'
+export type TokenName = 'WETH' | 'USDT' | 'ETH' | 'DEV'
 
 export type TokenMetadata = {
-  nativeNetwork: TestnetNetwork // e.g. 'kovan' for 'WETH' or 'USDT'
+  nativeNetwork: NetworkName // e.g. 'kovan' for 'WETH' or 'USDT'
   symbol: string
   icon: string
   decimals: number
@@ -16,16 +17,17 @@ export type TokenMetadata = {
 }
 
 export type NetworkMetadata = {
-  name: TestnetNetwork // kovan or moonbasealpha
+  name: NetworkName // kovan or moonbasealpha
   chainID: number // for metamask
   domainID: number // nomad domain ID
+  nativeToken: TokenMetadata
   rpcUrl: string
   blockExplorer: string
   confirmationTimeInMinutes: number // dispute period.  For testnet Kovan/Moonbase Alpha it's 2 minutes. For mainnet Ethereum/Moonbeam it's 30 minutes
 }
 
 export const WETH: TokenIdentifier = {
-  domain: 'kovan',
+  domain: 'kovan', // must be lowercase
   id: '0xd0a1e359811322d97991e03f863a0c30c2cf029c',
 }
 
@@ -42,7 +44,7 @@ export const DEV: TokenIdentifier = {
 
 export const tokens: { [key: string]: TokenMetadata } = {
   WETH: {
-    nativeNetwork: 'kovan',
+    nativeNetwork: 'kovan', // must be lowercase
     symbol: 'WETH',
     icon: wETHIcon,
     decimals: 18,
@@ -77,9 +79,10 @@ export const tokens: { [key: string]: TokenMetadata } = {
 
 export const networks: { [key: string]: NetworkMetadata } = {
   kovan: {
-    name: 'kovan',
+    name: 'kovan', // must be lowercase
     chainID: 42,
     domainID: 3000,
+    nativeToken: tokens.ETH,
     rpcUrl:
       'https://eth-kovan.alchemyapi.io/v2/QKnfLTfe7CkGA80yAVsCdh8ZatQCsfHI',
     blockExplorer: 'https://kovan.etherscan.io',
@@ -89,6 +92,7 @@ export const networks: { [key: string]: NetworkMetadata } = {
     name: 'moonbasealpha',
     chainID: 1287,
     domainID: 5000,
+    nativeToken: tokens.DEV,
     rpcUrl: 'https://moonbeam-alpha.api.onfinality.io/rpc?apikey=44e80fe3-d9ce-40f2-8336-6089e751b625',
     blockExplorer: 'https://moonbase-blockscout.testnet.moonbeam.network',
     confirmationTimeInMinutes: 2,
