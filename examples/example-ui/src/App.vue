@@ -1,19 +1,18 @@
 <template>
-  <div>
-    <h1>Example UI using Nomad SDK :unicorn_face:</h1>
-    <hello-world />
-  </div>
+  <img alt="Vue logo" src="./assets/logo.png">
+  <HelloWorld msg="Welcome to Your Vue.js + TypeScript App"/>
 </template>
 
-<script>
-import HelloWorld from './components/HelloWorld.vue'
+<script lang="ts">
+import { defineComponent } from 'vue';
+import HelloWorld from './components/HelloWorld.vue';
 
-export default {
+export default defineComponent({
   name: 'App',
   components: {
     HelloWorld
   }
-}
+});
 </script>
 
 <style>
