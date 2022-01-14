@@ -411,7 +411,7 @@ export class NomadContext extends MultiProvider {
       await tx.wait();
     }
 
-    const tx = await fromBridge.bridgeRouter.send(
+    const tx = await fromBridge.bridgeRouter.populateTransaction.send(
       fromToken.address,
       amount,
       this.resolveDomain(to),
@@ -463,7 +463,7 @@ export class NomadContext extends MultiProvider {
 
     overrides.value = amount;
 
-    const tx = await ethHelper.sendToEVMLike(
+    const tx = await ethHelper.populateTransaction.sendToEVMLike(
       toDomain,
       recipient,
       enableFast,
