@@ -1,18 +1,21 @@
-// import * as dotenv from "dotenv";
+import * as dotenv from "dotenv";
 import { ethers } from "hardhat";
 import { CounterRouter } from "../typechain";
 import { toBytes32 } from "./utils";
-import { dev } from "@nomad-xyz/sdk/dist";
+import { dev, NomadMessage } from "@nomad-xyz/sdk/dist";
+import { MessageStatus } from "@nomad-xyz/sdk/dist/nomad";
+
+dotenv.config();
 
 // Chain-specific identifiers arbitrarily chosen by Nomad team (do not change)
 const KOVAN_DOMAIN = 3000;
 const MOONBASEALPHA_DOMAIN = 5000;
 
 // Provider/signer info
-const KOVAN_URL = process.env.KOVAN_RPC;
-const MOONBASEALPHA_URL = process.env.MOONBASEALPHA_RPC;
-const KOVAN_DEPLOYER_KEY = process.env.KOVAN_DEPLOYER_KEY;
-const MOONBASEALPHA_DEPLOYER_KEY = process.env.MOONBASEALPHA_DEPLOYER_KEY;
+const KOVAN_URL = process.env.KOVAN_RPC!;
+const MOONBASEALPHA_URL = process.env.MOONBASEALPHA_RPC!;
+const KOVAN_DEPLOYER_KEY = process.env.KOVAN_DEPLOYER_KEY!;
+const MOONBASEALPHA_DEPLOYER_KEY = process.env.MOONBASEALPHA_DEPLOYER_KEY!;
 
 interface Deploys {
   kovanRouter: CounterRouter;
@@ -24,19 +27,24 @@ async function main() {
   const deploys = await deploy();
   await enrollRemoteRouters(deploys);
   const txHash = await sendMessage(deploys);
+  await trackMessageStatus(txHash);
+  console.log("\n FINISHED!");
 }
 
 function instantiateNomad() {
-  dev.registerRpcProvider("kovan", KOVAN_URL!);
-  dev.registerRpcProvider("moonbasealpha", MOONBASEALPHA_URL!);
+  console.log("\nInstantiating Nomad object...\n");
+  dev.registerRpcProvider("kovan", KOVAN_URL);
+  dev.registerRpcProvider("moonbasealpha", MOONBASEALPHA_URL);
 
-  const kovanSigner = new ethers.Wallet(
-    KOVAN_DEPLOYER_KEY!.toString(),
-    new ethers.providers.JsonRpcProvider(KOVAN_URL)
+  const kovanProvider = new ethers.providers.JsonRpcProvider(KOVAN_URL);
+  const kovanSigner = new ethers.Wallet(KOVAN_DEPLOYER_KEY, kovanProvider);
+
+  const moonbaseProvider = new ethers.providers.JsonRpcProvider(
+    MOONBASEALPHA_URL
   );
   const moonbasealphaSigner = new ethers.Wallet(
-    MOONBASEALPHA_DEPLOYER_KEY!.toString(),
-    new ethers.providers.JsonRpcProvider(MOONBASEALPHA_URL)
+    MOONBASEALPHA_DEPLOYER_KEY,
+    moonbaseProvider
   );
 
   dev.registerSigner("kovan", kovanSigner);
@@ -45,26 +53,28 @@ function instantiateNomad() {
 
 // Deploy Counter routers on both Kovan and Moonbasealpha.
 async function deploy(): Promise<Deploys> {
+  console.log("Getting XAppConnectionManager addresses...\n");
   // Addresses of Nomad XAppConnectionManager contracts on Kovan and Moonbasealpha
   const kovanXAppConnectionManagerAddress =
     dev.mustGetCore("kovan")._xAppConnectionManager;
   const moonbasealphaXAppConnectionManagerAddress =
     dev.mustGetCore("moonbasealpha")._xAppConnectionManager;
 
-  // const kovanSigner = dev.getSigner("kovan");
-  // const moonbasealphaSigner = dev.getSigner("moonbasealpha");
+  const kovanSigner = dev.getSigner("kovan");
+  const moonbasealphaSigner = dev.getSigner("moonbasealpha");
 
   // Deploy routers to each chain
   const KovanCounterRouter = await ethers.getContractFactory(
     "CounterRouter",
-    dev.getSigner("kovan")
+    kovanSigner
   );
   let kovanRouter = await KovanCounterRouter.deploy(
     kovanXAppConnectionManagerAddress
   );
+
   const MoonbasealphaCounterRouter = await ethers.getContractFactory(
     "CounterRouter",
-    dev.getSigner("moonbasealpha")
+    moonbasealphaSigner
   );
   let moonbasealphaRouter = await MoonbasealphaCounterRouter.deploy(
     moonbasealphaXAppConnectionManagerAddress
@@ -135,6 +145,32 @@ async function sendMessage(deploys: Deploys): Promise<string> {
   );
 
   return kovanDispatchToMoonbasealphaTx.hash;
+}
+
+// Track the status of your message from kovan to moonbeam
+async function trackMessageStatus(txHash: string) {
+  const message = await NomadMessage.singleFromTransactionHash(
+    dev,
+    "kovan",
+    txHash
+  );
+
+  const interval = 10 * 1000; // 10 second polling interval
+  let status = (await message.events()).status;
+  while (status != MessageStatus.Processed) {
+    await new Promise((resolve) => setTimeout(resolve, interval)); // pause
+
+    status = (await message.events()).status; // update status
+
+    const statusAsString = MessageStatus[status];
+    console.log(`Current status of transfer: ${statusAsString}`);
+  }
+
+  // Print tx hash of transaction that processed transfer on ethereum
+  const processTxHash = (await message.getProcess())!.transactionHash;
+  console.log(
+    `Success! Transfer processed on Ethereum with tx hash ${processTxHash}.`
+  );
 }
 
 main().catch((error) => {

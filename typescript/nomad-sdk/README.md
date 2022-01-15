@@ -67,8 +67,10 @@ while (status != MessageStatus.Processed) {
 }
 
 // Print tx hash of transaction that processed transfer on ethereum
-const processTxHash = transferMessage.getProcess().transactionHash();
-console.log(`Success! Transfer processed on Ethereum with tx hash ${processTxHash}.`)
+  const processTxHash = (await transferMessage.getProcess())!.transactionHash;
+  console.log(
+    `Success! Transfer processed on Ethereum with tx hash ${processTxHash}.`
+  );
 
 // so easy.
 ```
