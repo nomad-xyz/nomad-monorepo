@@ -1,6 +1,10 @@
 from eth_account.account import Account
 from web3 import Web3
+from requests.exceptions import HTTPError, ReadTimeout
 import backoff 
+
+
+errors_tuple = (ValueError, HTTPError, ReadTimeout)
 
 # Takes a hexKey as input
 # returns the public key
@@ -49,7 +53,7 @@ def create_transaction(sender_key:str, recipient_address:int, amount:int, nonce:
 
 # gets the current nonce for an address 
 @backoff.on_exception(backoff.expo,
-                      ValueError,
+                      errors_tuple,
                       max_tries=18)
 def get_nonce(address:str, endpoint:str):
     w3 = Web3(Web3.HTTPProvider(endpoint))
@@ -59,7 +63,7 @@ def get_nonce(address:str, endpoint:str):
 
 # gets the current nonce for an address 
 @backoff.on_exception(backoff.expo,
-                      ValueError,
+                      errors_tuple,
                       max_tries=8)
 def get_block_height(endpoint:str):
     w3 = Web3(Web3.HTTPProvider(endpoint))
@@ -67,7 +71,7 @@ def get_block_height(endpoint:str):
     return block_height
 
 @backoff.on_exception(backoff.expo,
-                      ValueError,
+                      errors_tuple,
                       max_tries=8)
 def get_balance(address:str, endpoint:str):
     w3 = Web3(Web3.HTTPProvider(endpoint))
@@ -77,7 +81,7 @@ def get_balance(address:str, endpoint:str):
     
 # dispatches a signed transaction from create_transaction
 @backoff.on_exception(backoff.expo,
-                      ValueError,
+                      errors_tuple,
                       max_tries=8)
 def dispatch_signed_transaction(signed_transaction, endpoint:str):
     # Set up w3 provider with network endpoint

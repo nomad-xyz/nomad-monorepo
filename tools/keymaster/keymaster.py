@@ -68,7 +68,7 @@ def monitor(ctx, metrics_port, pause_duration):
     while True:
         # top-up if we see a low balance
         should_top_up = False
-        threshold = 150000000000000000
+        threshold = 250000000000000000
         # for each rpc
         for name, network in config["networks"].items():
             endpoint = network["endpoint"]
@@ -143,7 +143,7 @@ def _top_up(ctx, auto_approve=False):
             # fetch config params 
             home_upper_bound = config["networks"][home]["threshold"]
             # don't top up until balance has gone beneath lower bound
-            home_lower_bound = 150000000000000000
+            home_lower_bound = 250000000000000000
             home_endpoint = config["networks"][home]["endpoint"]
             home_bank_signer = config["networks"][home]["bank"]["signer"]
             home_bank_address = config["networks"][home]["bank"]["address"]
@@ -165,7 +165,7 @@ def _top_up(ctx, auto_approve=False):
                  # fetch config params 
                 replica_upper_bound = config["networks"][replica]["threshold"] 
                 # don't top up until balance has gone beneath lower bound
-                replica_lower_bound = 150000000000000000
+                replica_lower_bound = 250000000000000000
                 replica_endpoint = config["networks"][replica]["endpoint"]
                 replica_bank_signer = config["networks"][replica]["bank"]["signer"]
                 replica_bank_address = config["networks"][replica]["bank"]["address"]
