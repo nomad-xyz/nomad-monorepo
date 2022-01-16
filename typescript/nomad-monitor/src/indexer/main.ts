@@ -4,7 +4,7 @@ import { Orchestrator } from "./orchestrator";
 import * as dotenv from 'dotenv';
 import { ethers } from "ethers";
 dotenv.config({
-    path: '/Users/daniilnaumetc/code/tmp/monitor/typescript/nomad-monitor/src/xxx/.env'
+    // path: '/Users/daniilnaumetc/code/tmp/monitor/typescript/nomad-monitor/src/indexer/.env'
 });
 
 const signer =
@@ -34,5 +34,7 @@ const moonbeamRPC = "https://moonbeam.api.onfinality.io/public";//"https://rpc.a
     ctx.registerWalletSigner(moonbeamId, signer);
     const c = new Logger();
     const o = new Orchestrator(mainnet, c, mainnet.domainNumbers[0]);
-    o.indexAll();
+    await o.indexAll();
+
+    o.startConsuming();
 })();

@@ -12,12 +12,14 @@ export class Indexer {
     persistance: Persistance;
     block2timeCache: Map<number, number>;
     provider: ethers.providers.Provider;
+    upToDate: boolean;
+    eventCallback: undefined | ((event: NomadEvent) => void);
 
     constructor(domain: number, sdk: NomadContext, orchestrator: Orchestrator) {
         this.domain = domain;
         this.sdk = sdk;
         this.orchestrator = orchestrator;
-        const loadPersistance = false;
+        const loadPersistance = fs.existsSync(`/tmp/persistance_${this.domain}.json`); // true;
         this.persistance = loadPersistance ? this.loadPersistance() : new RamPersistance(`/tmp/persistance_${this.domain}.json`);
         console.log(`Persistance:`, this.persistance);
         const it = (this.persistance as RamPersistance).iter();
@@ -29,6 +31,7 @@ export class Indexer {
         console.log(`events found:`, i)
         this.block2timeCache = new Map();
         this.provider = this.sdk.getProvider(domain)!;
+        this.upToDate = false;
     }
 
     async getTimeForBlock(block: number) {
@@ -55,6 +58,11 @@ export class Indexer {
         return this.sdk.getDomain(this.domain)?.paginate?.from || 0; //.getFrom(this.domain);
     }
 
+    processEvent(event: NomadEvent) {
+        if (this.eventCallback != undefined) this.eventCallback(event);
+        this.persistance.store(event)
+    }
+
     subscribeHome() {
         const home = this.home();
         home.on(home.filters.Dispatch(), async (
@@ -77,7 +85,8 @@ export class Indexer {
                     message,
                 }, ev.blockNumber
             )
-            this.persistance.store(eventPrepared)
+            
+            this.processEvent(eventPrepared)
         });
 
         home.on(home.filters.Update(), async (
@@ -98,7 +107,7 @@ export class Indexer {
                     signature,
                 }, ev.blockNumber
             )
-            this.persistance.store(eventPrepared)
+            this.processEvent(eventPrepared)
         })
     }
 
@@ -122,7 +131,7 @@ export class Indexer {
                     signature,
                 }, ev.blockNumber
             )
-            this.persistance.store(eventPrepared)
+            this.processEvent(eventPrepared)
         });
 
         replica.on(replica.filters.Process(), async (
@@ -137,14 +146,14 @@ export class Indexer {
                     messageHash, success, returnData,
                 }, ev.blockNumber
             )
-            this.persistance.store(eventPrepared)
+            this.processEvent(eventPrepared)
         })
     }
 
-    async startAll(replicas: number[]) {
+    async startAll(replicas: number[]) { // , past: number
         let from = this.persistance.height + 1;
         const to = await this.provider.getBlockNumber();
-        from = to - 2000;
+        // from = to - past;
         console.log(`Wat to fetch from`, from, `to`, to);
         // console.log(this.domain, `starting from height`, from, `but actually from to`, to, `- 1000`, to - 1000);
         this.subscribeAll(replicas);
@@ -170,6 +179,7 @@ export class Indexer {
         await Promise.all(replicas.map(r => this.fetchReplica(r, from, to)));
         this.persistance.sortSorage();
         this.savePersistance();
+        this.upToDate = true;
     }
 
     savePersistance() {
@@ -218,6 +228,18 @@ export class Indexer {
             ));
             this.persistance.store(...parsedEvents)
         }
+    }
+
+    throwPastEvents() {
+        for (const event of (this.persistance as RamPersistance).iter()) {
+            this.orchestrator.emit('new_event', event);
+        }
+    }
+
+    startThrowingEvents(past: boolean) {
+        this.eventCallback = (event: NomadEvent) => {this.orchestrator.emit('new_event', event)};
+        if (past) this.throwPastEvents();
+
     }
 
     async fetchReplica(domain: number, from: number, to: number) {

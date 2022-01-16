@@ -2,28 +2,37 @@ import { NomadContext } from '@nomad-xyz/sdk';
 import { Consumer } from './consumer';
 import { Indexer } from './indexer';
 // import {EventEmmiter} from 'events';
+import {EventEmitter} from 'events';
+import { NomadEvent } from './event';
 
-export class Orchestrator {
+// class Database extends EventEmitter {
+//     constructor() {
+//         super();
+//         this.emit('ready');
+//     }
+// }
+
+
+export class Orchestrator extends EventEmitter {
     sdk: NomadContext;
     consumer: Consumer;
     indexers: Map<number, Indexer>;
     gov: number;
-    // emmiter: EventEmmiter;
 
     constructor(sdk: NomadContext, c: Consumer, gov: number) {
+        super();
         this.sdk = sdk;
         this.consumer = c;
         this.indexers = new Map();
         this.gov = gov;
+
     }
 
-    indexAll() {
-        this.sdk.domainNumbers.map((domain: number) => {
-            this.index(domain)
-        })
+    async indexAll() {
+        await Promise.all(this.sdk.domainNumbers.map((domain: number) => this.index(domain)))
     }
 
-    index(domain: number) {
+    async index(domain: number) {
         const existingIndexer = this.indexers.get(domain);
         if (existingIndexer) {
             existingIndexer.stop();
@@ -33,10 +42,22 @@ export class Orchestrator {
 
         if (domain === this.gov) {
             
-            indexer.startAll(this.sdk.domainNumbers.filter(d => d!=this.gov))
+            await indexer.startAll(this.sdk.domainNumbers.filter(d => d!=this.gov))
         } else {
-            indexer.startAll([this.gov])
+            await indexer.startAll([this.gov])
         }
         this.indexers.set(domain, indexer);
+    }
+
+    startConsuming() {
+        this.on('new_event', (event: NomadEvent) => {
+            this.consumer.consume(event);
+        })
+        Array.from(this.indexers.values()).forEach(
+            indexer => {
+                indexer.startThrowingEvents(true)
+            }
+        )
+
     }
 }
