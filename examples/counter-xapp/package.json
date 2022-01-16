@@ -32,7 +32,7 @@
   "author": "Luke Tchang",
   "license": "MIT OR Apache-2.0",
   "dependencies": {
-    "@nomad-xyz/sdk": "^1.2.3",
+    "@nomad-xyz/sdk": "1.0.0",
     "@nomad-xyz/nomad-sol": "file:../../solidity/nomad-core",
     "@openzeppelin/contracts": "~3.4.2",
     "@openzeppelin/contracts-upgradeable": "~3.4.2",

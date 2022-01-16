@@ -54,6 +54,7 @@ function instantiateNomad() {
 // Deploy Counter routers on both Kovan and Moonbasealpha.
 async function deploy(): Promise<Deploys> {
   console.log("Getting XAppConnectionManager addresses...\n");
+
   // Addresses of Nomad XAppConnectionManager contracts on Kovan and Moonbasealpha
   const kovanXAppConnectionManagerAddress =
     dev.mustGetCore("kovan")._xAppConnectionManager;
