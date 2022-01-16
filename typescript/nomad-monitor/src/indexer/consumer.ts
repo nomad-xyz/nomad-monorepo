@@ -5,7 +5,14 @@ export abstract class Consumer {
 }
 
 export class Logger extends Consumer {
+    i: number;
+
+    constructor() {
+        super();
+        this.i = 0;
+    }
+
     consume(event: NomadEvent): void {
-        console.log(event);
+        console.log(this.i ++, '---->', event);
     }
 }
