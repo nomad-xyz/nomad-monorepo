@@ -1000,9 +1000,9 @@ dependencies = [
 
 [[package]]
 name = "elliptic-curve"
-version = "0.11.3"
+version = "0.11.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4c4c31bb557a73d165c838b614521f888112f9d4fcff7421d35646376dd17caf"
+checksum = "5fcbfdf46fd1157b49be0c2170bab2784ca19233b35c2dc772d60247b72f2071"
 dependencies = [
  "crypto-bigint 0.3.2",
  "der 0.5.1",
@@ -1169,7 +1169,7 @@ dependencies = [
  "cargo_metadata",
  "convert_case",
  "ecdsa",
- "elliptic-curve 0.11.3",
+ "elliptic-curve 0.11.7",
  "ethabi",
  "generic-array 0.14.4",
  "hex",
@@ -1264,7 +1264,7 @@ dependencies = [
  "async-trait",
  "coins-bip32",
  "coins-bip39",
- "elliptic-curve 0.11.3",
+ "elliptic-curve 0.11.7",
  "eth-keystore",
  "ethers-core",
  "futures-executor",
@@ -2285,6 +2285,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "newmad"
+version = "0.1.0"
+dependencies = [
+ "ethers",
+ "nomad-core",
+ "tokio",
+]
+
+[[package]]
 name = "nibble_vec"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2966,9 +2975,9 @@ checksum = "dbf0c48bc1d91375ae5c3cd81e3722dff1abcf81a30960240640d223f59fe0e5"
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.32"
+version = "1.0.36"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba508cc11742c0dc5c1659771673afbab7a0efab23aa17e854cbab0837ed0b43"
+checksum = "c7342d5883fbccae1cc37a2353b09c87c9b0f3afd73f5fb9bba687a1f733b029"
 dependencies = [
  "unicode-xid",
 ]

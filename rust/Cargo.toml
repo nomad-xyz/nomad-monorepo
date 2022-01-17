@@ -14,5 +14,6 @@ members = [
     "agents/processor",
     "tools/kms-cli",
     "tools/nomad-cli",
-    "tools/balance-exporter"
+    "tools/balance-exporter",
+    "newmad"
 ]

@@ -206,6 +206,7 @@ impl MerkleTree {
 
         Ok(())
     }
+
     /// Get a reference to the left and right subtrees if they exist.
     pub fn left_and_right_branches(&self) -> Option<(&Self, &Self)> {
         match *self {
