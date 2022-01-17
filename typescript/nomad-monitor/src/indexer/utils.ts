@@ -90,5 +90,5 @@ export class KVCache<K, V> {
 }
 
 export function logToFile(s: string) {
-  fs.writeFileSync('/tmp/log.log', s);
+  fs.appendFileSync('/tmp/log.log', s + '\n');
 }
