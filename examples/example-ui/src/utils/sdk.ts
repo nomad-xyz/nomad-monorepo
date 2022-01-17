@@ -42,7 +42,7 @@ export function getNetworkByDomainID(domainID: number): NetworkMetadata {
   const name = Object.keys(networks).find(n => {
     return networks[n].domainID === domainID
   })
-  return networks[name]
+  return networks[name!]
 }
 
 export async function getNomadBalances(
@@ -88,7 +88,7 @@ export async function getBalanceFromWallet(networkName: NetworkName, tokenName: 
   let balance
   // native assets
   if (token.tokenIdentifier.domain === networkName) {
-    const provider = nomad.getProvider(networkName)
+    const provider = nomad.getProvider(networkName)!
     if (network.nativeToken === token) {
       // get balance of primary native asset
       console.log('getting native token balance')
