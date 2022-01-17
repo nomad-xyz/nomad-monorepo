@@ -8,7 +8,7 @@ import { networks, tokens, NetworkName, TokenName, NetworkMetadata } from '../co
 import { getNetworkByChainID } from '../utils/index'
 import { ERC20__factory } from '@nomad-xyz/contract-interfaces/bridge'
 
-let nomad: NomadContext = instantiateNomad()
+const nomad: NomadContext = instantiateNomad()
 const { ethereum } = window as any
 
 function instantiateNomad(): NomadContext {

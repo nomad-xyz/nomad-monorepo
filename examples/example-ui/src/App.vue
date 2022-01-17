@@ -1,5 +1,8 @@
 <template>
   <div class="app-container">
+    <h1>Nomad SDK Example UI</h1>
+    <a href="https://www.npmjs.com/package/@nomad-xyz/sdk" target="_blank" class="link">NPM Package</a>
+    <a href="https://docs.nomad.xyz" target="_blank" class="link">Docs</a>
     <home />
   </div>
 </template>
@@ -30,5 +33,8 @@ export default defineComponent({
   flex-direction: column;
   justify-content: center;
   align-items: center;
+}
+.link {
+  color: #41BA83;
 }
 </style>

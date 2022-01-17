@@ -1,5 +1,4 @@
 <template>
-  <h1>Hello</h1>
   <n-card class="card">
     <n-form
       inline
