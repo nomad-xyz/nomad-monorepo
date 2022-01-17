@@ -56,11 +56,11 @@ console.log(`Tx hash on moonbeam: ${transferMessage.transactionHash()}`);
 
 // Track the status of your transfer from moonbeam to ethereum
 const interval = 10 * 1000; // 10 second polling interval
-let status = (await message.events()).status;
+let status = (await transferMessage.events()).status;
 while (status != MessageStatus.Processed) {
     await new Promise((resolve) => setTimeout(resolve, interval)); // pause
 
-    status = (await message.events()).status; // update status
+    status = (await transferMessage.events()).status; // update status
 
     const statusAsString = MessageStatus[status];
     console.log(`Current status of transfer: ${statusAsString}`); // print status
