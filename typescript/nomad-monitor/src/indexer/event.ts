@@ -1,4 +1,5 @@
 import { ethers } from 'ethers';
+import { logToFile } from './utils';
 
 export enum ContractType {
   Home = 'home',
@@ -56,10 +57,11 @@ export class NomadEvent {
     this.eventType = eventType;
     this.contractType = contractType;
     this.replicaOrigin = replicaOrigin;
-    this.ts = source === EventSource.Past && contractType == ContractType.Home ? ts - 60000: ts // if the event was fetched from RPC for past (we asked RPC when event happened) happened on another chain we want to make sure that event at chain of origin happened before it was relayed to destination
+    this.ts = source === EventSource.Past && contractType == ContractType.Home ? ts - 45000: ts // if the event was fetched from RPC for past (we asked RPC when event happened) happened on another chain we want to make sure that event at chain of origin happened before it was relayed to destination
     this.eventData = eventData;
     this.block = block;
     this.source = source;
+    logToFile(`new event at ${new Date().valueOf()} -> ${JSON.stringify(this.toObject())}`)
   }
 
   destination(): number {
