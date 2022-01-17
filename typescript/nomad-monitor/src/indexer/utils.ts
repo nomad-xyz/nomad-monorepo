@@ -88,3 +88,7 @@ export class KVCache<K, V> {
     return this.m.get(k);
   }
 }
+
+export function logToFile(s: string) {
+  fs.writeFileSync('/tmp/log.log', s);
+}

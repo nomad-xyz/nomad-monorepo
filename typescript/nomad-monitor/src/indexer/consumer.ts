@@ -133,12 +133,6 @@ export class Processor extends Consumer {
     return undefined;
   }
 
-//   mustGetMsg(id: string | number): NomadMessage {
-//     const m = this.getMsg(id);
-//     if (!m) throw new Error(`Message not found`);
-//     return m;
-//   }
-
   getMsgsByOriginAndRoot(
     origin: number,
     root: string,
@@ -148,12 +142,6 @@ export class Processor extends Consumer {
     if (msgIndexs) return msgIndexs.map(msgIndex => this.messages[msgIndex])
     return [];
   }
-
-//   mustGetMsgByOriginAndRoot(origin: number, root: string): NomadMessage {
-//     const m = this.getMsgByOriginAndRoot(origin, root);
-//     if (!m) throw new Error(`Msg not found by origin and root`);
-//     return m;
-//   }
 
   stats(): void {
     let dispatched = 0;
