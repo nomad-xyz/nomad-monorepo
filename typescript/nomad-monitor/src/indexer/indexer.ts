@@ -1,16 +1,54 @@
 import { Orchestrator } from "./orchestrator";
 import { NomadContext } from '@nomad-xyz/sdk';
 import fs from 'fs';
-import { ContractType, EventType, NomadEvent } from "./event";
+import { ContractType, EventType, NomadEvent, EventSource } from "./event";
 import { Home, Replica } from "@nomad-xyz/contract-interfaces/core";
 import { ethers } from "ethers";
+import { replacer, retry, reviver, sleep } from "./utils";
+
+
+function xxx(s: string) {
+    fs.appendFileSync('/tmp/kek.txt', s+'\n');
+}
+
+class KVCache<K, V> {
+    m: Map<K, V>;
+    path: string;
+
+    constructor(path: string) {
+        this.m = new Map();
+        this.path = path;
+        this.tryLoad();
+    }
+
+    save() {
+        fs.writeFileSync(this.path, JSON.stringify(this.m, replacer));
+    }
+
+    tryLoad() {
+        try {
+            this.m = JSON.parse(fs.readFileSync(this.path, 'utf8'), reviver);
+        } catch(_) {
+
+        }
+    }
+
+    set(k: K, v: V) {
+        this.m.set(k, v);
+        this.save()
+    }
+
+    get(k: K): V | undefined {
+        return this.m.get(k);
+    }
+}
 
 export class Indexer {
     domain: number;
     sdk: NomadContext;
     orchestrator: Orchestrator;
     persistance: Persistance;
-    block2timeCache: Map<number, number>;
+    block2timeCache: KVCache<number, number>;
     provider: ethers.providers.Provider;
     upToDate: boolean;
     eventCallback: undefined | ((event: NomadEvent) => void);
@@ -21,24 +59,29 @@ export class Indexer {
         this.orchestrator = orchestrator;
         const loadPersistance = fs.existsSync(`/tmp/persistance_${this.domain}.json`); // true;
         this.persistance = loadPersistance ? this.loadPersistance() : new RamPersistance(`/tmp/persistance_${this.domain}.json`);
-        console.log(`Persistance:`, this.persistance);
+        // console.log(`Persistance:`, this.persistance);
         const it = (this.persistance as RamPersistance).iter();
         let i = 0;
-        for (const event of it) {
-            console.log(`---> ${event.ts} - ${event.block} - ${event.domain} - ${event.eventType} - ${event.replicaOrigin}`, new Date(event.ts*1000));
+        for (const _ of it) {
+            // console.log(`---> ${event.ts} - ${event.block} - ${event.domain} - ${event.eventType} - ${event.replicaOrigin}`, new Date(event.ts*1000));
             i += 1;
         }
         console.log(`events found:`, i)
-        this.block2timeCache = new Map();
+        this.block2timeCache = new KVCache(`/tmp/blocktime_cache_${this.domain}`);
         this.provider = this.sdk.getProvider(domain)!;
         this.upToDate = false;
     }
 
-    async getTimeForBlock(block: number) {
-        const possibleTime = this.block2timeCache.get(block);
+    async getTimeForBlock(blockNumber: number) {
+        const possibleTime = this.block2timeCache.get(blockNumber);
         if (possibleTime) return possibleTime;
-        const time = (await this.provider.getBlock(block)).timestamp * 1000;
-        this.block2timeCache.set(block, time);
+        const [block, error] = await retry(async () => await this.provider.getBlock(blockNumber), 5);
+        if (!block) {
+            throw error || new Error(`Some error happened at retrying getting the block ${blockNumber} for ${this.domain}`);
+        }
+        // const block = await this.provider.getBlock(blockNumber)
+        const time = (block).timestamp * 1000;
+        this.block2timeCache.set(blockNumber, time);
         return time;
     }
 
@@ -55,7 +98,8 @@ export class Indexer {
     }
 
     get from(): number {
-        return this.sdk.getDomain(this.domain)?.paginate?.from || 0; //.getFrom(this.domain);
+        return this.persistance.from
+        // return this.persistance.from === -1 ? this.sdk.getDomain(this.domain)?.paginate?.from || this.persistance.from + 1 : this.persistance.from; //.getFrom(this.domain);
     }
 
     processEvent(event: NomadEvent) {
@@ -83,7 +127,7 @@ export class Indexer {
                     destinationAndNonce,
                     committedRoot,
                     message,
-                }, ev.blockNumber
+                }, ev.blockNumber, EventSource.New
             )
             
             this.processEvent(eventPrepared)
@@ -105,7 +149,7 @@ export class Indexer {
                     oldRoot,
                     newRoot,
                     signature,
-                }, ev.blockNumber
+                }, ev.blockNumber, EventSource.New
             )
             this.processEvent(eventPrepared)
         })
@@ -129,7 +173,7 @@ export class Indexer {
                     oldRoot,
                     newRoot,
                     signature,
-                }, ev.blockNumber
+                }, ev.blockNumber, EventSource.New
             )
             this.processEvent(eventPrepared)
         });
@@ -144,17 +188,17 @@ export class Indexer {
                 ContractType.Replica,
                 domain, new Date().valueOf(), {
                     messageHash, success, returnData,
-                }, ev.blockNumber
+                }, ev.blockNumber, EventSource.New
             )
             this.processEvent(eventPrepared)
         })
     }
 
     async startAll(replicas: number[]) { // , past: number
-        let from = this.persistance.height + 1;
+        let from = Math.max(this.persistance.height + 1, this.sdk.getDomain(this.domain)?.paginate?.from || 0);
         const to = await this.provider.getBlockNumber();
         // from = to - past;
-        console.log(`Wat to fetch from`, from, `to`, to);
+        console.log(`Want to fetch from`, from, `to`, to, `for`, this.domain);
         // console.log(this.domain, `starting from height`, from, `but actually from to`, to, `- 1000`, to - 1000);
         this.subscribeAll(replicas);
         await this.fetchAll(from, to, replicas);
@@ -175,11 +219,106 @@ export class Indexer {
     }
 
     async fetchAll(from: number, to: number, replicas: number[]) {
-        await this.fetchHome(from, to);
-        await Promise.all(replicas.map(r => this.fetchReplica(r, from, to)));
+
+        if (this.domain === 1337) { // 1650811245
+            xxx(`from sdk: ${this.sdk.getDomain(1650811245)?.paginate?.from}, ${this.from}, pf:${this.persistance.from}, plast: ${Array.from((this.persistance as RamPersistance).iter()).reduce((acc, v) => Math.max(acc, v.block), 0)} current: ${await this.provider.getBlockNumber()}`)
+            console.log(`Fetching batched for`, this.domain);
+            const batchSize = 1500;
+
+            let batchedFrom = from;
+            let batchedTo = batchedFrom + batchSize;
+
+            while (batchedTo <= to) {
+                if (batchedTo > to) {
+                    batchedTo = to
+                }
+                console.log(`Fetching batch`, batchedFrom, `-`, batchedTo);
+                xxx(`Fetching batch ${batchedFrom} - ${batchedTo}`);
+                const [_, error] = await retry(async () => {
+                    await this.fetchHome(batchedFrom, batchedTo);
+                    await Promise.all(replicas.map(r => this.fetchReplica(r, batchedFrom, batchedTo)));
+                }, 5);
+
+                if (error) throw error;
+                
+                batchedFrom += batchSize;
+                batchedTo += batchSize;
+                await sleep(6000);
+            }
+        } else {
+            console.log(`Fetching norma for`, this.domain);
+            // await this.fetchHome(from, to);
+            // await Promise.all(replicas.map(r => this.fetchReplica(r, from, to)));
+            const [_, error] = await retry(async () => {
+                await this.fetchHome(from, to);
+                await Promise.all(replicas.map(r => this.fetchReplica(r, from, to)));
+            }, 5);
+
+            if (error) throw error;
+        }
+
+        
+        
         this.persistance.sortSorage();
         this.savePersistance();
+
+        // TODO: either drop or make better
+        const p = this.persistance as RamPersistance;
+        const h = new Map<string, string>();
+        const r = new Map<string, string>();
+
+        let h1 = '';
+        let ht = Number.MAX_VALUE;
+        let r1 = '';
+        let rt = Number.MAX_VALUE;
+        let rtotal = 0;
+        let htotal = 0;
+
+        for (const event of p.iter()) {
+            if (event.eventType == EventType.HomeUpdate) {
+                const e = event.eventData as {oldRoot: string, newRoot: string};
+                h.set(e.oldRoot, e.newRoot);
+                htotal += 1;
+                if (event.ts < ht) {
+                    ht = event.ts;
+                    h1 = e.oldRoot;
+                }
+            } else if (event.eventType == EventType.ReplicaUpdate) {
+                const e = event.eventData as {oldRoot: string, newRoot: string};
+                r.set(e.oldRoot, e.newRoot);
+                rtotal += 1;
+                if (event.ts < rt) {
+                    rt = event.ts;
+                    r1 = e.oldRoot;
+                }
+            }
+        }
+
+        console.log(this.domain, `Home started with`, htotal, 'unresolved')
+        while (true) {
+            let newRoot = h.get(h1);
+            if (newRoot) {
+                h1 = newRoot;
+                htotal -= 1;
+            } else {
+                console.log(this.domain, `Home broke with`, htotal, 'unresolved')
+                break
+            }
+        }
+        while (true) {
+            let newRoot = r.get(r1);
+            if (newRoot) {
+                r1 = newRoot;
+                rtotal -= 1;
+            } else {
+                console.log(`Replica broke with`, rtotal, 'unresolved')
+                break
+            }
+        }
+        // TODO END
+
         this.upToDate = true;
+        console.log(this.domain, `Fetched all`);
     }
 
     savePersistance() {
@@ -187,7 +326,9 @@ export class Indexer {
     }
 
     loadPersistance(): Persistance {
-        return RamPersistance.loadFromFile(`/tmp/persistance_${this.domain}.json`)
+        const p = RamPersistance.loadFromFile(`/tmp/persistance_${this.domain}.json`);
+        p.sortSorage();
+        return p;
     }
 
     async fetchHome(from: number, to: number) {
@@ -205,7 +346,7 @@ export class Indexer {
                         destinationAndNonce: event.args[2],
                         committedRoot: event.args[3],
                         message: event.args[4],
-                    }, event.blockNumber
+                    }, event.blockNumber, EventSource.Past
                 )
             ))
             this.persistance.store(...parsedEvents)
@@ -223,22 +364,22 @@ export class Indexer {
                         oldRoot: event.args[1],
                         newRoot: event.args[2],
                         signature: event.args[3],
-                    }, event.blockNumber
+                    }, event.blockNumber, EventSource.Past
                 )
             ));
             this.persistance.store(...parsedEvents)
         }
     }
 
-    throwPastEvents() {
-        for (const event of (this.persistance as RamPersistance).iter()) {
-            this.orchestrator.emit('new_event', event);
-        }
-    }
+    // throwPastEvents() {
+    //     for (const event of (this.persistance as RamPersistance).iter()) {
+    //         this.orchestrator.emit('new_event', event);
+    //     }
+    // }
 
-    startThrowingEvents(past: boolean) {
+    startThrowingEvents() {
         this.eventCallback = (event: NomadEvent) => {this.orchestrator.emit('new_event', event)};
-        if (past) this.throwPastEvents();
+        // if (past) this.throwPastEvents();
 
     }
 
@@ -256,7 +397,7 @@ export class Indexer {
                         oldRoot: event.args[1],
                         newRoot: event.args[2],
                         signature: event.args[3],
-                    }, event.blockNumber
+                    }, event.blockNumber, EventSource.Past
                 )
             ));
             this.persistance.store(...parsedEvents)
@@ -273,7 +414,7 @@ export class Indexer {
                         messageHash: event.args[0],
                         success: event.args[1],
                         returnData: event.args[2],
-                    }, event.blockNumber
+                    }, event.blockNumber, EventSource.Past
                 )
             ));
             this.persistance.store(...parsedEvents)
@@ -391,26 +532,6 @@ export class RamPersistance extends Persistance {
         return p;
     }
 }
-
-function replacer(key: any, value: any): any {
-    if(value instanceof Map) {
-      return {
-        dataType: 'Map',
-        value: Array.from(value.entries()), // or with spread: value: [...value]
-      };
-    } else {
-      return value;
-    }
-}
-
-function reviver(key: any, value: any): any {
-    if(typeof value === 'object' && value !== null) {
-      if (value.dataType === 'Map') {
-        return new Map(value.value);
-      }
-    }
-    return value;
-  }
 
 
 export class EventsRange implements Iterable<NomadEvent> {

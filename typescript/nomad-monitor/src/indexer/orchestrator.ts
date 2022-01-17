@@ -1,7 +1,6 @@
 import { NomadContext } from '@nomad-xyz/sdk';
 import { Consumer } from './consumer';
-import { Indexer } from './indexer';
-// import {EventEmmiter} from 'events';
+import { Indexer, RamPersistance } from './indexer';
 import {EventEmitter} from 'events';
 import { NomadEvent } from './event';
 
@@ -53,9 +52,15 @@ export class Orchestrator extends EventEmitter {
         this.on('new_event', (event: NomadEvent) => {
             this.consumer.consume(event);
         })
-        Array.from(this.indexers.values()).forEach(
+        
+        Array.from(this.indexers.values()).map(indexer => {
+            const p = (indexer.persistance as RamPersistance).iter();
+            return Array.from(p);
+        }).flat().sort((a,b) => a.ts - b.ts).forEach(e => this.consumer.consume(e));
+
+        Array.from(this.indexers.values()).map(
             indexer => {
-                indexer.startThrowingEvents(true)
+                indexer.startThrowingEvents()
             }
         )
 
