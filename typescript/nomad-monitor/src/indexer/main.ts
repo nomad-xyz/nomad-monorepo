@@ -1,5 +1,5 @@
 import { mainnet } from "@nomad-xyz/sdk";
-import { Logger } from "./consumer";
+import { Processor } from "./consumer";
 import { Orchestrator } from "./orchestrator";
 import * as dotenv from 'dotenv';
 import { ethers } from "ethers";
@@ -23,16 +23,22 @@ const moonbeamRPC = "https://moonbeam.api.onfinality.io/public";//"https://rpc.a
     const ctx = mainnet;//NomadContext.fromDomains([ethereum, moonbeam]);
     const ethereumId = ctx.mustGetDomain('ethereum').id;
     const moonbeamId = ctx.mustGetDomain('moonbeam').id;
+    const p = new ethers.providers.InfuraProvider('homestead', infuraKey);
+    // const x = new ethers.providers.JsonRpcProvider(moonbeamRPC);
+
+    
 
     ctx.registerProvider(
         ethereumId,
-        new ethers.providers.InfuraProvider('homestead', infuraKey)
+        p
     );
     ctx.registerWalletSigner(ethereumId, signer);
 
     ctx.registerRpcProvider(moonbeamId, moonbeamRPC);
     ctx.registerWalletSigner(moonbeamId, signer);
-    const c = new Logger();
+    const c = new Processor();
+
+    setInterval(() => c.stats(), 15000);
     const o = new Orchestrator(mainnet, c, mainnet.domainNumbers[0]);
     await o.indexAll();
 
