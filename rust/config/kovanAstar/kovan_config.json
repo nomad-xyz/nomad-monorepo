@@ -1,0 +1,46 @@
+{
+  "environment": "staging",
+  "signers": {
+    "kovan": {
+      "key": "",
+      "type": "hexKey"
+    },
+    "astar": {
+      "key": "",
+      "type": "hexKey"
+    }
+  },
+  "replicas": {
+    "astar": {
+      "address": "0xF36d789E1A2cceC74476b4842e43bd1C58d3aB67",
+      "domain": "1634956402",
+      "name": "astar",
+      "rpcStyle": "ethereum",
+      "timelag": 20,
+      "connection": {
+        "type": "http",
+        "url": ""
+      }
+    }
+  },
+  "home": {
+    "address": "0x134610222e796deAdDe52Fd2E4710D55A32899d5",
+    "domain": "3000",
+    "name": "kovan",
+    "rpcStyle": "ethereum",
+    "timelag": 5,
+    "connection": {
+      "type": "http",
+      "url": ""
+    }
+  },
+  "tracing": {
+    "level": "debug",
+    "fmt": "json"
+  },
+  "db": "db_path",
+  "index": {
+    "from": "29329838",
+    "chunk": "2000"
+  }
+}

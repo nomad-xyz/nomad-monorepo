@@ -1,0 +1,18 @@
+{
+  "name": "astar",
+  "id": 1634956402,
+  "paginate": {
+    "from": 222746,
+    "blocks": 2000
+  },
+  "home": "0xab838C2D976Ad2daa8cAbd20BC55632e33A6f5d6",
+  "replicas": [
+    {
+      "domain": 3000,
+      "address": "0xF36d789E1A2cceC74476b4842e43bd1C58d3aB67"
+    }
+  ],
+  "governanceRouter": "0xD02E93492564567A02A78F16a21532a088Ce056B",
+  "bridgeRouter": "n/a",
+  "tokenRegistry": "n/a"
+}
