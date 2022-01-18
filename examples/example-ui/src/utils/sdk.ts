@@ -1,27 +1,21 @@
 import { NomadContext, dev } from '@nomad-xyz/sdk'
 import { TokenIdentifier } from '@nomad-xyz/sdk/nomad'
 import { Web3Provider } from '@ethersproject/providers'
-import { BigNumber, providers } from 'ethers'
+import { BigNumber, providers, utils } from 'ethers'
 import { TransferMessage } from '@nomad-xyz/sdk/nomad/messages/BridgeMessage'
-
-import { networks, tokens, NetworkName, TokenName, NetworkMetadata } from '../config'
-import { getNetworkByChainID } from '../utils/index'
 import { ERC20__factory } from '@nomad-xyz/contract-interfaces/bridge'
 
-const nomad: NomadContext = instantiateNomad()
+import {
+  networks,
+  tokens,
+  NetworkName,
+  TokenName,
+  NetworkMetadata,
+  TokenMetadata
+} from '../config'
+
 const { ethereum } = window as any
-
-function instantiateNomad(): NomadContext {
-  // configure for mainnet/testnet
-  const nomadContext: NomadContext = dev
-
-  // register rpc provider and signer for each network
-  Object.values(networks).forEach(({ name, rpcUrl }) => {
-    nomadContext.registerRpcProvider(name, rpcUrl)
-  })
-
-  return nomadContext
-}
+const nomad: NomadContext = instantiateNomad()
 
 export interface SendData {
   isNative: boolean
@@ -38,6 +32,38 @@ export type TXData = {
   hash: string
 }
 
+function instantiateNomad(): NomadContext {
+  // configure for mainnet/testnet
+  const nomadContext: NomadContext = dev
+
+  // register rpc provider and signer for each network
+  Object.values(networks).forEach(({ name, rpcUrl }) => {
+    nomadContext.registerRpcProvider(name, rpcUrl)
+  })
+
+  return nomadContext
+}
+
+/**
+ * determines if the token is native to the selected origin network
+ */
+export function isNativeToken(network: string, token: TokenMetadata): boolean {
+  return token.nativeOnly && token.nativeNetwork === network 
+}
+
+/**
+ * Retrieves network config given a chain ID
+ */
+export function getNetworkByChainID(chainID: number): NetworkMetadata | undefined {
+  for (const network in networks) {
+    if (networks[network].chainID === chainID) {
+      return networks[network]
+    }
+  }
+  // unsupported network
+  console.error(`network not found: ${chainID}`)
+}
+
 export function getNetworkByDomainID(domainID: number): NetworkMetadata {
   const name = Object.keys(networks).find(n => {
     return networks[n].domainID === domainID
@@ -46,17 +72,19 @@ export function getNetworkByDomainID(domainID: number): NetworkMetadata {
 }
 
 export async function getNomadBalances(
-  token: TokenIdentifier,
+  tokenName: TokenName,
   address: string
-): Promise<Record<number, BigNumber> | undefined> {
+): Promise<Record<number, string> | undefined> {
+  const { tokenIdentifier, decimals, symbol } = tokens[tokenName]
+
   // get representations of token
-  const representations = await nomad.resolveRepresentations(token)
-  const balances: Record<number, BigNumber> = {}
+  const representations = await nomad.resolveRepresentations(tokenIdentifier)
+  const balances: Record<number, string> = {}
   let domain, instance
 
   for ([domain, instance] of representations.tokens.entries()) {
-    console.log({ instance })
-    balances[domain] = await instance.balanceOf(address)
+    const balanceBN = await instance.balanceOf(address)
+    balances[domain] = `${utils.formatUnits(balanceBN.toString(), decimals)} ${symbol}`
   }
   return balances
 }
@@ -130,20 +158,23 @@ export function registerNewSigner(networkName: NetworkName) {
   nomad.registerSigner(networkName, newSigner)
 }
 
-export async function send(payload: SendData): Promise<TransferMessage> {
-  console.log('sending...', payload)
-  const {
-    isNative,
-    originNetwork,
-    destNetwork,
-    asset,
-    amnt,
-    recipient,
-  } = payload
+export async function send(
+  originNetworkName: NetworkName,
+  destinationNetworkName: NetworkName,
+  amount: number,
+  tokenName: TokenName,
+  destinationAddr: string
+): Promise<TransferMessage> {
+  const token = tokens[tokenName]
+  const isNative = isNativeToken(originNetworkName, token)
 
   // get Nomad domain
-  const originDomain = nomad.resolveDomain(originNetwork)
-  const destDomain = nomad.resolveDomain(destNetwork)
+  const originDomain = networks[originNetworkName].domainID
+  const destDomain = networks[destinationNetworkName].domainID
+  // 
+
+  // format amount according to token decimals
+  const amnt = utils.parseUnits(amount.toString(), token.decimals)
 
   let transferMessage: TransferMessage
   // if ETH Helper contract exists, native token must be wrapped
@@ -155,16 +186,16 @@ export async function send(payload: SendData): Promise<TransferMessage> {
       originDomain,
       destDomain,
       amnt,
-      recipient
+      destinationAddr
     )
   } else {
     console.log('send ERC-20')
     transferMessage = await nomad.send(
       originDomain,
       destDomain,
-      asset,
+      token.tokenIdentifier,
       amnt,
-      recipient,
+      destinationAddr,
     )
   }
   console.log('tx sent!!!', transferMessage)
@@ -234,17 +265,14 @@ export async function connectWallet() {
   const provider = await getMetamaskProvider()
   const signer = await provider.getSigner()
 
-  // set network, if supported
+  // return address
+  return await signer.getAddress()
+}
+
+export async function getMetamaskNetwork() {
+  const provider = await getMetamaskProvider()
   const { chainId } = await provider.ready
-
-  // get and set address
-  const address = await signer.getAddress()
-  const network = getNetworkByChainID(chainId)!
-
-  return {
-    walletAddress: address,
-    walletNetwork: network.name,
-  }
+  return getNetworkByChainID(chainId)!.name
 }
 
 export async function getMetamaskProvider(): Promise<Web3Provider> {

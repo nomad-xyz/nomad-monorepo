@@ -8,6 +8,7 @@
       :ref="formRef"
       class="form"
     >
+      <!-- amount -->
       <div class="amount form-row">
         <n-form-item label="Amount" path="sendData.amount" class="amount__item">
           <n-input v-model:value="formValue.sendData.amount" placeholder="Enter amount" />
@@ -20,6 +21,7 @@
           />
         </n-form-item>
       </div>
+      <!-- origin/destination networks -->
       <n-form-item label="Origin Network" path="sendData.originNetwork" class="form-row">
         <n-select
           v-model:value="formValue.sendData.originNetwork"
@@ -34,8 +36,11 @@
           placeholder="Select destination network"
         />
       </n-form-item>
+      <!-- actions -->
       <n-form-item>
-        <n-button @click="handleValidateClick">Validate</n-button>
+        <!-- if no address, user is not connected -->
+        <n-button v-if="!address" @click="connect">Connect Wallet</n-button>
+        <n-button v-else @click="send">Bridge Tokens</n-button>
       </n-form-item>
     </n-form>
   </n-card>
@@ -44,7 +49,8 @@
 <script lang="ts">
 import { defineComponent, ref } from 'vue';
 import { NForm, NFormItem, NInput, NSelect, NButton, NCard } from 'naive-ui';
-import { tokens, networks } from '@/config'
+import { tokens, networks, TokenName, NetworkName } from '@/config'
+import { connectWallet, switchNetwork, registerNewSigner, send } from '@/utils/sdk'
 
 function generateTokenOptions() {
   return Object.keys(tokens).map(t => {
@@ -57,6 +63,13 @@ function generateNetworkOptions() {
   return Object.keys(networks).map(n => {
     return { label: n, value: n }
   })
+}
+
+interface SendData {
+  amount: number | null
+  token: TokenName | null
+  originNetwork: NetworkName | null
+  destinationNetwork: NetworkName | null
 }
 
 export default defineComponent({
@@ -81,7 +94,7 @@ export default defineComponent({
           token: null,
           originNetwork: null,
           destinationNetwork: null,
-        },
+        } as SendData,
       }),
       rules: {
         sendData: {
@@ -107,29 +120,41 @@ export default defineComponent({
           },
         },
       },
-      handleValidateClick (e: any) {
-        e.preventDefault()
-        // if (!formRef.value) return
-        // formRef.value.validate((errors) => {
-        //   if (!errors) {
-        //     message.success('Valid')
-        //   } else {
-        //     console.log(errors)
-        //     message.error('Invalid')
-        //   }
-        // })
-      }
     }
   },
+  data() {
+    return {
+      // if address exists, user is connected to wallet
+      address: '',
+    }
+  },
+  methods: {
+    async connect() {
+      try {
+        const address = await connectWallet()
+        this.address = address || ''
+      } catch {
+        console.error('error connecting wallet')
+        this.address = ''
+      }
+    },
+    async send() {
+      console.log('send')
+      const { amount, token, originNetwork, destinationNetwork } = this.formValue.sendData
+      if (!amount || !token || !originNetwork || !destinationNetwork || !this.address) return
+
+      // switch to origin network and register signer
+      await switchNetwork(originNetwork)
+      await registerNewSigner(originNetwork)
+
+      const transferMessage = await send(originNetwork, destinationNetwork, amount, token, this.address)
+      console.log(transferMessage)
+    }
+  }
 });
 </script>
 
 <style scoped>
-.card {
-  width: 100%;
-  max-width: 450px;
-  margin: 50px 20px;
-}
 .form {
   display: flex;
   flex-direction: column;
