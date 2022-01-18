@@ -69,7 +69,7 @@ export class Orchestrator extends EventEmitter {
 
       this.consumer.stats();
       
-      await sleep(15000);
+      await sleep(30000);
     }
   }
 
