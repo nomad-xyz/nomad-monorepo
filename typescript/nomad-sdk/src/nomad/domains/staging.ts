@@ -1,43 +1,43 @@
 import { NomadDomain } from './domain';
 
 export const kovan: NomadDomain = {
-  "name": "kovan",
-  "id": 3000,
-  "paginate": {
-    "from": 29193952,
-    "blocks": 2000,
+  name: 'kovan',
+  id: 3000,
+  paginate: {
+    from: 29329838,
+    blocks: 2000,
   },
-  "home": "0xA2d62FbcD779231894586CFC569E8a085662d5Bb",
-  "replicas": [
+  home: '0x134610222e796deAdDe52Fd2E4710D55A32899d5',
+  replicas: [
     {
-      "domain": 5000,
-      "address": "0x2fFEa0eBe27cF63cbE4b8bb621b817F7fe40f27B",
+      domain: 1634956402,
+      address: '0xF36d789E1A2cceC74476b4842e43bd1C58d3aB67',
     },
   ],
-  "governanceRouter": "0x2960C101Cb72eCC35a515e247608b17B46f38bA6",
-  "bridgeRouter": "0x983fC3130002454d0e892ae7a53147B09Fb58fd8",
-  "tokenRegistry": "0x60fB0Ea196F2c0Ba54FBFAB4184cCFb2ce4048BD",
-  "ethHelper": "0xe3717ed5f3F087f3AAbaD4C25ee924EDeB80c9f6",
+  governanceRouter: '0x3B58BE35841176f00684af0e1Cc59D88c8e0847c',
+  bridgeRouter: '0x9aE2c4CA2ABaeE4f3C74057326686D27F0B44d68',
+  tokenRegistry: '0x7D27AC216F7239260fd3594f265401977fea69f9',
+  ethHelper: '0x77d3406cE820A4740906ca4849ad7e38B896EfF8',
 };
 
-export const moonbasealpha: NomadDomain = {
-  "name": "moonbasealpha",
-  "id": 5000,
-  "paginate": {
-    "from": 1507707,
-    "blocks": 2000,
+export const astar: NomadDomain = {
+  name: 'astar',
+  id: 1634956402,
+  paginate: {
+    from: 222746,
+    blocks: 2000,
   },
-  "home": "0xdc515CB0Ba06c5E058998551C21864ed2e0629Fe",
-  "replicas": [
+  home: '0xab838C2D976Ad2daa8cAbd20BC55632e33A6f5d6',
+  replicas: [
     {
-      "domain": 3000,
-      "address": "0x3333744724611Ef93521446670b4cC4009338E58",
+      domain: 3000,
+      address: '0x044d4615e14237888669C918b3d0069bD6682905',
     },
   ],
-  "governanceRouter": "0xD3cBBd9fe9Fa81850E2e083C4fe05Cc18B11a4B6",
-  "bridgeRouter": "0xEDC1bcB5a6B47483eD9640bbE4c91C3d2A9A6286",
-  "tokenRegistry": "0x5AFfc0aa97Af0e5de401b156De38CeE7b34cfCA0",
-  "ethHelper": "0x7FacDe7EB8e2B2d4996d9b03AaBD4bA033AD1654",
+  governanceRouter: '0xD02E93492564567A02A78F16a21532a088Ce056B',
+  bridgeRouter: '0xb115014bB06faDaD1687292DA3d2918f4a637e12',
+  tokenRegistry: '0x7470523E698cC52F05E8dd60Ef8a7a8fF1c819c5',
+  ethHelper: '0x579b5c2d973cF47E5AE0294A0beba9CB2076F220',
 };
 
-export const stagingDomains = [kovan, moonbasealpha];
+export const stagingDomains = [kovan, astar];
