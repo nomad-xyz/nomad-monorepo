@@ -28,10 +28,6 @@ export const stagingConfig: CoreConfig = {
   updater: '0x5340fe2F454B861E71647bd80596A3463e095C9c',
   watchers: ['0xa031973b293B924f6C848202Bf1dc3107fDE4D1e'],
   recoveryManager: '0x24F6c874F56533d9a1422e85e5C7A806ED11c036',
-  governor: {
-    domain: chainJson.domain,
-    address: '0xa4849f1D96B26066f9C631FCdc8F1457D27Fb5EC',
-  },
   optimisticSeconds: 60 * 30, // 30 minutes
   recoveryTimelock: 180, // 3 minutes
   processGas: 850_000,
