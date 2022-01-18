@@ -13,7 +13,7 @@ const moonbaseAlphaDeploy = new CoreDeploy(
   moonbaseAlphaConfig,
 );
 
-let astarConfig = moonbasealpha.devConfig;
+let astarConfig = astar.config;
 const astarDeploy = new CoreDeploy(astar.chain, astarConfig);
 
 deployComplete([kovanDeploy, moonbaseAlphaDeploy, astarDeploy]);

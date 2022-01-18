@@ -18,7 +18,7 @@ const chainJson: ChainJson = {
   domain: 6000,
   gas: { price: '10000000000' },
   chunk: 2000,
-  timelag: 5,
+  timelag: 800, // big reorgs on ropsten
 };
 
 export const chain = toChain(chainJson);
