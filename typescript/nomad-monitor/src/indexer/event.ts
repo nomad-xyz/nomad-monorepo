@@ -1,5 +1,4 @@
 import { ethers } from 'ethers';
-import { logToFile } from './utils';
 
 export enum ContractType {
   Home = 'home',
@@ -61,7 +60,6 @@ export class NomadEvent {
     this.eventData = eventData;
     this.block = block;
     this.source = source;
-    logToFile(`new event at ${new Date().valueOf()} -> ${JSON.stringify(this.toObject())}`)
   }
 
   destination(): number {
