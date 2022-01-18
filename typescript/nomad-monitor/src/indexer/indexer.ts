@@ -48,10 +48,6 @@ export class Indexer {
     return time;
   }
 
-  stop() {
-    // TODO: this should close all listeners
-  }
-
   async init() {
     await this.persistance.init();
   }
@@ -64,132 +60,6 @@ export class Indexer {
     return this.persistance.from;
   }
 
-  processEvent(event: NomadEvent) {
-    if (this.eventCallback != undefined) this.eventCallback(event);
-    this.persistance.store(event);
-  }
-
-  subscribeHome() {
-    const home = this.home();
-    home.on(
-      home.filters.Dispatch(),
-      async (
-        messageHash,
-        leafIndex,
-        destinationAndNonce,
-        committedRoot,
-        message,
-        ev,
-      ) => {
-        const eventPrepared = new NomadEvent(
-          this.domain,
-          EventType.HomeDispatch,
-          ContractType.Home,
-          0,
-          new Date().valueOf(),
-          {
-            messageHash,
-            leafIndex,
-            destinationAndNonce,
-            committedRoot,
-            message,
-          },
-          ev.blockNumber,
-          EventSource.New,
-        );
-
-        this.processEvent(eventPrepared);
-      },
-    );
-
-    home.on(
-      home.filters.Update(),
-      async (homeDomain, oldRoot, newRoot, signature, ev) => {
-        const eventPrepared = new NomadEvent(
-          this.domain,
-          EventType.HomeUpdate,
-          ContractType.Home,
-          0,
-          new Date().valueOf(),
-          {
-            homeDomain,
-            oldRoot,
-            newRoot,
-            signature,
-          },
-          ev.blockNumber,
-          EventSource.New,
-        );
-        this.processEvent(eventPrepared);
-      },
-    );
-  }
-
-  subscribeReplica(domain: number) {
-    const replica = this.replicaForDomain(domain);
-    replica.on(
-      replica.filters.Update(),
-      async (homeDomain, oldRoot, newRoot, signature, ev) => {
-        const eventPrepared = new NomadEvent(
-          this.domain,
-          EventType.ReplicaUpdate,
-          ContractType.Replica,
-          domain,
-          new Date().valueOf(),
-          {
-            homeDomain,
-            oldRoot,
-            newRoot,
-            signature,
-          },
-          ev.blockNumber,
-          EventSource.New,
-        );
-        this.processEvent(eventPrepared);
-      },
-    );
-
-    replica.on(
-      replica.filters.Process(),
-      async (messageHash, success, returnData, ev) => {
-        const eventPrepared = new NomadEvent(
-          this.domain,
-          EventType.ReplicaProcess,
-          ContractType.Replica,
-          domain,
-          new Date().valueOf(),
-          {
-            messageHash,
-            success,
-            returnData,
-          },
-          ev.blockNumber,
-          EventSource.New,
-        );
-        this.processEvent(eventPrepared);
-      },
-    );
-  }
-
-  async startAll(replicas: number[]) {
-    // , past: number
-    let from = Math.max(
-      this.persistance.height + 1,
-      this.sdk.getDomain(this.domain)?.paginate?.from || 0,
-    );
-    const to = await this.provider.getBlockNumber();
-    // from = to - past;
-    console.log(`Want to fetch from`, from, `to`, to, `for`, this.domain);
-    // console.log(this.domain, `starting from height`, from, `but actually from to`, to, `- 1000`, to - 1000);
-    this.subscribeAll(replicas);
-    await this.fetchAll(from, to, replicas);
-  }
-
-  subscribeAll(replicas: number[]) {
-    this.subscribeHome();
-    replicas.forEach((r) => this.subscribeReplica(r));
-  }
-
   home(): Home {
     return this.sdk.getCore(this.domain)!.home; //getHomeAtDomain(this.domain);
   }
@@ -198,23 +68,34 @@ export class Indexer {
     return this.sdk.getReplicaFor(domain, this.domain)!;
   }
 
-  async fetchAll(from: number, to: number, replicas: number[]) {
-    console.log(`Fetching for`, this.domain);
-    const [_, error] = await retry(async () => {
-      await this.fetchHome(from, to);
-      await Promise.all(replicas.map((r) => this.fetchReplica(r, from, to)));
+  async updateAll(replicas: number[]) {
+
+    let from = Math.max(
+      this.persistance.height + 1,
+      this.sdk.getDomain(this.domain)?.paginate?.from || 0,
+    );
+    const to = await this.provider.getBlockNumber();
+
+    console.log(`Fetching for`, this.domain, `from:`, from, `to:`, to);
+    const [fetchedEvents, error] = await retry(async () => {
+      const homeEvents = await this.fetchHome(from, to);
+      const replicasEvents = (await Promise.all(replicas.map((r) => this.fetchReplica(r, from, to)))).flat();
+      return [...homeEvents, ...replicasEvents];
     }, 5);
 
     if (error) throw error;
+    if (!fetchedEvents) throw new Error('kek');
 
-    this.persistance.sortSorage();
-    this.savePersistance();
+    fetchedEvents.sort((a,b) => a.ts-b.ts);
+    this.persistance.store(...fetchedEvents);
 
-    // TODO mb remove or fix
+
+
+
     this.dummyTestEventsIntegrity();
-    // TODO END
-
     console.log(this.domain, `Fetched all`);
+
+    return fetchedEvents
   }
 
   dummyTestEventsIntegrity() {
@@ -265,7 +146,7 @@ export class Indexer {
         h1 = newRoot;
         htotal -= 1;
       } else {
-        console.log(this.domain, `Home broke with`, htotal, 'unresolved');
+        // console.log(this.domain, `Home broke with`, htotal, 'unresolved');
         break;
       }
     }
@@ -275,7 +156,7 @@ export class Indexer {
         r1 = newRoot;
         rtotal -= 1;
       } else {
-        console.log(`Replica broke with`, rtotal, 'unresolved');
+        // console.log(this.domain, `Replica broke with`, rtotal, 'unresolved');
         break;
       }
     }
@@ -288,13 +169,10 @@ export class Indexer {
     this.persistance.persist();
   }
 
-  startThrowingEvents() {
-    this.eventCallback = (event: NomadEvent) => {
-      this.orchestrator.emit('new_event', event);
-    };
-  }
-
   async fetchHome(from: number, to: number) {
+
+    let fetchedEvents: NomadEvent[] = [];
+
     const home = this.home();
     {
       const events = await home.queryFilter(home.filters.Dispatch(), from, to);
@@ -319,7 +197,7 @@ export class Indexer {
             ),
         ),
       );
-      this.persistance.store(...parsedEvents);
+      fetchedEvents.push(...parsedEvents);
     }
 
     {
@@ -344,11 +222,15 @@ export class Indexer {
             ),
         ),
       );
-      this.persistance.store(...parsedEvents);
+      fetchedEvents.push(...parsedEvents);
     }
+
+    return fetchedEvents
   }
 
   async fetchReplica(domain: number, from: number, to: number) {
+    let fetchedEvents: NomadEvent[] = [];
+
     const replica = this.replicaForDomain(domain);
     {
       const events = await replica.queryFilter(
@@ -376,7 +258,7 @@ export class Indexer {
             ),
         ),
       );
-      this.persistance.store(...parsedEvents);
+      fetchedEvents.push(...parsedEvents);
     }
 
     {
@@ -404,9 +286,11 @@ export class Indexer {
             ),
         ),
       );
-      this.persistance.store(...parsedEvents);
+      fetchedEvents.push(...parsedEvents);
     }
+    return fetchedEvents;
   }
+
 }
 
 export abstract class Persistance {
@@ -436,7 +320,6 @@ export class FilePersistance extends Persistance {
   store(...events: NomadEvent[]): void {}
   async init(): Promise<boolean> {
     if (fs.existsSync(this.path)) {
-      // load from the storage
       this.from = 13;
       this.height = 14;
       return true;

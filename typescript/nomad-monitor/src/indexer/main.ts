@@ -29,11 +29,7 @@ const moonbeamRPC = 'https://moonbeam.api.onfinality.io/public'; //"https://rpc.
   ctx.registerWalletSigner(moonbeamId, signer);
   const c = new Processor();
 
-  setInterval(() => c.stats(), 15000);
   const o = new Orchestrator(mainnet, c, mainnet.domainNumbers[0]);
-  await o.indexAll();
 
-  o.startConsuming();
-
-  console.log(`--->`, c.messages.filter(m=>m.state == 1));
+  await o.startConsuming();
 })();

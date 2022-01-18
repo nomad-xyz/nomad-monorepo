@@ -2,13 +2,15 @@ import { NomadContext } from '@nomad-xyz/sdk';
 import { Consumer } from './consumer';
 import { Indexer } from './indexer';
 import { EventEmitter } from 'events';
-import { NomadEvent } from './event';
+import { sleep } from './utils';
 
 export class Orchestrator extends EventEmitter {
   sdk: NomadContext;
   consumer: Consumer;
   indexers: Map<number, Indexer>;
   gov: number;
+  done: boolean;
+  freshStart: boolean;
 
   constructor(sdk: NomadContext, c: Consumer, gov: number) {
     super();
@@ -16,49 +18,62 @@ export class Orchestrator extends EventEmitter {
     this.consumer = c;
     this.indexers = new Map();
     this.gov = gov;
+    this.done = false;
+    this.freshStart = true;
+
+    this.initIndexers()
+
+    this.initalFeedConsumer()
   }
 
   async indexAll() {
-    await Promise.all(
+    const events = (await Promise.all(
       this.sdk.domainNumbers.map((domain: number) => this.index(domain)),
-    );
+    )).flat();
+    events.sort((a, b) => a.ts-b.ts);
+    this.consumer.consume(...events);
   }
 
   async index(domain: number) {
-    const existingIndexer = this.indexers.get(domain);
-    if (existingIndexer) {
-      existingIndexer.stop();
-    }
+    let indexer = this.indexers.get(domain)!;
 
-    const indexer = new Indexer(domain, this.sdk, this);
-
+    let replicas = []
     if (domain === this.gov) {
-      await indexer.startAll(
-        this.sdk.domainNumbers.filter((d) => d != this.gov),
-      );
+      replicas = this.sdk.domainNumbers.filter((d) => d != this.gov)
     } else {
-      await indexer.startAll([this.gov]);
+      replicas = [this.gov];
     }
-    this.indexers.set(domain, indexer);
+
+    return await indexer.updateAll(replicas);
   }
 
-  startConsuming() {
-    this.on('new_event', (event: NomadEvent) => {
-      this.consumer.consume(event);
-    });
+  initalFeedConsumer() {
+    const events = Array.from(this.indexers.values()).map(indexer => indexer.persistance.allEvents()).flat();
+    events.sort((a, b) => a.ts-b.ts);
+    this.consumer.consume(...events);
+  }
 
-    Array.from(this.indexers.values())
-      .map((indexer) => indexer.persistance.allEvents())
-      .flat()
-      .sort((a, b) => a.ts - b.ts)
-      .forEach((e) => this.consumer.consume(e));
+  initIndexers() {
+    for (const domain of this.sdk.domainNumbers) {
+      const indexer = new Indexer(domain, this.sdk, this);
+      this.indexers.set(domain, indexer);
+    }
+  }
 
-    Array.from(this.indexers.values()).map((indexer) => {
-      indexer.startThrowingEvents();
-    });
+  async startConsuming() {
+    while (!this.done) {
+      console.log(`Started to reindex`)
+      const start = new Date().valueOf();
+      await this.indexAll()
+      console.log(`Finished reindexing after seconds:`, (new Date().valueOf() - start) / 1000);
+
+      this.consumer.stats();
+      
+      await sleep(15000);
+    }
   }
 
   stop() {
-    this.removeAllListeners();
+    this.done = true;
   }
 }

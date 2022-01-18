@@ -2,7 +2,7 @@ import { ethers } from 'ethers';
 import { EventType, NomadEvent } from './event';
 
 export abstract class Consumer {
-  abstract consume(event: NomadEvent): void;
+  abstract consume(...evens: NomadEvent[]): void;
   abstract stats(): void;
 }
 
@@ -63,18 +63,21 @@ export class Processor extends Consumer {
     this.consumed = 0;
   }
 
-  consume(event: NomadEvent): void {
-    if (event.eventType === EventType.HomeDispatch) {
-      this.dispatched(event);
-    } else if (event.eventType === EventType.HomeUpdate) {
-      this.homeUpdate(event);
-    } else if (event.eventType === EventType.ReplicaUpdate) {
-      this.replicaUpdate(event);
-    } else if (event.eventType === EventType.ReplicaProcess) {
-      this.process(event);
+  consume(...events: NomadEvent[]): void {
+    console.log(`Going to consume`, events.length, `events`);
+    for (const event of events) {
+      if (event.eventType === EventType.HomeDispatch) {
+        this.dispatched(event);
+      } else if (event.eventType === EventType.HomeUpdate) {
+        this.homeUpdate(event);
+      } else if (event.eventType === EventType.ReplicaUpdate) {
+        this.replicaUpdate(event);
+      } else if (event.eventType === EventType.ReplicaProcess) {
+        this.process(event);
+      }
+  
+      this.consumed += 1;
     }
-
-    this.consumed += 1;
   }
 
   dispatched(e: NomadEvent) {
@@ -93,21 +96,21 @@ export class Processor extends Consumer {
   homeUpdate(e: NomadEvent) {
     const ms = this.getMsgsByOriginAndRoot(e.domain, e.eventData.oldRoot!);
     if (ms.length) ms.forEach(m => {
-        if (m.state == MsgState.Dispatched) m.state = MsgState.Updated;
+        if (m.state < MsgState.Updated) m.state = MsgState.Updated;
     });
   }
 
   replicaUpdate(e: NomadEvent) {
     const ms = this.getMsgsByOriginAndRoot(e.replicaOrigin, e.eventData.oldRoot!);
     if (ms.length) ms.forEach(m => {
-        if (m.state == MsgState.Updated) m.state = MsgState.Relayed
+        if (m.state < MsgState.Relayed) m.state = MsgState.Relayed
     });
   }
 
   process(e: NomadEvent) {
     const m = this.getMsg(e.eventData.messageHash!);
     if (m) {
-        if (m.state == MsgState.Relayed) m.state = MsgState.Processed;
+        if (m.state < MsgState.Processed) m.state = MsgState.Processed;
     }
   }
 
