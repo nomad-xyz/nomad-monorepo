@@ -1,6 +1,7 @@
 import { ethers } from 'ethers';
 import { NomadEvent } from './event';
 import fs from 'fs';
+import { Mean } from './types';
 
 export function sleep(ms: number) {
   return new Promise((resolve) => {
@@ -41,6 +42,8 @@ export function replacer(key: any, value: any): any {
       dataType: 'BigNumber',
       value: value.toHexString(), // or with spread: value: [...value]
     };
+  } else if (value instanceof Mean) {
+    return value.mean();
   } else {
     return value;
   }

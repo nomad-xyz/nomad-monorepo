@@ -1,25 +1,27 @@
 import { NomadContext } from '@nomad-xyz/sdk';
 import { Consumer } from './consumer';
 import { Indexer } from './indexer';
-import { EventEmitter } from 'events';
-import { sleep } from './utils';
+import { IndexerCollector } from './metrics';
+import { Statistics } from './types';
+import { replacer, sleep } from './utils';
 
-export class Orchestrator extends EventEmitter {
+export class Orchestrator {
   sdk: NomadContext;
   consumer: Consumer;
   indexers: Map<number, Indexer>;
   gov: number;
   done: boolean;
   freshStart: boolean;
+  metrics: IndexerCollector;
 
-  constructor(sdk: NomadContext, c: Consumer, gov: number) {
-    super();
+  constructor(sdk: NomadContext, c: Consumer, gov: number, metrics: IndexerCollector) {
     this.sdk = sdk;
     this.consumer = c;
     this.indexers = new Map();
     this.gov = gov;
     this.done = false;
     this.freshStart = true;
+    this.metrics = metrics
 
     this.initIndexers()
 
@@ -67,10 +69,47 @@ export class Orchestrator extends EventEmitter {
       await this.indexAll()
       console.log(`Finished reindexing after seconds:`, (new Date().valueOf() - start) / 1000);
 
-      this.consumer.stats();
+      const stats = this.consumer.stats();
+      console.log(`stats->`, JSON.stringify(stats, replacer));
+
+      this.reportAllMetrics(stats);
       
       await sleep(30000);
     }
+  }
+
+  reportAllMetrics(statistics: Statistics) {
+    for (const domain of this.sdk.domainNumbers) {
+      this.reportMetrics(domain, statistics)
+    }
+  }
+
+  reportMetrics(domain: number, statistics: Statistics) {
+    const {
+      counts: {
+        dispatched,
+        updated,
+        relayed,
+        processed,
+      },
+      timings: {
+        meanUpdate,
+        meanRelay,
+        meanProcess,
+        meanE2E,
+      }
+    } = statistics.forDomain(domain);
+    this.metrics.setNetworkState(
+      this.sdk.getDomain(domain)!.name,
+      dispatched,
+      updated,
+      relayed,
+      processed,
+      meanUpdate,
+      meanRelay,
+      meanProcess,
+      meanE2E,
+    )
   }
 
   stop() {

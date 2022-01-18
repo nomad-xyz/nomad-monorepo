@@ -3,6 +3,8 @@ import { Processor } from './consumer';
 import { Orchestrator } from './orchestrator';
 import * as dotenv from 'dotenv';
 import { ethers } from 'ethers';
+import { IndexerCollector } from './metrics';
+import Logger from 'bunyan';
 dotenv.config({
   // path: '/Users/daniilnaumetc/code/tmp/monitor/typescript/nomad-monitor/src/indexer/.env'
 });
@@ -28,8 +30,18 @@ const moonbeamRPC = 'https://moonbeam.api.onfinality.io/public'; //"https://rpc.
   ctx.registerRpcProvider(moonbeamId, moonbeamRPC);
   ctx.registerWalletSigner(moonbeamId, signer);
   const c = new Processor();
+  const m = new IndexerCollector('development', createLogger('indexer', 'development'))
 
-  const o = new Orchestrator(mainnet, c, mainnet.domainNumbers[0]);
+  const o = new Orchestrator(mainnet, c, mainnet.domainNumbers[0], m);
 
   await o.startConsuming();
 })();
+
+function createLogger(name: string, environment: string) {
+  return Logger.createLogger({
+    name,
+    serializers: Logger.stdSerializers,
+    level: 'debug',
+    environment: environment,
+  });
+}
