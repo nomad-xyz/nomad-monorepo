@@ -4,7 +4,7 @@
       <div class="nav-container">
         Nomad
         <n-button v-if="!address" @click="connect">Connect Wallet</n-button>
-        <n-tag v-else round type="primary">{{ address }}</n-tag>
+        <n-tag v-else round type="primary">{{ truncateAddr(address) }}</n-tag>
       </div>
     </div>
     <h1>Nomad SDK Example UI</h1>
@@ -22,7 +22,7 @@
 <script lang="ts">
 import { defineComponent } from 'vue';
 import { NButton, NTag } from 'naive-ui';
-import { connectWallet } from '@/utils/sdk'
+import { connectWallet, truncateAddr } from '@/utils/sdk'
 import Bridge from './components/Bridge.vue';
 import Balances from './components/Balances.vue';
 import History from './components/History.vue';
@@ -38,6 +38,7 @@ export default defineComponent({
   },
   data() {
     return {
+      truncateAddr,
       address: ''
     }
   },
@@ -82,7 +83,7 @@ export default defineComponent({
 }
 .main {
   width: 100%;
-  max-width: 450px;
+  max-width: 500px;
   margin: 50px 20px;
 }
 .link {

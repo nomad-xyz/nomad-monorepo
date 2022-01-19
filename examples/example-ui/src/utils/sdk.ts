@@ -288,3 +288,15 @@ export async function getNetwork(provider: Web3Provider): Promise<string> {
   const network = getNetworkByChainID(chainId) || { name }
   return network.name
 }
+
+/**
+ * Shortens address for UI display
+ * 0x0000...0000
+ */
+export function truncateAddr(addr: string): string {
+  if (!addr) return ''
+  const first = addr.slice(0, 6)
+  const len = addr.length
+  const last = addr.slice(len - 4, len)
+  return `${first}...${last}`
+}
