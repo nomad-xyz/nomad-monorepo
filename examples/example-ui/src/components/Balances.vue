@@ -34,7 +34,13 @@ import { getNomadBalances, connectWallet } from '@/utils/sdk';
 import { tokens, TokenName } from '@/config';
 
 export default defineComponent({
-  name: 'Home',
+  name: 'Balances',
+  props: {
+    address: {
+      type: String,
+      required: true
+    }
+  },
   components: {
     NDataTable,
     NButton
@@ -69,7 +75,7 @@ export default defineComponent({
       this.loading = true
       let balances: any = []
       for (const token in tokens) {
-        const tokenBalances = await getNomadBalances(token as TokenName, '0x9791c9dF02D34F2e7d7322D655535d9849E8da5c')
+        const tokenBalances = await getNomadBalances(token as TokenName, this.address)
         balances.push({ asset: tokens[token].symbol, ...tokenBalances })
       }
       this.balances = balances

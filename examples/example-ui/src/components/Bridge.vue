@@ -39,7 +39,7 @@
       <!-- actions -->
       <n-form-item>
         <!-- if no address, user is not connected -->
-        <n-button v-if="!address" @click="connect">Connect Wallet</n-button>
+        <n-button v-if="!address" @click="$emit('connect')">Connect Wallet</n-button>
         <n-button v-else @click="send">Bridge Tokens</n-button>
       </n-form-item>
     </n-form>
@@ -50,7 +50,7 @@
 import { defineComponent, ref } from 'vue';
 import { NForm, NFormItem, NInput, NSelect, NButton, NCard } from 'naive-ui';
 import { tokens, networks, TokenName, NetworkName } from '@/config'
-import { connectWallet, switchNetwork, registerNewSigner, send } from '@/utils/sdk'
+import { switchNetwork, registerNewSigner, send } from '@/utils/sdk'
 
 function generateTokenOptions() {
   return Object.keys(tokens).map(t => {
@@ -73,7 +73,14 @@ interface SendData {
 }
 
 export default defineComponent({
-  name: 'Home',
+  name: 'Bridge',
+  emits: ['connect'],
+  props: {
+    address: {
+      type: String,
+      required: false
+    }
+  },
   components: {
     NForm,
     NFormItem,
@@ -122,22 +129,7 @@ export default defineComponent({
       },
     }
   },
-  data() {
-    return {
-      // if address exists, user is connected to wallet
-      address: '',
-    }
-  },
   methods: {
-    async connect() {
-      try {
-        const address = await connectWallet()
-        this.address = address || ''
-      } catch {
-        console.error('error connecting wallet')
-        this.address = ''
-      }
-    },
     async send() {
       console.log('send')
       const { amount, token, originNetwork, destinationNetwork } = this.formValue.sendData

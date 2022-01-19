@@ -11,7 +11,13 @@ import { defineComponent } from 'vue';
 import { NDataTable } from 'naive-ui';
 
 export default defineComponent({
-  name: 'Home',
+  name: 'History',
+  props: {
+    address: {
+      type: String,
+      required: true
+    }
+  },
   components: {
     NDataTable
   },
@@ -53,12 +59,8 @@ export default defineComponent({
   methods: {
     async getHistory() {
       // this.loading = true
-      // let balances: any = []
-      // for (const token in tokens) {
-      //   const tokenBalances = await getNomadBalances(token as TokenName, '0x9791c9dF02D34F2e7d7322D655535d9849E8da5c')
-      //   balances.push({ asset: tokens[token].symbol, ...tokenBalances })
-      // }
-      // this.balances = balances
+      // get history
+      // this.history = history
       // this.loading = false
     }
   }
