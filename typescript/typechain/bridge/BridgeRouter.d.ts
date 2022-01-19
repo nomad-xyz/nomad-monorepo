@@ -21,6 +21,7 @@ import type { TypedEventFilter, TypedEvent, TypedListener } from "./common";
 
 interface BridgeRouterInterface extends ethers.utils.Interface {
   functions: {
+    "DUST_AMOUNT()": FunctionFragment;
     "PRE_FILL_FEE_DENOMINATOR()": FunctionFragment;
     "PRE_FILL_FEE_NUMERATOR()": FunctionFragment;
     "VERSION()": FunctionFragment;
@@ -41,6 +42,10 @@ interface BridgeRouterInterface extends ethers.utils.Interface {
     "xAppConnectionManager()": FunctionFragment;
   };
 
+  encodeFunctionData(
+    functionFragment: "DUST_AMOUNT",
+    values?: undefined
+  ): string;
   encodeFunctionData(
     functionFragment: "PRE_FILL_FEE_DENOMINATOR",
     values?: undefined
@@ -105,6 +110,10 @@ interface BridgeRouterInterface extends ethers.utils.Interface {
     values?: undefined
   ): string;
 
+  decodeFunctionResult(
+    functionFragment: "DUST_AMOUNT",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(
     functionFragment: "PRE_FILL_FEE_DENOMINATOR",
     data: BytesLike
@@ -234,6 +243,8 @@ export class BridgeRouter extends BaseContract {
   interface: BridgeRouterInterface;
 
   functions: {
+    DUST_AMOUNT(overrides?: CallOverrides): Promise<[BigNumber]>;
+
     PRE_FILL_FEE_DENOMINATOR(overrides?: CallOverrides): Promise<[BigNumber]>;
 
     PRE_FILL_FEE_NUMERATOR(overrides?: CallOverrides): Promise<[BigNumber]>;
@@ -315,6 +326,8 @@ export class BridgeRouter extends BaseContract {
 
     xAppConnectionManager(overrides?: CallOverrides): Promise<[string]>;
   };
+
+  DUST_AMOUNT(overrides?: CallOverrides): Promise<BigNumber>;
 
   PRE_FILL_FEE_DENOMINATOR(overrides?: CallOverrides): Promise<BigNumber>;
 
@@ -398,6 +411,8 @@ export class BridgeRouter extends BaseContract {
   xAppConnectionManager(overrides?: CallOverrides): Promise<string>;
 
   callStatic: {
+    DUST_AMOUNT(overrides?: CallOverrides): Promise<BigNumber>;
+
     PRE_FILL_FEE_DENOMINATOR(overrides?: CallOverrides): Promise<BigNumber>;
 
     PRE_FILL_FEE_NUMERATOR(overrides?: CallOverrides): Promise<BigNumber>;
@@ -566,6 +581,8 @@ export class BridgeRouter extends BaseContract {
   };
 
   estimateGas: {
+    DUST_AMOUNT(overrides?: CallOverrides): Promise<BigNumber>;
+
     PRE_FILL_FEE_DENOMINATOR(overrides?: CallOverrides): Promise<BigNumber>;
 
     PRE_FILL_FEE_NUMERATOR(overrides?: CallOverrides): Promise<BigNumber>;
@@ -649,6 +666,8 @@ export class BridgeRouter extends BaseContract {
   };
 
   populateTransaction: {
+    DUST_AMOUNT(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
     PRE_FILL_FEE_DENOMINATOR(
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;

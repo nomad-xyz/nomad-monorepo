@@ -30,6 +30,7 @@ contract BridgeRouter is Version0, Router {
     // 5 bps (0.05%) hardcoded fast liquidity fee. Can be changed by contract upgrade
     uint256 public constant PRE_FILL_FEE_NUMERATOR = 9995;
     uint256 public constant PRE_FILL_FEE_DENOMINATOR = 10000;
+    uint256 public constant DUST_AMOUNT = 0.06 ether;
 
     // ============ Public Storage ============
 
@@ -236,6 +237,7 @@ contract BridgeRouter is Version0, Router {
         uint256 _amount = _applyPreFillFee(_action.amnt());
         // transfer tokens from liquidity provider to token recipient
         _token.safeTransferFrom(_liquidityProvider, _recipient, _amount);
+        _dust(_recipient);
         // emit event
         emit Receive(
             _originAndNonce(_origin, _nonce),
@@ -347,6 +349,7 @@ contract BridgeRouter is Version0, Router {
             // Tell the token what its detailsHash is
             IBridgeToken(_token).setDetailsHash(_action.detailsHash());
         }
+        _dust(_recipient);
         // emit Receive event
         emit Receive(
             _originAndNonce(_origin, _nonce),
@@ -375,6 +378,23 @@ contract BridgeRouter is Version0, Router {
         _amtAfterFee =
             (_amnt * PRE_FILL_FEE_NUMERATOR) /
             PRE_FILL_FEE_DENOMINATOR;
+    }
+
+    /**
+     * @notice Dust the recipient.
+     * @dev Does not dust if insufficient funds, or if user has funds already
+     */
+    function _dust(address _recipient) internal {
+        if (
+            _recipient.balance <= DUST_AMOUNT &&
+            address(this).balance >= DUST_AMOUNT
+        ) {
+            // `send` gives execution 2300 gas and returns a `success` boolean.
+            // however, we do not care if the call fails. A failed call
+            // indicates a smart contract attempting to execute logic, which we
+            // specifically do not want.
+            payable(_recipient).send(DUST_AMOUNT);
+        }
     }
 
     /**
