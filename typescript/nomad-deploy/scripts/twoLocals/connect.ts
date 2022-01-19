@@ -3,10 +3,8 @@ import * as daffy from '../../config/local/jerry';
 import { ExistingCoreDeploy } from '../../src/core/CoreDeploy';
 import { deployEnvironment } from '../../src/chain';
 import { ExistingBridgeDeploy } from '../../src/bridge/BridgeDeploy';
-import {
-  connectionGovernanceActions,
-  executeGovernanceActions,
-} from '../../src/incremental';
+import { enrollSpoke } from '../../src/incremental';
+import { NomadContext } from '@nomad-xyz/sdk';
 
 let environment = deployEnvironment();
 
@@ -42,11 +40,43 @@ const daffyBridgeDeploy = new ExistingBridgeDeploy(
   path,
 );
 
-const actions = connectionGovernanceActions(
-  tomCoreDeploy,
-  tomBridgeDeploy,
-  daffyCoreDeploy,
-  daffyBridgeDeploy,
-);
+const tomDomain = {
+  id: tomCoreDeploy.chain.domain,
+  name: tomCoreDeploy.chain.name,
+  bridgeRouter: tomBridgeDeploy.contracts.bridgeRouter!.proxy.address,
+  tokenRegistry: tomBridgeDeploy.contracts.tokenRegistry!.proxy.address,
+  ethHelper: tomBridgeDeploy.contracts.ethHelper?.address,
+  home: tomCoreDeploy.contracts.home!.proxy.address,
+  replicas: Object.entries(tomCoreDeploy.contracts.replicas).map(
+    ([domain, replica]) => ({
+      domain: parseInt(domain),
+      address: replica.proxy.address,
+    }),
+  ),
+  governanceRouter: tomCoreDeploy.contracts.governance!.proxy.address,
+  xAppConnectionManager: tomCoreDeploy.contracts.xAppConnectionManager!.address,
+  safeService: 'todo',
+};
 
-executeGovernanceActions(tomCoreDeploy, actions);
+const daffyDomain = {
+  id: daffyCoreDeploy.chain.domain,
+  name: daffyCoreDeploy.chain.name,
+  bridgeRouter: daffyBridgeDeploy.contracts.bridgeRouter!.proxy.address,
+  tokenRegistry: daffyBridgeDeploy.contracts.tokenRegistry!.proxy.address,
+  ethHelper: daffyBridgeDeploy.contracts.ethHelper?.address,
+  home: daffyCoreDeploy.contracts.home!.proxy.address,
+  replicas: Object.entries(daffyCoreDeploy.contracts.replicas).map(
+    ([domain, replica]) => ({
+      domain: parseInt(domain),
+      address: replica.proxy.address,
+    }),
+  ),
+  governanceRouter: daffyCoreDeploy.contracts.governance!.proxy.address,
+  xAppConnectionManager:
+    daffyCoreDeploy.contracts.xAppConnectionManager!.address,
+  safeService: 'todo',
+};
+
+const sdk = NomadContext.fromDomains([tomDomain, daffyDomain]);
+
+enrollSpoke(sdk, daffyDomain.id, []);

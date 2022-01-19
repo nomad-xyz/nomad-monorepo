@@ -16,12 +16,6 @@ const tomDeploy = ExistingCoreDeploy.withPath(
   path,
   tom.chain.deployer,
 );
-const jerryDeploy = ExistingCoreDeploy.withPath(
-  jerry.chain,
-  environment === 'staging' ? jerry.stagingConfig : jerry.devConfig,
-  path,
-  jerry.chain.deployer,
-);
 
 // Instantiate New Bridge Deploy
 const daffyDeploy = new CoreDeploy(
@@ -29,4 +23,4 @@ const daffyDeploy = new CoreDeploy(
   environment === 'staging' ? daffy.stagingConfig : daffy.devConfig,
 );
 
-deployNewChain(daffyDeploy, [tomDeploy, jerryDeploy]);
+deployNewChain(daffyDeploy, tomDeploy);

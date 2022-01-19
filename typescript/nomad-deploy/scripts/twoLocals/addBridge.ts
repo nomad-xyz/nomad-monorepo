@@ -14,13 +14,8 @@ const path = getPathToDeployConfig(environment);
 
 // Instantiate Existing Bridge Deploys
 const tomDeploy = new ExistingBridgeDeploy(tom.chain, tom.bridgeConfig, path);
-const jerryDeploy = new ExistingBridgeDeploy(
-  jerry.chain,
-  jerry.bridgeConfig,
-  path,
-);
 
 // Instantiate New Bridge Deploy
 const daffyDeploy = new BridgeDeploy(daffy.chain, daffy.bridgeConfig, path);
 
-deployNewChainBridge(daffyDeploy, [tomDeploy, jerryDeploy]);
+deployNewChainBridge(daffyDeploy, tomDeploy);

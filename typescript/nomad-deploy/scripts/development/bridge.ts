@@ -1,4 +1,4 @@
-import {deployBridgesComplete} from '../../src/bridge';
+import { deployBridgesHubAndSpoke } from '../../src/bridge';
 import * as kovan from '../../config/testnets/kovan';
 import * as moonbasealpha from '../../config/testnets/moonbasealpha';
 import { BridgeDeploy } from '../../src/bridge/BridgeDeploy';
@@ -15,4 +15,4 @@ const moonBaseAlphaDeploy = new BridgeDeploy(
 
 const kovanDeploy = new BridgeDeploy(kovan.chain, kovan.bridgeConfig, path);
 
-deployBridgesComplete([kovanDeploy, moonBaseAlphaDeploy]);
+deployBridgesHubAndSpoke(kovanDeploy, [moonBaseAlphaDeploy]);
