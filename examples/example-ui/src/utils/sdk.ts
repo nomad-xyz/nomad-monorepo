@@ -52,13 +52,21 @@ export type TXData = {
 
 /**
  * determines if the token is native to the selected origin network
+ * e.g. ETH, USDT and WETH are native to Kovan. DEV is native to Moonbase Alpha
+ * 
+ * @param network The network name, lowercase
+ * @param token The token metadata
+ * @returns True if native, false if otherwise
  */
-export function isNativeToken(network: string, token: TokenMetadata): boolean {
+export function isNativeToken(network: NetworkName, token: TokenMetadata): boolean {
   return token.nativeOnly && token.nativeNetwork === network 
 }
 
 /**
- * Retrieves network config given a chain ID
+ * Retrieves network config data given a chain ID
+ * 
+ * @param chainID The chainID used by Metamask
+ * @returns The network metadata
  */
 export function getNetworkByChainID(chainID: number): NetworkMetadata | undefined {
   for (const network in networks) {
@@ -66,10 +74,14 @@ export function getNetworkByChainID(chainID: number): NetworkMetadata | undefine
       return networks[network]
     }
   }
-  // unsupported network
-  console.error(`network not found: ${chainID}`)
 }
 
+/**
+ * Retrieves network config data given the Nomad domain ID
+ * 
+ * @param domainID The domainID used by Nomad
+ * @returns The network metadata
+ */
 export function getNetworkByDomainID(domainID: number): NetworkMetadata {
   const name = Object.keys(networks).find(n => {
     return networks[n].domainID === domainID
@@ -79,6 +91,16 @@ export function getNetworkByDomainID(domainID: number): NetworkMetadata {
 
 /******** SDK ********/
 
+/**
+ * Retrieves Nomad balances for a specific token across all networks
+ * 
+ * key = Nomad domain
+ * value = token balance
+ * 
+ * @param tokenName The token name
+ * @param address The user's wallet address
+ * @returns Balance by network
+ */
 export async function getNomadBalances(
   tokenName: TokenName,
   address: string
@@ -97,6 +119,14 @@ export async function getNomadBalances(
   return balances
 }
 
+/**
+ * Retrieves balance for a Nomad asset on `domain` chain
+ * 
+ * @param token The token identifier consisting of a domain (network) and id (native token address)
+ * @param address The user's wallet address
+ * @param domain The Nomad domain ID
+ * @returns Balance on specified chain
+ */
 export async function getNomadBalance(
   token: TokenIdentifier,
   address: string,
@@ -114,6 +144,14 @@ export async function getNomadBalance(
   }
 }
 
+/**
+ * Retrieves balance for token on specified network
+ * 
+ * @param networkName The network name
+ * @param tokenName The token name
+ * @param address The user's wallet address
+ * @returns Balance by network
+ */
 export async function getBalanceFromWallet(networkName: NetworkName, tokenName: TokenName, address: string) {
   console.log('gettingbalanceFromwallet')
 
@@ -137,7 +175,7 @@ export async function getBalanceFromWallet(networkName: NetworkName, tokenName: 
       balance = await tokenContract.balanceOf(address)
     }
   } else {
-    // get balance ofNomad representational assets
+    // get balance of Nomad representational assets
     console.log('getting representational token balance')
     balance = await getNomadBalance(
       token.tokenIdentifier,
@@ -149,6 +187,13 @@ export async function getBalanceFromWallet(networkName: NetworkName, tokenName: 
   return balance
 }
 
+/**
+ * Registers new signer in SDK, useful when switching chains
+ * 
+ * @dev note that old signers must be cleared
+ * 
+ * @param networkName The network name
+ */
 export function registerNewSigner(networkName: NetworkName) {
   console.log('registering signer for ', networkName)
   // get current provider and signer
@@ -166,6 +211,16 @@ export function registerNewSigner(networkName: NetworkName) {
   nomad.registerSigner(networkName, newSigner)
 }
 
+/**
+ * Dispatches bridge transaction
+ * 
+ * @param originNetworkName The name of the origin network
+ * @param destinationNetworkName The name of the destination network
+ * @param amount The sending amount as a number, will be formatted when passed to SDK
+ * @param tokenName The sending token name
+ * @param destinationAddr The destination address, defaults to the user's wallet address
+ * @returns TransferMessage
+ */
 export async function send(
   originNetworkName: NetworkName,
   destinationNetworkName: NetworkName,
@@ -210,6 +265,13 @@ export async function send(
   return transferMessage
 }
 
+/**
+ * Fetches the TransferMessage object
+ * 
+ * @dev can be used to retrieve data about a transfer, including status
+ * 
+ * @param tx The transaction data, origin network and transaction hash
+ */
 export async function getTxMessage(tx: TXData): Promise<TransferMessage> {
   const { origin, hash } = tx
   return await TransferMessage.singleFromTransactionHash(
@@ -219,6 +281,14 @@ export async function getTxMessage(tx: TXData): Promise<TransferMessage> {
   )
 }
 
+/**
+ * Processes a transaction
+ * 
+ * @dev transactions to Moonbeam are subsidized on the receiving end. However, when going
+ * to Ethereum, user must return to process and claim funds.
+ * 
+ * @param tx The transaction data, origin network and transaction hash
+ */
 export async function processTx (tx: TXData) {
   // get transfer message
   const { origin, hash } = tx
@@ -252,12 +322,23 @@ export async function processTx (tx: TXData) {
   }
 }
 
-export async function resolveRepresentation(origin: NetworkName | number, tokenIdentifier: TokenIdentifier) {
-  return await nomad.resolveRepresentation(origin, tokenIdentifier)
+/**
+ * Retrieves token representation address on specified network
+ * 
+ * @dev note that old signers must be cleared
+ * 
+ * @param network The network name or Nomad domain ID
+ * @param tokenIdentifier The domain and native token address
+ */
+export async function resolveRepresentation(network: NetworkName | number, tokenIdentifier: TokenIdentifier) {
+  return await nomad.resolveRepresentation(network, tokenIdentifier)
 }
 
 /******** WALLET ********/
 
+/**
+ * Connect wallet
+ */
 export async function connectWallet() {
   // if window.ethereum does not exist, do not connect
   if (!ethereum) return
@@ -272,6 +353,11 @@ export async function connectWallet() {
   return await signer.getAddress()
 }
 
+/**
+ * Switch networks in wallet
+ * 
+ * @param networkName The name of the network to switch to
+ */
 export async function switchNetwork(networkName: string) {
   console.log('set wallet network')
 
@@ -310,6 +396,11 @@ export async function switchNetwork(networkName: string) {
   return network.name
 }
 
+/**
+ * Returns the active network from user's wallet
+ * 
+ * @returns The network metadata
+ */
 export async function getMetamaskNetwork() {
   const provider = await getMetamaskProvider()
   const { chainId } = await provider.ready
@@ -327,6 +418,9 @@ export async function getMetamaskProvider(): Promise<Web3Provider> {
 /**
  * Shortens address for UI display
  * 0x0000...0000
+ * 
+ * @param addr The full address or transaction hash
+ * @returns The shortened address
  */
 export function truncateAddr(addr: string): string {
   if (!addr) return ''
@@ -336,12 +430,26 @@ export function truncateAddr(addr: string): string {
   return `${first}...${last}`
 }
 
+/**
+ * Registers new signer in SDK, useful when switching chains
+ * 
+ * @dev Nomad uses 32 byte addresses, they are prefixed with 12 empty bytes
+ * 
+ * @param addr The 32 byte address
+ * @returns The 20 byte address
+ */
 export function fromBytes32(addr: string): string {
+  if (addr.length !== 66) return addr
   // trim 12 bytes from beginning plus '0x'
   const short = addr.slice(26)
   return `0x${short}`
 }
 
+/**
+ * Return a human-readable status
+ * 
+ * @param status The status as a number
+ */
 export function getStatusText(status: number): string {
   switch (status) {
     case 0:
