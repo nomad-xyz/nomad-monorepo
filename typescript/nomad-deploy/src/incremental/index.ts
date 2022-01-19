@@ -25,9 +25,10 @@ export async function enrollSpoke(
   await Promise.all(
     watchers.map(async (watcher) => {
       const call =
-        await hubCore.xAppConnectionManager.populateTransaction.watcherPermission(
+        await hubCore.xAppConnectionManager.populateTransaction.setWatcherPermission(
           watcher,
           spokeDomain,
+          true
         );
       batch.pushLocal(call);
     }),
