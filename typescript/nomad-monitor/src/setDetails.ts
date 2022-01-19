@@ -22,6 +22,9 @@ function getRpcProviderFromNetwork(
     case 'moonbeam':
       rpcUrl = process.env.MOONBEAM_RPC!;
       break;
+    case 'astar':
+      rpcUrl = process.env.ASTAR_RPC!;
+      break;
     case 'moonbasealpha':
       rpcUrl = process.env.MOONBASEALPHA_RPC!;
       break;
