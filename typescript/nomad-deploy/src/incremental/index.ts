@@ -28,7 +28,7 @@ export async function enrollSpoke(
         await hubCore.xAppConnectionManager.populateTransaction.setWatcherPermission(
           watcher,
           spokeDomain,
-          true
+          true,
         );
       batch.pushLocal(call);
     }),

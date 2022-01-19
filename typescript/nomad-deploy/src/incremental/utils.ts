@@ -1,3 +1,7 @@
+import { NomadDomain } from '@nomad-xyz/sdk/nomad';
+import { BridgeDeploy } from '../bridge/BridgeDeploy';
+import { CoreDeploy } from '../core/CoreDeploy';
+
 /**
  * Structure that allows to poll an async block
  * for multiple times until it returns something or
@@ -80,4 +84,29 @@ export class Waiter<T> {
   async wait(): Promise<[T | undefined, boolean]> {
     return await this.promise;
   }
+}
+
+// TODO: bring it into good shape and move somewhere else. Also not sure if we should pass safe service as argument
+export function deploysToSDK(
+  core: CoreDeploy,
+  bridge: BridgeDeploy,
+  safeService?: string,
+): NomadDomain {
+  return {
+    id: core.chain.domain,
+    name: core.chain.name,
+    bridgeRouter: bridge.contracts.bridgeRouter!.proxy.address,
+    tokenRegistry: bridge.contracts.tokenRegistry!.proxy.address,
+    ethHelper: bridge.contracts.ethHelper?.address,
+    home: core.contracts.home!.proxy.address,
+    replicas: Object.entries(core.contracts.replicas).map(
+      ([domain, replica]) => ({
+        domain: parseInt(domain),
+        address: replica.proxy.address,
+      }),
+    ),
+    governanceRouter: core.contracts.governance!.proxy.address,
+    xAppConnectionManager: core.contracts.xAppConnectionManager!.address,
+    safeService,
+  };
 }

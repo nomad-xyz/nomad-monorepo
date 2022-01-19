@@ -808,20 +808,9 @@ export class Nomad {
 
     await this.updateMultiProvider();
 
-    // from here SDK will be used to send governance actions
-
     await enrollSpoke(this.multiprovider!, newNetwork.domain, [
       this.getWatcherKey(newNetwork)!.toAddress(),
     ]);
-
-    // till here
-
-    this.updateArtifacts(
-      [newCoreDeploy, govCoreDeploy],
-      [newBridgeDeploy, govBridgeDeploy]
-    );
-
-    await this.updateMultiProvider();
 
     await checkCoreDeploy(
       newCoreDeploy,

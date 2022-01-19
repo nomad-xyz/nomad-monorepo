@@ -7,7 +7,7 @@ import {
 } from '../../src/bridge/BridgeDeploy';
 import { getPathToDeployConfig } from '../../src/verification/readDeployOutput';
 
-const path = getPathToDeployConfig("dev");
+const path = getPathToDeployConfig('dev');
 
 // Instantiate Existing Bridge Deploys
 const tomDeploy = new ExistingBridgeDeploy(tom.chain, tom.bridgeConfig, path);

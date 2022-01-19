@@ -236,6 +236,24 @@ async function sendTokensHubAndSpoke(
     [amount2, amount3, amount1]
   );
 
+  let expectToFail = true;
+  try {
+    await sendTokensAndConfirm(
+      n,
+      c,
+      b,
+      token,
+      new Key().toAddress(),
+      [amount2, amount3, amount1]
+    );
+
+    expectToFail = false;
+  } catch(e) {
+    console.log(`Failed sending from ${c.name} to ${b.name} as expected`)
+  }
+
+  if (!expectToFail) throw new Error(`Supposed to not be able to send tokens`);
+
   await sendTokensAndConfirm(
     n,
     a,
@@ -262,6 +280,8 @@ async function sendTokensHubAndSpoke(
     new Key().toAddress(),
     [amount2, amount3, amount1]
   );
+
+  
 
   if (
     tokenContract1.address.toLowerCase() !== token.id.toString().toLowerCase() ||

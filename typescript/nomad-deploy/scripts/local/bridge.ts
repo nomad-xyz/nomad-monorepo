@@ -5,7 +5,7 @@ import { deployBridgesHubAndSpoke } from '../../src/bridge';
 import { BridgeDeploy } from '../../src/bridge/BridgeDeploy';
 
 // get the path to the latest core system deploy
-const path = getPathToDeployConfig("dev");
+const path = getPathToDeployConfig('dev');
 
 const tomDeploy = new BridgeDeploy(tom.chain, tom.bridgeConfig, path);
 const jerryDeploy = new BridgeDeploy(jerry.chain, jerry.bridgeConfig, path);

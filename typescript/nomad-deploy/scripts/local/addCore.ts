@@ -4,7 +4,7 @@ import { deployNewChain } from '../../src/core';
 import { CoreDeploy, ExistingCoreDeploy } from '../../src/core/CoreDeploy';
 import { getPathToDeployConfig } from '../../src/verification/readDeployOutput';
 
-const path = getPathToDeployConfig("dev");
+const path = getPathToDeployConfig('dev');
 
 // Instantiate Existing Bridge Deploys
 const tomDeploy = ExistingCoreDeploy.withPath(
@@ -15,9 +15,6 @@ const tomDeploy = ExistingCoreDeploy.withPath(
 );
 
 // Instantiate New Bridge Deploy
-const daffyDeploy = new CoreDeploy(
-  daffy.chain,
-  daffy.devConfig,
-);
+const daffyDeploy = new CoreDeploy(daffy.chain, daffy.devConfig);
 
 deployNewChain(daffyDeploy, tomDeploy);
