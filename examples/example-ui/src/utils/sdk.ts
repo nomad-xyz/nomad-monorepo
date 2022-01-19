@@ -278,8 +278,8 @@ export async function getMetamaskNetwork() {
 export async function getMetamaskProvider(): Promise<Web3Provider> {
   const provider = new Web3Provider(ethereum)
   await provider.ready
-  const signer = provider.getSigner()
-  console.log({ provider, signer })
+  // const signer = provider.getSigner()
+  // console.log({ provider, signer })
   return Promise.resolve(provider)
 }
 

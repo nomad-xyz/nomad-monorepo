@@ -6,6 +6,7 @@
     <div class="main">
       <home />
       <balances />
+      <history />
     </div>
   </div>
 </template>
@@ -13,13 +14,15 @@
 <script lang="ts">
 import { defineComponent } from 'vue';
 import Home from './components/Home.vue';
-import Balances from './components/Balances.vue'
+import Balances from './components/Balances.vue';
+import History from './components/History.vue';
 
 export default defineComponent({
   name: 'App',
   components: {
     Home,
     Balances,
+    History,
   }
 });
 </script>
