@@ -59,6 +59,11 @@ export async function enrollSpoke(
 
   // turn into a tx request
   await batch.build();
+
+  // TODO: output governance transaction to a file
+  // TODO: output information needed to execute transaction to a file
+  // TODO: for staging and prod, send to gnosis safe instead of executing
+  // if(staging || prod) {await gnosis.send(batch);} else {await batch.execute();}
   // send to the chain
   await batch.execute();
 }

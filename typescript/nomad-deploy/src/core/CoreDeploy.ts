@@ -151,7 +151,7 @@ export class CoreDeploy extends Deploy<CoreContracts> {
     };
 
     for (var remote of remotes) {
-      if (!remote.contracts.replicas[local.chain.domain]) continue; // TODO: clean it. It prevents from connecting not connected networks
+      if (!remote.contracts.replicas[local.chain.domain]) continue; // prevents from connecting not connected networks
       const replica: RustContractBlock = {
         address: remote.contracts.replicas[local.chain.domain].proxy.address,
         domain: remote.chain.domain.toString(),
