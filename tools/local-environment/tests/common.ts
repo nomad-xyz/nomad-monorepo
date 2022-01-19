@@ -1,6 +1,5 @@
 import { Nomad, utils, Network } from "../src";
 import type { TokenIdentifier } from "@nomad-xyz/sdk/nomad/tokens";
-import { ERC20 } from "@nomad-xyz/contract-interfaces/bridge/ERC20";
 import { ethers } from "ethers";
 import { TransferMessage } from "@nomad-xyz/sdk/nomad";
 
@@ -25,7 +24,7 @@ export async function sendTokensAndConfirm(
   receiver: string,
   amounts: ethers.BigNumberish[],
   fastLiquidity = false
-): Promise<[boolean, ERC20]> {
+) {
   const ctx = n.getMultiprovider();
 
   let amountTotal = ethers.BigNumber.from(0);
@@ -86,7 +85,6 @@ export async function sendTokensAndConfirm(
   if (!tokenCreated) throw new Error(`Timedout token creation at destination`);
 
   if (!tokenContract) throw new Error(`no token contract`);
-  // const _tokenContract: xapps.ERC20 = tokenContract;
 
   let newBalance = await tokenContract!.balanceOf(receiver);
 
@@ -106,5 +104,7 @@ export async function sendTokensAndConfirm(
 
   const [, success] = await waiter2.wait();
 
-  return [success, tokenContract!];
+  if (!success) throw new Error(`Tokens transfer from ${from.name} to ${to.name} failed`);
+
+  return tokenContract!;
 }

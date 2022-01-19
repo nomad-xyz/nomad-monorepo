@@ -156,7 +156,7 @@ async function sendTokensTriangular(
   const amount2 = getRandomTokenAmount();
   const amount3 = getRandomTokenAmount();
 
-  const [successA2B, _] = await sendTokensAndConfirm(
+   await sendTokensAndConfirm(
     n,
     a,
     b,
@@ -165,11 +165,7 @@ async function sendTokensTriangular(
     [amount1, amount2, amount3]
   );
 
-  if (!successA2B)
-    throw new Error(`Tokens transfer from ${a.name} to ${b.name} failed`);
-  console.log(`Tokens arrived at ${b.name}`);
-
-  const [successB2C, __] = await sendTokensAndConfirm(
+  await sendTokensAndConfirm(
     n,
     b,
     c,
@@ -177,11 +173,8 @@ async function sendTokensTriangular(
     cActor.toAddress(),
     [amount3, amount2, amount1]
   );
-  if (!successB2C)
-    throw new Error(`Tokens transfer from ${b.name} to ${c.name} failed`);
-  console.log(`Tokens arrived at ${c.name}`);
 
-  const [successC2A, tokenContract] = await sendTokensAndConfirm(
+  const tokenContract = await sendTokensAndConfirm(
     n,
     c,
     a,
@@ -189,10 +182,6 @@ async function sendTokensTriangular(
     new Key().toAddress(), // to random address
     [amount1, amount3, amount2]
   );
-
-  if (!successC2A)
-    throw new Error(`Tokens transfer from ${c.name} to ${a.name} failed`);
-  console.log(`Tokens arrived at ${a.name}`);
 
   if (
     tokenContract.address.toLowerCase() !== token.id.toString().toLowerCase()
@@ -238,7 +227,7 @@ async function sendTokensHubAndSpoke(
   const amount3 = getRandomTokenAmount();
 
 
-  const [successA2C] = await sendTokensAndConfirm(
+  await sendTokensAndConfirm(
     n,
     a,
     c,
@@ -247,11 +236,7 @@ async function sendTokensHubAndSpoke(
     [amount2, amount3, amount1]
   );
 
-  if (!successA2C)
-    throw new Error(`Tokens transfer from ${a.name} to ${b.name} failed`);
-  console.log(`Tokens arrived at ${b.name}`);
-
-  const [successA2B] = await sendTokensAndConfirm(
+  await sendTokensAndConfirm(
     n,
     a,
     b,
@@ -260,11 +245,7 @@ async function sendTokensHubAndSpoke(
     [amount1, amount2]
   );
 
-  if (!successA2B)
-    throw new Error(`Tokens transfer from ${a.name} to ${b.name} failed`);
-  console.log(`Tokens arrived at ${b.name}`);
-
-  const [successB2A, tokenContract1] = await sendTokensAndConfirm(
+  const tokenContract1 = await sendTokensAndConfirm(
     n,
     b,
     a,
@@ -273,11 +254,7 @@ async function sendTokensHubAndSpoke(
     [amount1, amount2]
   );
 
-  if (!successB2A)
-    throw new Error(`Tokens transfer from ${a.name} to ${b.name} failed`);
-  console.log(`Tokens arrived at ${b.name}`);
-
-  const [successC2A, tokenContract2] = await sendTokensAndConfirm(
+  const tokenContract2 = await sendTokensAndConfirm(
     n,
     c,
     a,
@@ -285,10 +262,6 @@ async function sendTokensHubAndSpoke(
     new Key().toAddress(),
     [amount2, amount3, amount1]
   );
-
-  if (!successC2A)
-    throw new Error(`Tokens transfer from ${a.name} to ${b.name} failed`);
-  console.log(`Tokens arrived at ${b.name}`);
 
   if (
     tokenContract1.address.toLowerCase() !== token.id.toString().toLowerCase() ||

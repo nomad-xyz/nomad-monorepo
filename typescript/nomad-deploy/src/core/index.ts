@@ -5,7 +5,6 @@ import * as proxyUtils from '../proxyUtils';
 import { CoreDeploy } from './CoreDeploy';
 import * as contracts from '@nomad-xyz/contract-interfaces/core';
 import { checkCoreDeploy } from './checks';
-import { CallData, formatCall } from '../utils';
 import { getPathToDeployConfig } from '../verification/readDeployOutput';
 import { canonizeId } from '@nomad-xyz/sdk/utils';
 
