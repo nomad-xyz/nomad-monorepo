@@ -1,4 +1,5 @@
 import { NomadContext } from '@nomad-xyz/sdk';
+import Logger from 'bunyan';
 import { Consumer } from './consumer';
 import { Indexer } from './indexer';
 import { IndexerCollector } from './metrics';
@@ -13,35 +14,45 @@ export class Orchestrator {
   done: boolean;
   freshStart: boolean;
   metrics: IndexerCollector;
+  logger: Logger;
 
-  constructor(sdk: NomadContext, c: Consumer, gov: number, metrics: IndexerCollector) {
+  constructor(
+    sdk: NomadContext,
+    c: Consumer,
+    gov: number,
+    metrics: IndexerCollector,
+    logger: Logger,
+  ) {
     this.sdk = sdk;
     this.consumer = c;
     this.indexers = new Map();
     this.gov = gov;
     this.done = false;
     this.freshStart = true;
-    this.metrics = metrics
+    this.metrics = metrics;
+    this.logger = logger;
 
-    this.initIndexers()
-
-    this.initalFeedConsumer()
+    this.initIndexers();
+    this.initalFeedConsumer();
   }
 
   async indexAll() {
-    const events = (await Promise.all(
-      this.sdk.domainNumbers.map((domain: number) => this.index(domain)),
-    )).flat();
-    events.sort((a, b) => a.ts-b.ts);
+    const events = (
+      await Promise.all(
+        this.sdk.domainNumbers.map((domain: number) => this.index(domain)),
+      )
+    ).flat();
+    events.sort((a, b) => a.ts - b.ts);
+    this.logger.info(`Received ${events.length} events after reindexing`);
     this.consumer.consume(...events);
   }
 
   async index(domain: number) {
     let indexer = this.indexers.get(domain)!;
 
-    let replicas = []
+    let replicas = [];
     if (domain === this.gov) {
-      replicas = this.sdk.domainNumbers.filter((d) => d != this.gov)
+      replicas = this.sdk.domainNumbers.filter((d) => d != this.gov);
     } else {
       replicas = [this.gov];
     }
@@ -50,8 +61,10 @@ export class Orchestrator {
   }
 
   initalFeedConsumer() {
-    const events = Array.from(this.indexers.values()).map(indexer => indexer.persistance.allEvents()).flat();
-    events.sort((a, b) => a.ts-b.ts);
+    const events = Array.from(this.indexers.values())
+      .map((indexer) => indexer.persistance.allEvents())
+      .flat();
+    events.sort((a, b) => a.ts - b.ts);
     this.consumer.consume(...events);
   }
 
@@ -64,40 +77,34 @@ export class Orchestrator {
 
   async startConsuming() {
     while (!this.done) {
-      console.log(`Started to reindex`)
+      this.logger.info(`Started to reindex`);
       const start = new Date().valueOf();
-      await this.indexAll()
-      console.log(`Finished reindexing after seconds:`, (new Date().valueOf() - start) / 1000);
+      await this.indexAll();
+      this.logger.info(
+        `Finished reindexing after ${
+          (new Date().valueOf() - start) / 1000
+        } seconds`,
+      );
 
       const stats = this.consumer.stats();
-      console.log(`stats->`, JSON.stringify(stats, replacer));
+      this.logger.debug(JSON.stringify(stats, replacer));
 
       this.reportAllMetrics(stats);
-      
+
       await sleep(30000);
     }
   }
 
   reportAllMetrics(statistics: Statistics) {
     for (const domain of this.sdk.domainNumbers) {
-      this.reportMetrics(domain, statistics)
+      this.reportMetrics(domain, statistics);
     }
   }
 
   reportMetrics(domain: number, statistics: Statistics) {
     const {
-      counts: {
-        dispatched,
-        updated,
-        relayed,
-        processed,
-      },
-      timings: {
-        meanUpdate,
-        meanRelay,
-        meanProcess,
-        meanE2E,
-      }
+      counts: { dispatched, updated, relayed, processed },
+      timings: { meanUpdate, meanRelay, meanProcess, meanE2E },
     } = statistics.forDomain(domain);
     this.metrics.setNetworkState(
       this.sdk.getDomain(domain)!.name,
@@ -109,7 +116,7 @@ export class Orchestrator {
       meanRelay,
       meanProcess,
       meanE2E,
-    )
+    );
   }
 
   stop() {
