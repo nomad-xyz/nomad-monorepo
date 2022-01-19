@@ -5,7 +5,7 @@ import { ethers } from "ethers";
 import fs from "fs";
 import { TransferMessage } from "@nomad-xyz/sdk/nomad";
 import { getCustomToken } from "./utils/token/deployERC20";
-import { randomTokens } from "../src/utils";
+import { getRandomTokenAmount } from "../src/utils";
 import { sendTokensAndConfirm } from "./common";
 
 (async () => {
@@ -96,9 +96,9 @@ import { sendTokensAndConfirm } from "./common";
     ctx.registerWalletSigner(jerry.name, receiver.toString());
 
     // get 3 random amounts which will be bridged
-    const amount1 = randomTokens();
-    const amount2 = randomTokens();
-    const amount3 = randomTokens();
+    const amount1 = getRandomTokenAmount();
+    const amount2 = getRandomTokenAmount();
+    const amount3 = getRandomTokenAmount();
 
     const [successTom2Jerry, _] = await sendTokensAndConfirm(
       n,

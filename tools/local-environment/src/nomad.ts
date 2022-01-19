@@ -1073,7 +1073,6 @@ export class Nomad {
           .slice()
           .filter((remote) => remote.chain.domain !== deploy.chain.domain);
 
-        // console.log(`Ejecting Core for`, deploy.chain.domain, 'with', remotes.map(r => r.chain.domain))
         const config = CoreDeploy.buildConfig(deploy, remotes);
         const name = deploy.chain.name;
         const contracts = deploy.contracts;

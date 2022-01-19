@@ -74,7 +74,7 @@ import { sleep } from "../src/utils";
 
     await (await home.update(commitedRoot, newRoot, signature)).wait();
 
-    console.log(`Submitted niceee update to home`);
+    console.log(`Submitted valid update to home`);
 
     const replica = n.getCore(jerry).getReplica(tom.domain)!;
     if (!replica) throw new Error(`no replica`);
@@ -90,14 +90,14 @@ import { sleep } from "../src/utils";
       await replica.update(commitedRoot, fraudRoot, fraudletSignature)
     ).wait();
 
-    console.log(`Submitted fraudlet update to replica`);
+    console.log(`Submitted fraudulent update to replica`);
 
     const [homeCommitedRoot, homeRoot, replicaCommitedRoot] = await Promise.all(
       [home.committedRoot(), home.root(), replica.committedRoot()]
     );
 
     if (homeCommitedRoot !== homeRoot)
-      throw new Error(`Home contract's root is not equal to commited root`);
+      throw new Error(`Home contract's root is not equal to committed root`);
 
     if (homeRoot === replicaCommitedRoot)
       throw new Error(

@@ -238,7 +238,7 @@ export function zip<A, B>(a: A[], b: B[]): [A, B][] {
   return a.map((x, i) => [x, b[i]]);
 }
 
-export function randomTokens(): ethers.BigNumber {
+export function getRandomTokenAmount(): ethers.BigNumber {
   return ethers.utils.parseEther(String(randomTillPoint(2) + 0.01));
 }
 

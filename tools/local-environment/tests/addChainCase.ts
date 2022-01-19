@@ -1,7 +1,7 @@
 import { LocalNetwork, Nomad, Key, utils, Network } from "../src";
 import fs from "fs";
 import { getCustomToken } from "./utils/token/deployERC20";
-import { randomTokens, sleep } from "../src/utils";
+import { getRandomTokenAmount, sleep } from "../src/utils";
 import { sendTokensAndConfirm } from "./common";
 
 async function setup() {
@@ -152,9 +152,9 @@ async function sendTokensTriangular(
   ctx.registerWalletSigner(c.name, cActor.toString());
 
   // get 3 random amounts which will be bridged
-  const amount1 = randomTokens();
-  const amount2 = randomTokens();
-  const amount3 = randomTokens();
+  const amount1 = getRandomTokenAmount();
+  const amount2 = getRandomTokenAmount();
+  const amount3 = getRandomTokenAmount();
 
   const [successA2B, _] = await sendTokensAndConfirm(
     n,
@@ -233,9 +233,9 @@ async function sendTokensHubAndSpoke(
   ctx.registerWalletSigner(c.name, cActor.toString());
 
   // get 3 random amounts which will be bridged
-  const amount1 = randomTokens();
-  const amount2 = randomTokens();
-  const amount3 = randomTokens();
+  const amount1 = getRandomTokenAmount();
+  const amount2 = getRandomTokenAmount();
+  const amount3 = getRandomTokenAmount();
 
 
   const [successA2C] = await sendTokensAndConfirm(
