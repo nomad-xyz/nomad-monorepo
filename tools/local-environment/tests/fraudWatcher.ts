@@ -68,7 +68,7 @@ import { sleep } from "../src/utils";
 
     const [commitedRoot, newRoot] = await home.suggestUpdate();
 
-    const updater = await n.getNomadUpdater(tom);
+    const updater = await n.getUpdater(tom);
 
     const { signature } = await updater.signUpdate(commitedRoot, newRoot);
 

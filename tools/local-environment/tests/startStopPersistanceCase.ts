@@ -21,8 +21,8 @@ async function startNomad(): Promise<Object> {
   const n = new Nomad(jerry);
   n.addNetwork(tom);
 
-  n.setAllKey(jerry, k);
-  n.setAllKey(tom, k);
+  n.setAllKeys(jerry, k);
+  n.setAllKeys(tom, k);
 
   await n.deploy({ injectSigners: true });
 

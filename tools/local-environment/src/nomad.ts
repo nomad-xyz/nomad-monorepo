@@ -35,10 +35,6 @@ import { deployHubAndSpoke, deployNewChain } from "@nomad-xyz/deploy/src/core";
 import { ContractVerificationInput } from "@nomad-xyz/deploy/src/deploy";
 import {
   enrollSpoke,
-  // connectionGovernanceActions,
-  // executeGovernanceActions,
-  // crossConnectionGovernanceActions,
-  // GovernanceActions,
 } from "@nomad-xyz/deploy/src/incremental";
 import TestBridgeDeploy from "@nomad-xyz/deploy/src/bridge/TestBridgeDeploy";
 import {
@@ -275,7 +271,7 @@ export class Nomad {
     );
   }
 
-  async getNomadUpdater(
+  async getUpdater(
     networkish: Networkish,
     addressOrIndex?: string | number
   ): Promise<Updater> {
@@ -295,7 +291,7 @@ export class Nomad {
     return Updater.fromSigner(signerWithAddress, network.domain);
   }
 
-  setAllKey(networkish: Networkish, key: Key) {
+  setAllKeys(networkish: Networkish, key: Key) {
     this.setDeployer(networkish, key);
     this.setSigner(networkish, key);
     this.setUpdater(networkish, key);
@@ -383,7 +379,7 @@ export class Nomad {
     return this.deployArtifacts;
   }
 
-  async getNomadDomainForNetwork(
+  async getDomainForNetwork(
     networkish: Networkish
   ): Promise<NomadDomain | undefined> {
     const network = this.getNetwork(networkish);
@@ -428,7 +424,7 @@ export class Nomad {
     // but it is possible to do it here as well
     const domains = await Promise.all(
       this.getNetworks().map(async (network) =>
-        this.getNomadDomainForNetwork(network)
+        this.getDomainForNetwork(network)
       )
     );
 
@@ -803,7 +799,6 @@ export class Nomad {
     this.setArtifacts(artifacts);
   }
 
-  // OK!
   async deployAdditionalNetwork(newNetwork: Network) {
     const govCoreDeploy = this.getExistingCoreDeploy(this.host)!;
     const govBridgeDeploy = this.getExistingBridgeDeploy(this.host)!;
