@@ -1,18 +1,15 @@
 import * as tom from '../../config/local/tom';
-import * as jerry from '../../config/local/jerry';
 import * as daffy from '../../config/local/daffy';
 import { deployNewChain } from '../../src/core';
 import { CoreDeploy, ExistingCoreDeploy } from '../../src/core/CoreDeploy';
-import { deployEnvironment } from '../../src/chain';
 import { getPathToDeployConfig } from '../../src/verification/readDeployOutput';
 
-let environment = deployEnvironment();
-const path = getPathToDeployConfig(environment);
+const path = getPathToDeployConfig("dev");
 
 // Instantiate Existing Bridge Deploys
 const tomDeploy = ExistingCoreDeploy.withPath(
   tom.chain,
-  environment === 'staging' ? tom.stagingConfig : tom.devConfig,
+  tom.devConfig,
   path,
   tom.chain.deployer,
 );
@@ -20,7 +17,7 @@ const tomDeploy = ExistingCoreDeploy.withPath(
 // Instantiate New Bridge Deploy
 const daffyDeploy = new CoreDeploy(
   daffy.chain,
-  environment === 'staging' ? daffy.stagingConfig : daffy.devConfig,
+  daffy.devConfig,
 );
 
 deployNewChain(daffyDeploy, tomDeploy);
