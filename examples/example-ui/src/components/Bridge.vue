@@ -131,6 +131,7 @@ export default defineComponent({
   },
   methods: {
     async send() {
+      // TODO: validate before sending
       console.log('send')
       const { amount, token, originNetwork, destinationNetwork } = this.formValue.sendData
       if (!amount || !token || !originNetwork || !destinationNetwork || !this.address) return

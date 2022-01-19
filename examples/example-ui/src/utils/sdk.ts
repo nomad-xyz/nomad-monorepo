@@ -1,7 +1,7 @@
 import { NomadContext, dev } from '@nomad-xyz/sdk'
 import { TokenIdentifier } from '@nomad-xyz/sdk/nomad'
 import { Web3Provider } from '@ethersproject/providers'
-import { BigNumber, providers, utils } from 'ethers'
+import { BigNumber, providers, utils, BytesLike } from 'ethers'
 import { TransferMessage } from '@nomad-xyz/sdk/nomad/messages/BridgeMessage'
 import { ERC20__factory } from '@nomad-xyz/contract-interfaces/bridge'
 
@@ -13,24 +13,11 @@ import {
   NetworkMetadata,
   TokenMetadata
 } from '../config'
+export const s3URL = 'https://nomadxyz-development-proofs.s3.us-west-2.amazonaws.com/'
+// production s3URL: 'https://nomadxyz-production-proofs.s3.us-west-2.amazonaws.com/'
 
 const { ethereum } = window as any
 const nomad: NomadContext = instantiateNomad()
-
-export interface SendData {
-  isNative: boolean
-  originNetwork: number
-  destNetwork: number
-  asset: TokenIdentifier
-  amnt: number
-  recipient: string
-  ethersOverrides: object
-}
-
-export type TXData = {
-  network: NetworkName
-  hash: string
-}
 
 function instantiateNomad(): NomadContext {
   // configure for mainnet/testnet
@@ -43,6 +30,25 @@ function instantiateNomad(): NomadContext {
 
   return nomadContext
 }
+
+/******** TYPES ********/
+export interface SendData {
+  isNative: boolean
+  originNetwork: number
+  destNetwork: number
+  asset: TokenIdentifier
+  amnt: number
+  recipient: string
+  ethersOverrides: object
+}
+
+export type TXData = {
+  origin: NetworkName
+  destination: NetworkName
+  hash: string
+}
+
+/******** CONFIGS ********/
 
 /**
  * determines if the token is native to the selected origin network
@@ -70,6 +76,8 @@ export function getNetworkByDomainID(domainID: number): NetworkMetadata {
   })
   return networks[name!]
 }
+
+/******** SDK ********/
 
 export async function getNomadBalances(
   tokenName: TokenName,
@@ -202,19 +210,66 @@ export async function send(
   return transferMessage
 }
 
-export async function getGasPrice(network: string | number) {
-  const provider = nomad.getProvider(network)
-  const gasPrice = await provider?.getGasPrice()
-  return gasPrice
-}
-
 export async function getTxMessage(tx: TXData): Promise<TransferMessage> {
-  const { network, hash } = tx
+  const { origin, hash } = tx
   return await TransferMessage.singleFromTransactionHash(
     nomad,
-    network,
+    origin,
     hash
   )
+}
+
+export async function processTx (tx: TXData) {
+  // get transfer message
+  const { origin, hash } = tx
+  const message = await TransferMessage.singleFromTransactionHash(nomad, origin, hash)
+
+  // switch to destination network and register signer
+  const destNetwork = getNetworkByDomainID(message.destination)
+  await switchNetwork(destNetwork.name)
+  await registerNewSigner(destNetwork.name)
+
+  // get proof
+  const res = await fetch(`${s3URL}${origin}_${message.leafIndex.toString()}`)
+  const data = (await res.json()) as any
+  console.log('proof: ', data)
+
+  // get replica contract
+  const core = nomad.getCore(message.destination)
+  const replica = core?.getReplica(message.origin)
+
+  // connect signer
+  const signer = nomad.getSigner(message.origin)
+  replica!.connect(signer!)
+
+  // prove and process
+  try {
+    const receipt = await replica!.proveAndProcess(data.message as BytesLike, data.proof.path, data.proof.index)
+    console.log('PROCESSED!!!!')
+    return receipt
+  } catch(e) {
+    console.log(e)
+  }
+}
+
+export async function resolveRepresentation(origin: NetworkName | number, tokenIdentifier: TokenIdentifier) {
+  return await nomad.resolveRepresentation(origin, tokenIdentifier)
+}
+
+/******** WALLET ********/
+
+export async function connectWallet() {
+  // if window.ethereum does not exist, do not connect
+  if (!ethereum) return
+
+  await ethereum.request({ method: 'eth_requestAccounts' })
+
+  // get provider/signer
+  const provider = await getMetamaskProvider()
+  const signer = await provider.getSigner()
+
+  // return address
+  return await signer.getAddress()
 }
 
 export async function switchNetwork(networkName: string) {
@@ -255,20 +310,6 @@ export async function switchNetwork(networkName: string) {
   return network.name
 }
 
-export async function connectWallet() {
-  // if window.ethereum does not exist, do not connect
-  if (!ethereum) return
-
-  await ethereum.request({ method: 'eth_requestAccounts' })
-
-  // get provider/signer
-  const provider = await getMetamaskProvider()
-  const signer = await provider.getSigner()
-
-  // return address
-  return await signer.getAddress()
-}
-
 export async function getMetamaskNetwork() {
   const provider = await getMetamaskProvider()
   const { chainId } = await provider.ready
@@ -278,16 +319,10 @@ export async function getMetamaskNetwork() {
 export async function getMetamaskProvider(): Promise<Web3Provider> {
   const provider = new Web3Provider(ethereum)
   await provider.ready
-  // const signer = provider.getSigner()
-  // console.log({ provider, signer })
   return Promise.resolve(provider)
 }
 
-export async function getNetwork(provider: Web3Provider): Promise<string> {
-  const { chainId, name } = await provider.ready
-  const network = getNetworkByChainID(chainId) || { name }
-  return network.name
-}
+/******** UI ********/
 
 /**
  * Shortens address for UI display
@@ -299,4 +334,26 @@ export function truncateAddr(addr: string): string {
   const len = addr.length
   const last = addr.slice(len - 4, len)
   return `${first}...${last}`
+}
+
+export function fromBytes32(addr: string): string {
+  // trim 12 bytes from beginning plus '0x'
+  const short = addr.slice(26)
+  return `0x${short}`
+}
+
+export function getStatusText(status: number): string {
+  switch (status) {
+    case 0:
+      return 'Dispatched'
+    case 1:
+      return 'Included'
+    case 2:
+      return 'Relayed'
+    case 3:
+      return 'Processed'
+
+    default:
+      return 'Dispatched'
+  }
 }

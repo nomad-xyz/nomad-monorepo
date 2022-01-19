@@ -8,26 +8,23 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue';
+import { defineComponent, h, ref } from 'vue';
 import { NDataTable } from 'naive-ui';
-import { truncateAddr } from '@/utils/sdk';
-import { NetworkName } from '@/config';
-
-type RowData = {
-  originNetwork: NetworkName
-  destinationNetwork: NetworkName
-  hash: string
-}
+import { truncateAddr, TXData } from '@/utils/sdk';
+import TxData from './TxData.vue'
 
 const createColumns = () => {
   return [
-    // {
-    //   type: 'expand',
-    //   expandable: true,
-    //   renderExpand: (rowData: RowData) => {
-    //     return rowData.hash
-    //   }
-    // },
+    {
+      type: 'expand',
+      expandable: () => true,
+      renderExpand: (rowData: TXData) => {
+        return h(
+          TxData,
+          { tx: rowData }
+        )
+      }
+    },
     {
       title: 'Origin Network',
       key: 'origin'
@@ -39,7 +36,7 @@ const createColumns = () => {
     {
       title: 'Transaction Hash',
       key: 'hash',
-      render (row: RowData) {
+      render (row: TXData) {
         return truncateAddr(row.hash)
       }
     }
@@ -62,18 +59,21 @@ export default defineComponent({
       loading: false,
       columns: createColumns(),
       // history: ref([]),
-      history: [
+      // TODO: save transactions in localstorage
+      history: ref([
         {
+          key: 0,
           origin: 'kovan',
           destination: 'moonbasealpha',
           hash: '0xa99650ad988ed11ad4c970edc42325576149ad7baa0dbe6fae54a0e3da395792'
         },
         {
+          key: 1,
           origin: 'kovan',
           destination: 'moonbasealpha',
           hash: '0x1111...2222'
         }
-      ]
+      ])
     }
   },
   async mounted() {
