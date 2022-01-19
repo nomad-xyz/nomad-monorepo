@@ -5,21 +5,17 @@ import * as dotenv from 'dotenv';
 import { ethers } from 'ethers';
 import { IndexerCollector } from './metrics';
 import Logger from 'bunyan';
-dotenv.config({
-  // path: '/Users/daniilnaumetc/code/tmp/monitor/typescript/nomad-monitor/src/indexer/.env'
-});
+dotenv.config({});
 
 const signer = process.env.SIGNER!;
-const alchemyKey = process.env.ALCHEMY_KEY!;
+// const alchemyKey = process.env.ALCHEMY_KEY!;
 const infuraKey = process.env.INFURA_KEY!;
+const environment = 'development';
 
-console.log(signer, alchemyKey);
-
-const moonbeamRPC = 'https://moonbeam.api.onfinality.io/public'; //"https://rpc.api.moonbeam.network";
-// const ethereumRPC = `https://eth-mainnet.alchemyapi.io/v2/${alchemyKey}`;
+const moonbeamRPC = 'https://moonbeam.api.onfinality.io/public';
 
 (async () => {
-  const ctx = mainnet; //NomadContext.fromDomains([ethereum, moonbeam]);
+  const ctx = mainnet;
   const ethereumId = ctx.mustGetDomain('ethereum').id;
   const moonbeamId = ctx.mustGetDomain('moonbeam').id;
   const p = new ethers.providers.InfuraProvider('homestead', infuraKey);
@@ -29,10 +25,11 @@ const moonbeamRPC = 'https://moonbeam.api.onfinality.io/public'; //"https://rpc.
 
   ctx.registerRpcProvider(moonbeamId, moonbeamRPC);
   ctx.registerWalletSigner(moonbeamId, signer);
+  const logger = createLogger('indexer', environment);
   const c = new Processor();
-  const m = new IndexerCollector('development', createLogger('indexer', 'development'))
+  const m = new IndexerCollector(environment, logger);
 
-  const o = new Orchestrator(mainnet, c, mainnet.domainNumbers[0], m);
+  const o = new Orchestrator(mainnet, c, mainnet.domainNumbers[0], m, logger);
 
   await o.startConsuming();
 })();

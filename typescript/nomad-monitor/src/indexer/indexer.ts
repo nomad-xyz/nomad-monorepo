@@ -21,7 +21,9 @@ export class Indexer {
     this.persistance = new RamPersistance(
       `/tmp/persistance_${this.domain}.json`,
     );
-    this.block2timeCache = new KVCache(`/tmp/blocktime_cache_${this.domain}`);
+    this.block2timeCache = new KVCache(
+      `/tmp/persistance_blocktime_cache_${this.domain}`,
+    );
   }
 
   get provider(): ethers.providers.Provider {
@@ -61,7 +63,7 @@ export class Indexer {
   }
 
   home(): Home {
-    return this.sdk.getCore(this.domain)!.home; //getHomeAtDomain(this.domain);
+    return this.sdk.getCore(this.domain)!.home;
   }
 
   replicaForDomain(domain: number): Replica {
@@ -69,38 +71,37 @@ export class Indexer {
   }
 
   async updateAll(replicas: number[]) {
-
     let from = Math.max(
       this.persistance.height + 1,
       this.sdk.getDomain(this.domain)?.paginate?.from || 0,
     );
     const to = await this.provider.getBlockNumber();
 
-    console.log(`Fetching for`, this.domain, `from:`, from, `to:`, to);
+    this.orchestrator.logger.info(
+      `Fetching events for domain ${this.domain} from: ${from}, to: ${to}`,
+    );
     const [fetchedEvents, error] = await retry(async () => {
       const homeEvents = await this.fetchHome(from, to);
-      const replicasEvents = (await Promise.all(replicas.map((r) => this.fetchReplica(r, from, to)))).flat();
+      const replicasEvents = (
+        await Promise.all(replicas.map((r) => this.fetchReplica(r, from, to)))
+      ).flat();
       return [...homeEvents, ...replicasEvents];
     }, 5);
 
     if (error) throw error;
     if (!fetchedEvents) throw new Error('kek');
 
-    fetchedEvents.sort((a,b) => a.ts-b.ts);
+    fetchedEvents.sort((a, b) => a.ts - b.ts);
     this.persistance.store(...fetchedEvents);
 
-
-
-
     this.dummyTestEventsIntegrity();
-    console.log(this.domain, `Fetched all`);
+    this.orchestrator.logger.info(`Fetched all for domain ${this.domain}`);
 
-    return fetchedEvents
+    return fetchedEvents;
   }
 
   dummyTestEventsIntegrity() {
     // TODO: either drop or make better
-    // const p = this.persistance as RamPersistance;
     const h = new Map<string, string>();
     const r = new Map<string, string>();
 
@@ -113,7 +114,7 @@ export class Indexer {
 
     let allEvents = this.persistance.allEvents();
     if (allEvents.length === 0) {
-      console.warn(`No events to test integrity!!!`);
+      this.orchestrator.logger.warn(`No events to test integrity!!!`);
       return;
     }
 
@@ -146,7 +147,6 @@ export class Indexer {
         h1 = newRoot;
         htotal -= 1;
       } else {
-        // console.log(this.domain, `Home broke with`, htotal, 'unresolved');
         break;
       }
     }
@@ -156,7 +156,6 @@ export class Indexer {
         r1 = newRoot;
         rtotal -= 1;
       } else {
-        // console.log(this.domain, `Replica broke with`, rtotal, 'unresolved');
         break;
       }
     }
@@ -170,7 +169,6 @@ export class Indexer {
   }
 
   async fetchHome(from: number, to: number) {
-
     let fetchedEvents: NomadEvent[] = [];
 
     const home = this.home();
@@ -193,7 +191,7 @@ export class Indexer {
                 message: event.args[4],
               },
               event.blockNumber,
-              EventSource.Past,
+              EventSource.Fetch,
             ),
         ),
       );
@@ -218,14 +216,14 @@ export class Indexer {
                 signature: event.args[3],
               },
               event.blockNumber,
-              EventSource.Past,
+              EventSource.Fetch,
             ),
         ),
       );
       fetchedEvents.push(...parsedEvents);
     }
 
-    return fetchedEvents
+    return fetchedEvents;
   }
 
   async fetchReplica(domain: number, from: number, to: number) {
@@ -254,7 +252,7 @@ export class Indexer {
                 signature: event.args[3],
               },
               event.blockNumber,
-              EventSource.Past,
+              EventSource.Fetch,
             ),
         ),
       );
@@ -282,7 +280,7 @@ export class Indexer {
                 returnData: event.args[2],
               },
               event.blockNumber,
-              EventSource.Past,
+              EventSource.Fetch,
             ),
         ),
       );
@@ -290,7 +288,6 @@ export class Indexer {
     }
     return fetchedEvents;
   }
-
 }
 
 export abstract class Persistance {
