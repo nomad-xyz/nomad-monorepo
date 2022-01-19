@@ -38,5 +38,3 @@ const daffyDomain = deploysToSDK(daffyCoreDeploy, daffyBridgeDeploy);
 const sdk = NomadContext.fromDomains([tomDomain, daffyDomain]);
 
 enrollSpoke(sdk, daffyDomain.id, daffy.devConfig.watchers);
-
-// TODO: move this elsewhere

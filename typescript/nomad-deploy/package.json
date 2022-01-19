@@ -28,7 +28,6 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@ethersproject/experimental": "^5.3.0",
-    "@gnosis.pm/safe-ethers-adapters": "file:../../../safe-core-sdk/packages/safe-ethers-adapters",
     "@nomad-xyz/contract-interfaces": "1.1.0",
     "@nomad-xyz/sdk": "file:../nomad-sdk/dist",
     "@types/node": "^16.9.1",

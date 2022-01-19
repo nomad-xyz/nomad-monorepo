@@ -218,7 +218,6 @@ async function sendTokensHubAndSpoke(
 
   ctx.registerWalletSigner(a.name, aActor.toString());
   ctx.registerWalletSigner(b.name, bActor.toString());
-
   ctx.registerWalletSigner(c.name, cActor.toString());
 
   // get 3 random amounts which will be bridged
@@ -226,7 +225,7 @@ async function sendTokensHubAndSpoke(
   const amount2 = getRandomTokenAmount();
   const amount3 = getRandomTokenAmount();
 
-
+  // send tokens A to C
   await sendTokensAndConfirm(
     n,
     a,
@@ -236,24 +235,7 @@ async function sendTokensHubAndSpoke(
     [amount2, amount3, amount1]
   );
 
-  let expectToFail = true;
-  try {
-    await sendTokensAndConfirm(
-      n,
-      c,
-      b,
-      token,
-      new Key().toAddress(),
-      [amount2, amount3, amount1]
-    );
-
-    expectToFail = false;
-  } catch(e) {
-    console.log(`Failed sending from ${c.name} to ${b.name} as expected`)
-  }
-
-  if (!expectToFail) throw new Error(`Supposed to not be able to send tokens`);
-
+  // send tokens A to B
   await sendTokensAndConfirm(
     n,
     a,
@@ -263,6 +245,7 @@ async function sendTokensHubAndSpoke(
     [amount1, amount2]
   );
 
+  // send tokens B to A
   const tokenContract1 = await sendTokensAndConfirm(
     n,
     b,
@@ -272,6 +255,7 @@ async function sendTokensHubAndSpoke(
     [amount1, amount2]
   );
 
+  // send tokens C to A
   const tokenContract2 = await sendTokensAndConfirm(
     n,
     c,
@@ -281,7 +265,22 @@ async function sendTokensHubAndSpoke(
     [amount2, amount3, amount1]
   );
 
-  
+  // send tokens C to B (should fail!!)
+  let tokenSendFailed = true;
+  try {
+    await sendTokensAndConfirm(
+        n,
+        c,
+        b,
+        token,
+        new Key().toAddress(),
+        [amount2, amount3, amount1]
+    );
+    tokenSendFailed = false;
+  } catch(e) {
+    console.log(`Failed sending from ${c.name} to ${b.name} as expected`)
+  }
+  if (!tokenSendFailed) throw new Error(`Supposed to not be able to send tokens`);
 
   if (
     tokenContract1.address.toLowerCase() !== token.id.toString().toLowerCase() ||
