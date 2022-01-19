@@ -1,18 +1,21 @@
 <template>
-  <n-data-table :columns="columns" :data="data" />
+  <n-data-table :columns="columns" :data="getData" />
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue';
+import { defineComponent, unref, ref } from 'vue';
 import { NDataTable } from 'naive-ui';
 import { getNomadBalances, connectWallet } from '@/utils/sdk';
 import { tokens, TokenName } from '@/config';
 
 async function formatData() {
-  return await Object.keys(tokens).map(async (t: string) => {
+  let balances: any = []
+  await Object.keys(tokens).map(async (t: string) => {
     // TODO: get address once connected
-    return await getNomadBalances(t as TokenName, '0x9791c9dF02D34F2e7d7322D655535d9849E8da5c')
+    const tokenBalances = await getNomadBalances(t as TokenName, '0x9791c9dF02D34F2e7d7322D655535d9849E8da5c')
+    balances.push(tokenBalances)
   });
+  return balances
 }
 
 export default defineComponent({
@@ -22,6 +25,7 @@ export default defineComponent({
   },
   data() {
     return {
+      unref,
       columns: [
         {
           title: 'Kovan',
@@ -32,14 +36,21 @@ export default defineComponent({
           key: '5000'
         }
       ],
-      data: [] as any[]
+      data: ref([])
     }
   },
   async mounted() {
     await connectWallet()
-    // console.log(await getNomadBalances(tokens['WETH'].tokenIdentifier, '0x9791c9dF02D34F2e7d7322D655535d9849E8da5c'))
-    this.data = await formatData()
-    console.log('data', this.data[0])
+    const data = await formatData()
+    setTimeout(() => {
+      this.data = data
+    }, 3000)
   },
+  computed: {
+    getData() {
+      const d = this.data as any
+      return JSON.parse(JSON.stringify(d))
+    }
+  }
 });
 </script>
