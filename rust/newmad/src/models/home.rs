@@ -72,7 +72,7 @@ impl HomeModel {
 
 // Business
 impl HomeModel {
-    fn handle_dispatch(&mut self, dispatch: Dispatch) -> Result<()> {
+    async fn handle_dispatch(&mut self, dispatch: Dispatch) -> Result<()> {
         if self.committed_root != dispatch.committed_root {
             panic!("out of order events");
         }
@@ -94,7 +94,7 @@ impl HomeModel {
         Ok(())
     }
 
-    fn handle_update(&mut self, signed_update: SignedUpdate) -> Result<()> {
+    async fn handle_update(&mut self, signed_update: SignedUpdate) -> Result<()> {
         if self.failed {
             panic!("update while in failed state");
         }
@@ -113,10 +113,10 @@ impl HomeModel {
         Ok(())
     }
 
-    pub fn handle_event(&mut self, event: HomeEvents) -> Result<()> {
+    async fn handle_event(&mut self, event: HomeEvents) -> Result<()> {
         match event {
-            HomeEvents::Dispatch(dispatch) => self.handle_dispatch(dispatch),
-            HomeEvents::Update(update) => self.handle_update(update),
+            HomeEvents::Dispatch(dispatch) => self.handle_dispatch(dispatch).await,
+            HomeEvents::Update(update) => self.handle_update(update).await,
             HomeEvents::ImproperUpdate { .. } => {
                 self.failed = true;
                 Ok(())
@@ -154,7 +154,7 @@ impl HomeModel {
         tokio::spawn(async move {
             loop {
                 match events.recv().await {
-                    Some(e) => self.handle_event(e).unwrap(),
+                    Some(e) => self.handle_event(e).await.unwrap(),
                     None => return (),
                 }
             }
