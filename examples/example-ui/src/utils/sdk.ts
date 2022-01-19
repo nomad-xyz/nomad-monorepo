@@ -84,7 +84,7 @@ export async function getNomadBalances(
 
   for ([domain, instance] of representations.tokens.entries()) {
     const balanceBN = await instance.balanceOf(address)
-    balances[domain] = `${utils.formatUnits(balanceBN.toString(), decimals)} ${symbol}`
+    balances[domain] = utils.formatUnits(balanceBN.toString(), decimals)
   }
   return balances
 }

@@ -4,8 +4,8 @@
     <a href="https://www.npmjs.com/package/@nomad-xyz/sdk" target="_blank" class="link">NPM Package</a>
     <a href="https://docs.nomad.xyz" target="_blank" class="link">Docs</a>
     <div class="main">
-      <balances class="balances"/>
       <home />
+      <balances />
     </div>
   </div>
 </template>
@@ -46,8 +46,5 @@ export default defineComponent({
 }
 .link {
   color: #41BA83;
-}
-.balances {
-  margin-bottom: 20px;
 }
 </style>
