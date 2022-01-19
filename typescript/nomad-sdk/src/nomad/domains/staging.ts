@@ -11,7 +11,7 @@ export const kovan: NomadDomain = {
   replicas: [
     {
       domain: 1634956402,
-      address: '0xF36d789E1A2cceC74476b4842e43bd1C58d3aB67',
+      address: '0x044d4615e14237888669C918b3d0069bD6682905',
     },
   ],
   governanceRouter: '0x3B58BE35841176f00684af0e1Cc59D88c8e0847c',
@@ -31,7 +31,7 @@ export const astar: NomadDomain = {
   replicas: [
     {
       domain: 3000,
-      address: '0x044d4615e14237888669C918b3d0069bD6682905',
+      address: '0xF36d789E1A2cceC74476b4842e43bd1C58d3aB67',
     },
   ],
   governanceRouter: '0xD02E93492564567A02A78F16a21532a088Ce056B',
