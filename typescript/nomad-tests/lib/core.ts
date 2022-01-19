@@ -180,7 +180,7 @@ function serializeCalls(batch: types.CallData[]): string {
   ]);
 }
 
-function batchHash(callsData: types.CallData[]): string {
+export function batchHash(callsData: types.CallData[]): string {
   return ethers.utils.keccak256(serializeCalls(callsData));
 }
 

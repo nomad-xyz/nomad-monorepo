@@ -1,11 +1,8 @@
-import { LocalNetwork, Nomad, Key, utils, Network } from "../src";
+import { LocalNetwork, Nomad, Key, utils } from "../src";
 import type { TokenIdentifier } from "@nomad-xyz/sdk/nomad/tokens";
-import { ERC20 } from "@nomad-xyz/contract-interfaces/dist/bridge/ERC20";
-import { ethers } from "ethers";
 import fs from "fs";
-import { TransferMessage } from "@nomad-xyz/sdk/nomad";
 import { getCustomToken } from "./utils/token/deployERC20";
-import { randomTokens } from "../src/utils";
+import { getRandomTokenAmount } from "../src/utils";
 import { sendTokensAndConfirm } from "./common";
 
 (async () => {
@@ -96,11 +93,11 @@ import { sendTokensAndConfirm } from "./common";
     ctx.registerWalletSigner(jerry.name, receiver.toString());
 
     // get 3 random amounts which will be bridged
-    const amount1 = randomTokens();
-    const amount2 = randomTokens();
-    const amount3 = randomTokens();
+    const amount1 = getRandomTokenAmount();
+    const amount2 = getRandomTokenAmount();
+    const amount3 = getRandomTokenAmount();
 
-    const [successTom2Jerry, _] = await sendTokensAndConfirm(
+    await sendTokensAndConfirm(
       n,
       tom,
       jerry,
@@ -109,11 +106,7 @@ import { sendTokensAndConfirm } from "./common";
       [amount1, amount2, amount3]
     );
 
-    if (!successTom2Jerry)
-      throw new Error(`Tokens transfer from jerry to tom failed`);
-    console.log(`Tokens arrived at Tom`);
-
-    const [successJerry2Tom, tokenContract] = await sendTokensAndConfirm(
+    const tokenContract = await sendTokensAndConfirm(
       n,
       jerry,
       tom,
@@ -121,9 +114,6 @@ import { sendTokensAndConfirm } from "./common";
       new Key().toAddress(),
       [amount3, amount2, amount1]
     );
-    if (!successJerry2Tom)
-      throw new Error(`Tokens transfer from tom to jerry failed`);
-    console.log(`Tokens arrived at Jerry`);
 
     if (
       tokenContract.address.toLowerCase() !== token.id.toString().toLowerCase()

@@ -7,6 +7,8 @@ import { DockerizedActor } from "./actors";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { Governor } from "@nomad-xyz/deploy/src/core/CoreDeploy";
 
+export type Networkish = string | number | Network;
+
 enum NetworkStatus {
   Running,
   Stopped,
@@ -165,12 +167,12 @@ export abstract class Network {
   setLocalGovernor(address: string) {
     this.setGovernor({
       address,
-      domain: this.domain
-    })
+      domain: this.domain,
+    });
   }
 
   isGovernor(): boolean {
-    return !!this.governor
+    return !!this.governor;
   }
 
   toString(): string {

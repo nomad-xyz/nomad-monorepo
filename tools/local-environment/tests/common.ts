@@ -1,6 +1,5 @@
 import { Nomad, utils, Network } from "../src";
 import type { TokenIdentifier } from "@nomad-xyz/sdk/nomad/tokens";
-import { ERC20 } from "@nomad-xyz/contract-interfaces/dist/bridge/ERC20";
 import { ethers } from "ethers";
 import { TransferMessage } from "@nomad-xyz/sdk/nomad";
 
@@ -23,8 +22,9 @@ export async function sendTokensAndConfirm(
   to: Network,
   token: TokenIdentifier,
   receiver: string,
-  amounts: ethers.BigNumberish[]
-): Promise<[boolean, ERC20]> {
+  amounts: ethers.BigNumberish[],
+  fastLiquidity = false
+) {
   const ctx = n.getMultiprovider();
 
   let amountTotal = ethers.BigNumber.from(0);
@@ -33,9 +33,17 @@ export async function sendTokensAndConfirm(
   for (const amountish of amounts) {
     const amount = ethers.BigNumber.from(amountish);
 
-    result = await ctx.send(from.name, to.name, token, amount, receiver, {
-      gasLimit: 10000000,
-    });
+    result = await ctx.send(
+      from.name,
+      to.name,
+      token,
+      amount,
+      receiver,
+      fastLiquidity,
+      {
+        gasLimit: 10000000,
+      }
+    );
 
     amountTotal = amountTotal.add(amount);
 
@@ -77,7 +85,6 @@ export async function sendTokensAndConfirm(
   if (!tokenCreated) throw new Error(`Timedout token creation at destination`);
 
   if (!tokenContract) throw new Error(`no token contract`);
-  // const _tokenContract: xapps.ERC20 = tokenContract;
 
   let newBalance = await tokenContract!.balanceOf(receiver);
 
@@ -88,7 +95,7 @@ export async function sendTokensAndConfirm(
         return true;
       } else {
         newBalance = await tokenContract!.balanceOf(receiver);
-        console.log(`New balance:`, parseInt(newBalance.toString()));
+        console.log(`New balance:`, parseInt(newBalance.toString()), 'must be:', parseInt(tokenContract.toString()));
       }
     },
     4 * 60_000,
@@ -97,5 +104,7 @@ export async function sendTokensAndConfirm(
 
   const [, success] = await waiter2.wait();
 
-  return [success, tokenContract!];
+  if (!success) throw new Error(`Tokens transfer from ${from.name} to ${to.name} failed`);
+
+  return tokenContract!;
 }

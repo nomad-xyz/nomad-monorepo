@@ -1,14 +1,5 @@
+import { canonizeId } from '@nomad-xyz/sdk/utils';
 import * as ethers from 'ethers';
-
-/*
- * Converts address to Bytes32
- *
- * @param address - the address
- * @return The address as bytes32
- */
-export function toBytes32(address: string): string {
-  return '0x' + '00'.repeat(12) + address.slice(2);
-}
 
 /*
  * Encoded call to a function,
@@ -41,7 +32,7 @@ export function formatCall(
   );
 
   return {
-    to: toBytes32(destinationContract.address),
+    to: canonizeId(destinationContract.address),
     data: data,
   };
 }

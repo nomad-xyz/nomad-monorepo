@@ -64,15 +64,19 @@ import { sleep } from "../src/utils";
       )
     ).wait();
 
+    console.log(`Dispatched test transaction to home`);
+
     const [commitedRoot, newRoot] = await home.suggestUpdate();
 
-    const updater = await n.getNomadUpdater(tom);
+    const updater = await n.getUpdater(tom);
 
     const { signature } = await updater.signUpdate(commitedRoot, newRoot);
 
     await (await home.update(commitedRoot, newRoot, signature)).wait();
 
-    const replica = n.getCore(jerry).replicas.get(tom.domain)?.contract;
+    console.log(`Submitted valid update to home`);
+
+    const replica = n.getCore(jerry).getReplica(tom.domain)!;
     if (!replica) throw new Error(`no replica`);
 
     const fraudRoot =
@@ -86,12 +90,14 @@ import { sleep } from "../src/utils";
       await replica.update(commitedRoot, fraudRoot, fraudletSignature)
     ).wait();
 
+    console.log(`Submitted fraudulent update to replica`);
+
     const [homeCommitedRoot, homeRoot, replicaCommitedRoot] = await Promise.all(
       [home.committedRoot(), home.root(), replica.committedRoot()]
     );
 
     if (homeCommitedRoot !== homeRoot)
-      throw new Error(`Home contract's root is not equal to commited root`);
+      throw new Error(`Home contract's root is not equal to committed root`);
 
     if (homeRoot === replicaCommitedRoot)
       throw new Error(

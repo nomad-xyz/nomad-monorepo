@@ -2,11 +2,11 @@ import { assert } from 'console';
 import fs from 'fs';
 import { ethers } from 'ethers';
 import * as proxyUtils from '../proxyUtils';
-import { CoreDeploy, ExistingCoreDeploy } from './CoreDeploy';
+import { CoreDeploy } from './CoreDeploy';
 import * as contracts from '@nomad-xyz/contract-interfaces/core';
 import { checkCoreDeploy } from './checks';
-import { toBytes32, CallData, formatCall } from '../utils';
 import { getPathToDeployConfig } from '../verification/readDeployOutput';
+import { canonizeId } from '@nomad-xyz/sdk/utils';
 
 function log(isTest: boolean, str: string) {
   if (!isTest) {
@@ -427,7 +427,7 @@ export async function enrollGovernanceRouter(
   );
   let tx = await local.contracts.governance!.proxy.setRouterLocal(
     remote.chain.domain,
-    toBytes32(remote.contracts.governance!.proxy.address),
+    canonizeId(remote.contracts.governance!.proxy.address),
     local.overrides,
   );
   await tx.wait(local.chain.confirmations);
@@ -828,26 +828,23 @@ export async function deployHubAndSpoke(hub: CoreDeploy, spokes: CoreDeploy[]) {
  * according to the deployNomad script
  *
  * @param newDeploy - A single chain deploy for the new chain being added
- * @param oldDeploys - An array of already-deployed chains, including chain, config, and deploy.contracts.governance.proxy
+ * @param hubDeploy - A governing (hub) deploy of already-deployed chain, including chain, config, and deploy.contracts.governance.proxy
  */
 export async function deployNewChain(
   newDeploy: CoreDeploy,
-  oldDeploys: ExistingCoreDeploy[],
+  hubDeploy: CoreDeploy,
 ) {
-  if (!newDeploy || oldDeploys.length == 0) {
+  if (!newDeploy || !hubDeploy) {
     throw new Error('Bad deploy input for deployNewChain');
   }
 
-  const govDeploy = getGovernorDeploy(oldDeploys);
-
   // there exists any chain marked test
-  const isTestDeploy: boolean =
-    newDeploy.test || oldDeploys.filter((c) => c.test).length > 0;
+  const isTestDeploy: boolean = newDeploy.test || hubDeploy.test;
 
   // log the deploy details
   log(
     isTestDeploy,
-    `Beginning New Chain deploy process for ${newDeploy.chain.name} with ${oldDeploys.length} existing chains`,
+    `Beginning New Chain deploy process for ${newDeploy.chain.name}`,
   );
   log(isTestDeploy, `Deploy env is ${newDeploy.config.environment}`);
   log(
@@ -857,98 +854,39 @@ export async function deployNewChain(
 
   // wait for providers to be ready
   log(isTestDeploy, 'awaiting provider ready');
-  await newDeploy.ready();
-  await Promise.all([
-    oldDeploys.map(async (deploy) => {
-      await deploy.ready();
-    }),
-  ]);
+  await Promise.all([newDeploy.ready(), hubDeploy.ready()]);
   log(isTestDeploy, 'done readying');
 
   // deploy nomad on the new chain
   await deployNomad(newDeploy);
 
-  // deploy remotes on new chain & one per old chain
-  for (let oldDeploy of oldDeploys) {
-    log(
-      isTestDeploy,
-      `connecting ${oldDeploy.chain.name} on ${newDeploy.chain.name}`,
-    );
-    // deploy and enroll replica for the old chain on the new chain
-    await enrollRemote(newDeploy, oldDeploy);
-    log(
-      isTestDeploy,
-      `connected ${oldDeploy.chain.name} on ${newDeploy.chain.name}`,
-    );
+  // deploy remotes on new spoke chain & hub chain
+  log(
+    isTestDeploy,
+    `connecting ${hubDeploy.chain.name} on ${newDeploy.chain.name}`,
+  );
+  // deploy and enroll replica for the hub chain on the new chain
+  await enrollRemote(newDeploy, hubDeploy);
+  log(
+    isTestDeploy,
+    `connected ${hubDeploy.chain.name} on ${newDeploy.chain.name}`,
+  );
 
-    // deploy a replica for the new chain on each old Chain
-    // note: this will have to be enrolled via Governance messages
-    await deployUnenrolledReplica(oldDeploy, newDeploy);
-  }
+  // deploy a replica for the new chain on hub chain
+  // note: this will have to be enrolled via Governance messages
+  await deployUnenrolledReplica(hubDeploy, newDeploy);
 
-  await transferGovernorship(govDeploy, newDeploy);
+  await transferGovernorship(hubDeploy, newDeploy);
 
-  // relinquish control of all chains
+  // relinquish control of new chain
   await relinquish(newDeploy);
 
   // checks new chain deploy is correct
-  const remoteDomains = oldDeploys.map((deploy) => deploy.chain.domain);
-  await checkCoreDeploy(newDeploy, remoteDomains, govDeploy.chain.domain);
-
-  // write config outputs
-  if (!isTestDeploy) {
-    writeDeployOutput([newDeploy, ...oldDeploys]);
-  }
-}
-
-/**
- * Gets enroll watcher calls from fresh deploy
- * to existing network. Calls
- * should be delegated to governing router.
- *
- * @param newDeploy - Core deploy of newly deployed chain
- * @param oldDeploy - Core deploy of existing chain
- */
-export function getEnrollWatchersCall(
-  newDeploy: CoreDeploy,
-  oldDeploy: CoreDeploy,
-): CallData[] {
-  // xAppConnectionManager at existing chain
-  const oldXAppConnectionManager = oldDeploy.contracts.xAppConnectionManager!;
-
-  // enroll new watchers in XAppConnectionManager at old chain
-  return newDeploy.config.watchers.map((watcherAddress) =>
-    formatCall(oldXAppConnectionManager, 'setWatcherPermission', [
-      watcherAddress,
-      newDeploy.chain.domain,
-      true,
-    ]),
+  await checkCoreDeploy(
+    newDeploy,
+    [hubDeploy.chain.domain],
+    hubDeploy.chain.domain,
   );
-}
-
-/**
- * Gets enroll replica call from fresh deploy
- * to existing network. Call
- * should be delegated to governing router.
- *
- * @param newDeploy - Core deploy of newly deployed chain
- * @param oldDeploy - Core deploy of existing chain
- */
-export function getEnrollReplicaCall(
-  newDeploy: CoreDeploy,
-  oldDeploy: CoreDeploy,
-): CallData {
-  // Newly deployed replica address at existing chain
-  const newReplicaAtOldChainAddress =
-    oldDeploy.contracts.replicas[newDeploy.chain.domain].proxy.address;
-  // xAppConnectionManager at existing chain
-  const oldXAppConnectionManager = oldDeploy.contracts.xAppConnectionManager!;
-
-  // enroll new watchers in XAppConnectionManager at old chain
-  return formatCall(oldXAppConnectionManager, 'ownerEnrollReplica', [
-    newReplicaAtOldChainAddress,
-    newDeploy.chain.domain,
-  ]);
 }
 
 /**
