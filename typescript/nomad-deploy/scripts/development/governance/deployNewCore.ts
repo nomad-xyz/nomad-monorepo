@@ -4,16 +4,16 @@ import { CoreDeploy, ExistingCoreDeploy } from '../../../src/core/CoreDeploy';
 import { deployNewChain } from '../../../src/core';
 import { getPathToDeployConfig } from '../../../src/verification/readDeployOutput';
 
-const path = getPathToDeployConfig('staging');
+const path = getPathToDeployConfig('dev');
 
 // Instantiate existing governor deploy on Rinkeby
 const rinkebyCoreDeploy = ExistingCoreDeploy.withPath(
   rinkeby.chain,
-  rinkeby.stagingConfig,
+  rinkeby.devConfig,
   path,
 );
 
-// Deploy Knew ovan core and bridge with Rinkeby hub
-const kovanCoreDeploy = new CoreDeploy(kovan.chain, kovan.stagingConfig);
+// Deploy Kovan core and bridge with Rinkeby hub
+const kovanCoreDeploy = new CoreDeploy(kovan.chain, kovan.devConfig);
 
 deployNewChain(kovanCoreDeploy, rinkebyCoreDeploy);

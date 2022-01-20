@@ -5,14 +5,15 @@ import { ExistingBridgeDeploy } from '../../../src/bridge/BridgeDeploy';
 import { getPathToDeployConfig } from '../../../src/verification/readDeployOutput';
 import { deploysToSDK } from '../../../src/incremental/utils';
 import { enrollSpoke } from '../../../src/incremental';
+import { checkHubToSpokeConnection } from '../../../src/incremental/checks';
 import { NomadContext } from '@nomad-xyz/sdk';
 
-const path = getPathToDeployConfig('staging');
+const path = getPathToDeployConfig('dev');
 
-// Instantiate existing governor deploys on Rinkeby
+// Instantiate existing governor deploy on Rinkeby
 const rinkebyCoreDeploy = ExistingCoreDeploy.withPath(
   rinkeby.chain,
-  rinkeby.stagingConfig,
+  rinkeby.devConfig,
   path,
 );
 const rinkebyBridgeDeploy = new ExistingBridgeDeploy(
@@ -22,11 +23,10 @@ const rinkebyBridgeDeploy = new ExistingBridgeDeploy(
 );
 const rinkebyDomain = deploysToSDK(rinkebyCoreDeploy, rinkebyBridgeDeploy);
 
-// Enroll Kovan as spoke to Rinkeby hub (reinstantiate kovan objects now with
-// addresses)
+// Enroll Kovan as spoke to Rinkeby hub
 const kovanCoreDeploy = ExistingCoreDeploy.withPath(
   kovan.chain,
-  kovan.stagingConfig,
+  kovan.devConfig,
   path,
 );
 const kovanBridgeDeploy = new ExistingBridgeDeploy(
@@ -44,5 +44,12 @@ sdkDomains.map((core) => {
   sdk.registerSigner(core.chain.domain, core.deployer);
 });
 
-// enroll spoke
-enrollSpoke(sdk, kovanDomain.id, kovan.stagingConfig);
+// enroll spoke then check enrollment
+(async () => {
+  await enrollSpoke(sdk, kovanDomain.id, kovan.devConfig);
+  await checkHubToSpokeConnection(
+    sdk,
+    kovanDomain.id,
+    kovan.devConfig.watchers,
+  );
+})();
