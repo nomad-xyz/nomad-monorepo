@@ -24,11 +24,11 @@ export const chain = toChain(chainJson);
 
 export const config: CoreConfig = {
   environment: 'prod',
-  updater: '0x40FD91557B318BD5d52D12535795265c88702681',
+  updater: '0x72a9f9ABB2dA5c2Fc3FdBcD88813D342227DC37E',
   recoveryTimelock: 60 * 60 * 24, // 1 day
   recoveryManager: '0xea24Ac04DEFb338CA8595C3750E20166F3b4998A',
   optimisticSeconds: 60 * 30, // 30 minutes
-  watchers: ['0x297BBC2F2EAAEB17Ee53F514020bC8173F0570dC'],
+  watchers: ['0xD653414d8B55BF4EC0111a2F5bf60eF994f23Bd7'],
   processGas: 850_000,
   reserveGas: 15_000,
 };

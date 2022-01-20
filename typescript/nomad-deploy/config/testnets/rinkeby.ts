@@ -45,8 +45,8 @@ export const devConfig: CoreConfig = {
 
 export const stagingConfig: CoreConfig = {
   environment: 'staging',
-  updater: '0x201dd86063Dc251cA5a576d1b7365C38e5fB4CD5',
-  watchers: ['0x22B2855635154Baa41C306BcA979C8c9a077A180'],
+  updater: '0x6b237D5AF6E5116Fe27116C0F6257Caa6721d043',
+  watchers: ['0x37B1E57b43e755dA8384D05cf437D88D0274Bfbd'],
   recoveryManager: '0x812c096810e8eFAA73efF841B601Ab82a7be9aB0', // rinkeby gnosis safe - 1/1 signers, signer = deployer key (0xa4849f1D96B26066f9C631FCdc8F1457D27Fb5EC)
   governor: {
     domain: chainJson.domain,
