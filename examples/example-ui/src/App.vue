@@ -2,7 +2,7 @@
   <div class="app-container">
     <div class="nav">
       <div class="nav-container">
-        Nomad
+        <img src="@/assets/wordmark.png" alt="Nomad" class="wordmark" />
         <n-button v-if="!address" @click="connect">Connect Wallet</n-button>
         <n-tag v-else round type="primary">{{ truncateAddr(address) }}</n-tag>
       </div>
@@ -92,6 +92,9 @@ export default defineComponent({
   flex-direction: row;
   justify-content: space-between;
   padding: 20px 20px 20px 40px;
+}
+.wordmark {
+  height: 20px;
 }
 .main {
   width: 100%;
