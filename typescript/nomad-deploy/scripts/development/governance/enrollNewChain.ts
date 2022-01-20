@@ -5,7 +5,7 @@ import { ExistingBridgeDeploy } from '../../../src/bridge/BridgeDeploy';
 import { getPathToDeployConfig } from '../../../src/verification/readDeployOutput';
 import { deploysToSDK } from '../../../src/incremental/utils';
 import { enrollSpoke } from '../../../src/incremental';
-import { NomadContext } from '@nomad-xyz/sdk/src';
+import { NomadContext } from '@nomad-xyz/sdk';
 
 const path = getPathToDeployConfig('staging');
 
@@ -39,5 +39,12 @@ const moonbaseAlphaBridgeDeploy = new ExistingBridgeDeploy(
 const moonbaseAlphaDomain = deploysToSDK(moonbaseAlphaCoreDeploy, moonbaseAlphaBridgeDeploy);
 
 const sdk = NomadContext.fromDomains([moonbaseAlphaDomain, kovanDomain]);
+
+[kovanExistingCoreDeploy, moonbaseAlphaCoreDeploy].map(core => {
+    sdk.registerProvider(core.chain.domain, core.provider);
+
+    sdk.registerSigner(core.chain.domain, core.deployer);
+})
+
 
 enrollSpoke(sdk, moonbaseAlphaDomain.id, moonbaseAlpha.stagingConfig.watchers);
