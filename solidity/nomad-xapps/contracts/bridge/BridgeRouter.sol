@@ -82,6 +82,9 @@ contract BridgeRouter is Version0, Router {
         uint256 amount
     );
 
+    // ======== Receive =======
+    receive() external payable {}
+
     // ======== Initializer ========
 
     function initialize(address _tokenRegistry, address _xAppConnectionManager)

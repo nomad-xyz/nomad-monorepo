@@ -17,7 +17,7 @@ import {
 import { BytesLike } from "@ethersproject/bytes";
 import { Listener, Provider } from "@ethersproject/providers";
 import { FunctionFragment, EventFragment, Result } from "@ethersproject/abi";
-import type { TypedEventFilter, TypedEvent, TypedListener } from "./common";
+import { TypedEventFilter, TypedEvent, TypedListener } from "./commons";
 
 interface PingPongRouterInterface extends ethers.utils.Interface {
   functions: {
@@ -104,28 +104,6 @@ interface PingPongRouterInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: "Received"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "Sent"): EventFragment;
 }
-
-export type OwnershipTransferredEvent = TypedEvent<
-  [string, string] & { previousOwner: string; newOwner: string }
->;
-
-export type ReceivedEvent = TypedEvent<
-  [number, number, BigNumber, boolean] & {
-    domain: number;
-    matchId: number;
-    count: BigNumber;
-    isPing: boolean;
-  }
->;
-
-export type SentEvent = TypedEvent<
-  [number, number, BigNumber, boolean] & {
-    domain: number;
-    matchId: number;
-    count: BigNumber;
-    isPing: boolean;
-  }
->;
 
 export class PingPongRouter extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this;
@@ -290,14 +268,6 @@ export class PingPongRouter extends BaseContract {
   };
 
   filters: {
-    "OwnershipTransferred(address,address)"(
-      previousOwner?: string | null,
-      newOwner?: string | null
-    ): TypedEventFilter<
-      [string, string],
-      { previousOwner: string; newOwner: string }
-    >;
-
     OwnershipTransferred(
       previousOwner?: string | null,
       newOwner?: string | null
@@ -306,27 +276,7 @@ export class PingPongRouter extends BaseContract {
       { previousOwner: string; newOwner: string }
     >;
 
-    "Received(uint32,uint32,uint256,bool)"(
-      domain?: BigNumberish | null,
-      matchId?: BigNumberish | null,
-      count?: null,
-      isPing?: null
-    ): TypedEventFilter<
-      [number, number, BigNumber, boolean],
-      { domain: number; matchId: number; count: BigNumber; isPing: boolean }
-    >;
-
     Received(
-      domain?: BigNumberish | null,
-      matchId?: BigNumberish | null,
-      count?: null,
-      isPing?: null
-    ): TypedEventFilter<
-      [number, number, BigNumber, boolean],
-      { domain: number; matchId: number; count: BigNumber; isPing: boolean }
-    >;
-
-    "Sent(uint32,uint32,uint256,bool)"(
       domain?: BigNumberish | null,
       matchId?: BigNumberish | null,
       count?: null,
