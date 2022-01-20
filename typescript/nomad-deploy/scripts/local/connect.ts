@@ -38,7 +38,7 @@ const daffyDomain = deploysToSDK(daffyCoreDeploy, daffyBridgeDeploy);
 
 const sdk = NomadContext.fromDomains([tomDomain, daffyDomain]);
 
-[tomCoreDeploy, daffyCoreDeploy].map(core => {
+[tomCoreDeploy, daffyCoreDeploy].map((core) => {
   sdk.registerProvider(core.chain.domain, core.provider);
   sdk.registerSigner(core.chain.domain, core.deployer);
 });

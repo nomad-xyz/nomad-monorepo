@@ -26,7 +26,7 @@ const rinkebyDomain = deploysToSDK(rinkebyCoreDeploy, rinkebyBridgeDeploy);
 // addresses)
 const kovanCoreDeploy = ExistingCoreDeploy.withPath(
   kovan.chain,
-  kovan.devConfig,
+  kovan.stagingConfig,
   path,
 );
 const kovanBridgeDeploy = new ExistingBridgeDeploy(
@@ -34,18 +34,15 @@ const kovanBridgeDeploy = new ExistingBridgeDeploy(
   kovan.bridgeConfig,
   path,
 );
-const kovanDomain = deploysToSDK(
-  kovanCoreDeploy,
-  kovanBridgeDeploy,
-);
+const kovanDomain = deploysToSDK(kovanCoreDeploy, kovanBridgeDeploy);
 
 // setup SDK
 const sdkDomains = [rinkebyDomain, kovanDomain];
 const sdk = NomadContext.fromDomains(sdkDomains);
-sdkDomains.map(core => {
-    sdk.registerProvider(core.chain.domain, core.provider);
-    sdk.registerSigner(core.chain.domain, core.deployer);
+sdkDomains.map((core) => {
+  sdk.registerProvider(core.chain.domain, core.provider);
+  sdk.registerSigner(core.chain.domain, core.deployer);
 });
 
 // enroll spoke
-enrollSpoke(sdk, kovanDomain.id, kovan.stagingConfig.watchers);
+enrollSpoke(sdk, kovanDomain.id, kovan.stagingConfig);
