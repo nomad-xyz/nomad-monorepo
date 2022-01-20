@@ -90,11 +90,11 @@ function getNetworks() {
       break;
 
     case 'staging':
-      networks = ['kovan', 'moonbasealpha'];
+      networks = ['kovan', 'moonbasealpha', 'rinkeby'];
       break;
     
     default:
-      networks = ['kovan', 'moonbasealpha'];
+      networks = ['kovan', 'moonbasealpha', 'rinkeby'];
       break;
   }
 
@@ -110,7 +110,8 @@ export function getRpcsFromEnv() {
     kovanRpc: process.env.KOVAN_RPC ?? '',
     rinkebyRpc: process.env.RINKEBY_RPC ?? '',
     moonbasealphaRpc: process.env.MOONBASEALPHA_RPC ?? '',
-    moonbeamRpc: process.env.MOONBEAM_RPC ?? ''
+    moonbeamRpc: process.env.MOONBEAM_RPC ?? '',
+    astarRpc: process.env.ASTAR_RPC ?? '',
   };
 }
 

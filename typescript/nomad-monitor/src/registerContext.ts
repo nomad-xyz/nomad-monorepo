@@ -8,10 +8,12 @@ export function setRpcProviders(rpcs: any) {
   // register staging
   staging.registerRpcProvider('moonbasealpha', rpcs.moonbasealphaRpc);
   staging.registerRpcProvider('kovan', rpcs.kovanRpc);
+  staging.registerRpcProvider('rinkeby', rpcs.kovanRpc);
 
   // register dev
-  dev.registerRpcProvider('kovan', rpcs.kovanRpc);
   dev.registerRpcProvider('moonbasealpha', rpcs.moonbasealphaRpc);
+  dev.registerRpcProvider('kovan', rpcs.kovanRpc);
+  dev.registerRpcProvider('rinkeby', rpcs.moonbasealphaRpc);
 }
 
 export { mainnet, staging, dev };

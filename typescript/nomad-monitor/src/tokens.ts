@@ -1,4 +1,4 @@
-import { dev } from './registerContext';
+import { mainnet } from './registerContext';
 import { buildConfig } from './config';
 
 import {
@@ -111,5 +111,5 @@ export async function persistDeployedTokens(
 
 (async function main() {
   const config = buildConfig("tokens")
-  await persistDeployedTokens(dev, config.googleCredentialsFile)
+  await persistDeployedTokens(mainnet, config.googleCredentialsFile)
 })();
