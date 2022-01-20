@@ -744,6 +744,7 @@ export async function deployHubAndSpoke(hub: CoreDeploy, spokes: CoreDeploy[]) {
   }
 
   // store block numbers for each chain, so that agents know where to start
+  console.log('Recording starting blocks for each network...');
   await Promise.all(deploys.map((d) => d.recordFromBlock()));
 
   // deploy nomad on each chain

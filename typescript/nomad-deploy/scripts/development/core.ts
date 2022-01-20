@@ -1,11 +1,11 @@
 import { deployHubAndSpoke } from '../../src/core';
-import * as kovan from '../../config/testnets/kovan';
+import * as rinkeby from '../../config/testnets/rinkeby';
 import * as moonbasealpha from '../../config/testnets/moonbasealpha';
-import * as shibuya from '../../config/testnets/shibuya';
+import * as kovan from '../../config/testnets/kovan';
 import { CoreDeploy } from '../../src/core/CoreDeploy';
 
-let kovanConfig = kovan.devConfig;
-const kovanDeploy = new CoreDeploy(kovan.chain, kovanConfig);
+let rinkebyConfig = rinkeby.devConfig;
+const rinkebyDeploy = new CoreDeploy(rinkeby.chain, rinkebyConfig);
 
 let moonbaseAlphaConfig = moonbasealpha.devConfig;
 const moonbaseAlphaDeploy = new CoreDeploy(
@@ -13,7 +13,7 @@ const moonbaseAlphaDeploy = new CoreDeploy(
   moonbaseAlphaConfig,
 );
 
-let shibuyaConfig = moonbasealpha.devConfig;
-const shibuyaDeploy = new CoreDeploy(shibuya.chain, shibuyaConfig);
+let kovanConfig = kovan.devConfig;
+const kovanDeploy = new CoreDeploy(kovan.chain, kovanConfig);
 
-deployHubAndSpoke(kovanDeploy, [moonbaseAlphaDeploy, shibuyaDeploy]);
+deployHubAndSpoke(rinkebyDeploy, [moonbaseAlphaDeploy, kovanDeploy]);
