@@ -9,17 +9,31 @@ import {
   BridgeToken,
   BridgeToken__factory,
 } from '@nomad-xyz/contract-interfaces/bridge';
+import { hexlify } from 'ethers/lib/utils';
+import { canonizeId } from '@nomad-xyz/sdk/utils';
 const { BridgeMessageTypes } = bridge;
 
 [true, false].map((ENABLE_FAST) => {
-  describe('BridgeRouter', async () => {
+  describe.only('BridgeRouter', async () => {
     describe(ENABLE_FAST ? 'Fast Liquidity' : 'No Fast Liquidity', async () => {
       let deployer: types.Signer;
       let deployerAddress: string;
-      let deployerId: BytesLike;
+      let deployerId: string;
       let deploy: TestBridgeDeploy;
       let detailsHash: BytesLike;
       let originAndNonce: BigNumber;
+
+      let bridgor: types.Signer;
+      let bridgorAddress: string;
+      let bridgorId: string;
+
+      let remoteBridgeId: string;
+
+      const DUST = BigNumber.from('60000000000000000');
+      const fastTransferRecipient = '0x' + '22'.repeat(20);
+      const fastTransferRecipientId = hexlify(
+        canonizeId(fastTransferRecipient),
+      );
 
       const PROTOCOL_PROCESS_GAS = 800_000;
 
@@ -29,9 +43,12 @@ const { BridgeMessageTypes } = bridge;
 
       before(async () => {
         // populate deployer signer
-        [deployer] = await ethers.getSigners();
+        [deployer, bridgor] = await ethers.getSigners();
         deployerAddress = await deployer.getAddress();
-        deployerId = toBytes32(await deployer.getAddress()).toLowerCase();
+        deployerId = hexlify(canonizeId(deployerAddress));
+        remoteBridgeId = deployerId;
+        bridgorAddress = await bridgor.getAddress();
+        bridgorId = hexlify(canonizeId(bridgorAddress));
       });
 
       describe('setup', async () => {
@@ -66,7 +83,7 @@ const { BridgeMessageTypes } = bridge;
           const handleTx = deploy!.bridgeRouter!.handle(
             deploy.remoteDomain,
             mockNonce,
-            deployerId,
+            remoteBridgeId,
             '0x',
             {
               gasLimit: PROTOCOL_PROCESS_GAS,
@@ -95,7 +112,7 @@ const { BridgeMessageTypes } = bridge;
                 type: ENABLE_FAST
                   ? BridgeMessageTypes.FAST_TRANSFER
                   : BridgeMessageTypes.TRANSFER,
-                recipient: deployerId,
+                recipient: bridgorId,
                 amount: TOKEN_VALUE,
                 detailsHash,
               },
@@ -107,7 +124,7 @@ const { BridgeMessageTypes } = bridge;
             let handleTx = await deploy.bridgeRouter!.handle(
               deploy.remoteDomain,
               mockNonce,
-              deployerId,
+              remoteBridgeId,
               transferMessage,
               { gasLimit: PROTOCOL_PROCESS_GAS },
             );
@@ -130,12 +147,12 @@ const { BridgeMessageTypes } = bridge;
               .withArgs(
                 originAndNonce,
                 repr.address,
-                deployerAddress,
+                bridgorAddress,
                 ethers.constants.AddressZero,
                 BigNumber.from(TOKEN_VALUE),
               );
 
-            expect(await repr!.balanceOf(deployer.address)).to.equal(
+            expect(await repr!.balanceOf(bridgorAddress)).to.equal(
               BigNumber.from(TOKEN_VALUE),
             );
             expect(await repr!.totalSupply()).to.equal(
@@ -144,13 +161,15 @@ const { BridgeMessageTypes } = bridge;
           });
 
           it('errors on send if ERC20 balance is insufficient', async () => {
-            const stealTx = deploy.bridgeRouter!.send(
-              repr!.address,
-              TOKEN_VALUE * 10,
-              deploy.remoteDomain,
-              deployerId,
-              ENABLE_FAST,
-            );
+            const stealTx = deploy
+              .bridgeRouter!.connect(bridgor)
+              .send(
+                repr!.address,
+                TOKEN_VALUE * 10,
+                deploy.remoteDomain,
+                deployerId,
+                ENABLE_FAST,
+              );
 
             await expect(stealTx).to.be.revertedWith(
               'ERC20: burn amount exceeds balance',
@@ -159,78 +178,83 @@ const { BridgeMessageTypes } = bridge;
 
           it('errors when missing a remote router', async () => {
             expect(
-              deploy.bridgeRouter!.send(
-                repr!.address,
-                TOKEN_VALUE * 10,
-                121234,
-                deployerId,
-                ENABLE_FAST,
-              ),
+              deploy
+                .bridgeRouter!.connect(bridgor)
+                .send(
+                  repr!.address,
+                  TOKEN_VALUE * 10,
+                  121234,
+                  deployerId,
+                  ENABLE_FAST,
+                ),
             ).to.be.revertedWith('!remote');
           });
 
           it('errors on send when recipient is the 0 address', async () => {
             expect(
-              deploy.bridgeRouter!.send(
-                repr!.address,
-                TOKEN_VALUE * 10,
-                deploy.remoteDomain,
-                `0x${'00'.repeat(32)}`,
-                ENABLE_FAST,
-              ),
+              deploy
+                .bridgeRouter!.connect(bridgor)
+                .send(
+                  repr!.address,
+                  TOKEN_VALUE * 10,
+                  deploy.remoteDomain,
+                  `0x${'00'.repeat(32)}`,
+                  ENABLE_FAST,
+                ),
             ).to.be.revertedWith('!recip');
           });
 
           it('errors on send if ERC20 amount is zero', async () => {
-            const zeroTx = deploy.bridgeRouter!.send(
-              repr!.address,
-              0,
-              deploy.remoteDomain,
-              deployerId,
-              ENABLE_FAST,
-            );
+            const zeroTx = deploy
+              .bridgeRouter!.connect(bridgor)
+              .send(
+                repr!.address,
+                0,
+                deploy.remoteDomain,
+                deployerId,
+                ENABLE_FAST,
+              );
 
             await expect(zeroTx).to.be.revertedWith('!amnt');
           });
 
           it('errors on send if remote router is unknown', async () => {
-            const unknownRemote = deploy.bridgeRouter!.send(
-              repr!.address,
-              1,
-              3000,
-              deployerId,
-              ENABLE_FAST,
-            );
+            const unknownRemote = deploy
+              .bridgeRouter!.connect(bridgor)
+              .send(repr!.address, 1, 3000, deployerId, ENABLE_FAST);
 
             await expect(unknownRemote).to.be.revertedWith('!remote');
           });
 
           it('burns tokens on outbound message', async () => {
             // OUTBOUND
-            const sendTx = await deploy.bridgeRouter!.send(
-              repr!.address,
-              TOKEN_VALUE,
-              deploy.remoteDomain,
-              deployerId,
-              ENABLE_FAST,
-            );
+            const sendTx = await deploy
+              .bridgeRouter!.connect(bridgor)
+              .send(
+                repr!.address,
+                TOKEN_VALUE,
+                deploy.remoteDomain,
+                bridgorId,
+                ENABLE_FAST,
+              );
 
             await expect(sendTx)
               .to.emit(deploy.mockCore, 'Enqueue')
               .withArgs(deploy.remoteDomain, deployerId, transferMessage);
-
             expect(await repr!.totalSupply()).to.equal(BigNumber.from(0));
           });
 
           it('errors on outbound messages with no balance', async () => {
             // OUTBOUND, NO Tokens
-            const badTx = deploy.bridgeRouter!.send(
-              repr!.address,
-              TOKEN_VALUE,
-              deploy.remoteDomain,
-              deployerId,
-              ENABLE_FAST,
-            );
+            const badTx = deploy
+              .bridgeRouter!.connect(bridgor)
+              .send(
+                repr!.address,
+                TOKEN_VALUE,
+                deploy.remoteDomain,
+                deployerId,
+                ENABLE_FAST,
+              );
             await expect(badTx).to.be.revertedWith(
               'ERC20: burn amount exceeds balance',
             );
@@ -246,7 +270,7 @@ const { BridgeMessageTypes } = bridge;
 
             localToken = await new BridgeToken__factory(deployer).deploy();
             await localToken.initialize();
-            await localToken.mint(deployerAddress, TOKEN_VALUE);
+            await localToken.mint(bridgorAddress, TOKEN_VALUE);
 
             const name = await localToken.name();
             const symbol = await localToken.symbol();
@@ -267,14 +291,14 @@ const { BridgeMessageTypes } = bridge;
                 type: ENABLE_FAST
                   ? BridgeMessageTypes.FAST_TRANSFER
                   : BridgeMessageTypes.TRANSFER,
-                recipient: deployerId,
+                recipient: bridgorId,
                 amount: TOKEN_VALUE,
                 detailsHash: localDetailsHash,
               },
             };
             transferMessage = bridge.serializeMessage(transferMessageObj);
 
-            expect(await localToken.balanceOf(deployerAddress)).to.equal(
+            expect(await localToken.balanceOf(bridgorAddress)).to.equal(
               BigNumber.from(TOKEN_VALUE),
             );
             expect(
@@ -284,13 +308,15 @@ const { BridgeMessageTypes } = bridge;
 
           it('errors if the token is not approved', async () => {
             // TOKEN NOT APPROVED
-            const unapproved = deploy.bridgeRouter!.send(
-              localToken.address,
-              1,
-              deploy.remoteDomain,
-              deployerId,
-              ENABLE_FAST,
-            );
+            const unapproved = deploy
+              .bridgeRouter!.connect(bridgor)
+              .send(
+                localToken.address,
+                1,
+                deploy.remoteDomain,
+                deployerId,
+                ENABLE_FAST,
+              );
 
             expect(unapproved).to.be.revertedWith(
               'ERC20: transfer amount exceeds allowance',
@@ -301,18 +327,22 @@ const { BridgeMessageTypes } = bridge;
           });
 
           it('errors if insufficient balance', async () => {
-            await localToken.approve(
-              deploy.bridgeRouter!.address,
-              ethers.constants.MaxUint256,
-            );
+            await localToken
+              .connect(bridgor)
+              .approve(
+                deploy.bridgeRouter!.address,
+                ethers.constants.MaxUint256,
+              );
 
-            const badTx = deploy.bridgeRouter!.send(
-              localToken.address,
-              TOKEN_VALUE * 5,
-              deploy.remoteDomain,
-              deployerId,
-              ENABLE_FAST,
-            );
+            const badTx = deploy
+              .bridgeRouter!.connect(bridgor)
+              .send(
+                localToken.address,
+                TOKEN_VALUE * 5,
+                deploy.remoteDomain,
+                deployerId,
+                ENABLE_FAST,
+              );
 
             expect(badTx).to.be.revertedWith(
               'ERC20: transfer amount exceeds balance',
@@ -323,17 +353,19 @@ const { BridgeMessageTypes } = bridge;
           });
 
           it('holds tokens on outbound transfer', async () => {
-            const sendTx = await deploy.bridgeRouter!.send(
-              localToken.address,
-              TOKEN_VALUE,
-              deploy.remoteDomain,
-              deployerId,
-              ENABLE_FAST,
-            );
+            const sendTx = await deploy
+              .bridgeRouter!.connect(bridgor)
+              .send(
+                localToken.address,
+                TOKEN_VALUE,
+                deploy.remoteDomain,
+                bridgorId,
+                ENABLE_FAST,
+              );
 
             await expect(sendTx)
               .to.emit(deploy.mockCore, 'Enqueue')
-              .withArgs(deploy.remoteDomain, deployerId, transferMessage);
+              .withArgs(deploy.remoteDomain, remoteBridgeId, transferMessage);
 
             await expect(sendTx)
               .to.emit(deploy.bridgeRouter!, 'Send')
@@ -341,7 +373,7 @@ const { BridgeMessageTypes } = bridge;
                 localToken.address,
                 sendTx.from,
                 deploy.remoteDomain,
-                deployerId,
+                bridgorId,
                 TOKEN_VALUE,
                 ENABLE_FAST,
               );
@@ -355,7 +387,7 @@ const { BridgeMessageTypes } = bridge;
             let handleTx = await deploy.bridgeRouter!.handle(
               deploy.remoteDomain,
               mockNonce,
-              deployerId,
+              remoteBridgeId,
               transferMessage,
               { gasLimit: PROTOCOL_PROCESS_GAS },
             );
@@ -369,7 +401,7 @@ const { BridgeMessageTypes } = bridge;
               .withArgs(
                 originAndNonce,
                 localToken.address,
-                deployerAddress,
+                bridgorAddress,
                 ethers.constants.AddressZero,
                 BigNumber.from(TOKEN_VALUE),
               );
@@ -378,7 +410,7 @@ const { BridgeMessageTypes } = bridge;
               await localToken.balanceOf(deploy.bridgeRouter!.address),
             ).to.equal(BigNumber.from(0));
 
-            expect(await localToken.balanceOf(deployerAddress)).to.equal(
+            expect(await localToken.balanceOf(bridgorAddress)).to.equal(
               BigNumber.from(TOKEN_VALUE),
             );
           });
@@ -397,7 +429,7 @@ const { BridgeMessageTypes } = bridge;
               tokenId: deploy.testTokenId,
               action: {
                 type: BridgeMessageTypes.FAST_TRANSFER,
-                recipient: deployerId,
+                recipient: bridgorId,
                 amount: TOKEN_VALUE,
                 detailsHash,
               },
@@ -418,24 +450,18 @@ const { BridgeMessageTypes } = bridge;
           describe('remotely-originating asset', async () => {
             let setupMessage: string;
             let repr: BridgeToken;
-            let recipient: string;
-            let recipientId: string;
             let transferMessage: string;
             let fastTransferMessage: string;
 
             before(async () => {
               deploy = await TestBridgeDeploy.deploy(ethers, deployer);
 
-              // generate actions
-              recipient = `0x${'00'.repeat(19)}ff`;
-              recipientId = toBytes32(recipient);
-
               // transfer message
               const fastTransferMessageObj: types.Message = {
                 tokenId: deploy.testTokenId,
                 action: {
                   type: BridgeMessageTypes.FAST_TRANSFER,
-                  recipient: recipientId,
+                  recipient: fastTransferRecipientId,
                   amount: TOKEN_VALUE,
                   detailsHash,
                 },
@@ -448,7 +474,7 @@ const { BridgeMessageTypes } = bridge;
                 tokenId: deploy.testTokenId,
                 action: {
                   type: BridgeMessageTypes.TRANSFER,
-                  recipient: deployerId,
+                  recipient: bridgorId,
                   amount: TOKEN_VALUE,
                   detailsHash,
                 },
@@ -460,7 +486,7 @@ const { BridgeMessageTypes } = bridge;
                 tokenId: deploy.testTokenId,
                 action: {
                   type: BridgeMessageTypes.TRANSFER,
-                  recipient: deployerId,
+                  recipient: bridgorId,
                   amount: TOKEN_VALUE,
                   detailsHash,
                 },
@@ -471,7 +497,7 @@ const { BridgeMessageTypes } = bridge;
               const setupTx = await deploy.bridgeRouter!.handle(
                 deploy.remoteDomain,
                 mockNonce,
-                deployerId,
+                remoteBridgeId,
                 setupMessage,
                 { gasLimit: PROTOCOL_PROCESS_GAS },
               );
@@ -494,18 +520,20 @@ const { BridgeMessageTypes } = bridge;
                 .withArgs(
                   originAndNonce,
                   repr.address,
-                  deployerAddress,
+                  bridgorAddress,
                   ethers.constants.AddressZero,
                   BigNumber.from(TOKEN_VALUE),
                 );
 
-              expect(await repr.balanceOf(deployerAddress)).to.equal(
+              expect(await repr.balanceOf(bridgorAddress)).to.equal(
                 BigNumber.from(TOKEN_VALUE),
               );
-              await repr?.approve(
-                deploy.bridgeRouter!.address,
-                ethers.constants.MaxUint256,
-              );
+              await repr
+                ?.connect(bridgor)
+                .approve(
+                  deploy.bridgeRouter!.address,
+                  ethers.constants.MaxUint256,
+                );
             });
 
             it('reverts for non-fast transfer messages', async () => {
@@ -518,25 +546,23 @@ const { BridgeMessageTypes } = bridge;
             });
 
             it('transfers tokens on a prefill', async () => {
-              const prefillTx = await deploy.bridgeRouter!.preFill(
-                deploy.remoteDomain,
-                mockNonce,
-                fastTransferMessage,
-              );
+              const prefillTx = await deploy
+                .bridgeRouter!.connect(bridgor)
+                .preFill(deploy.remoteDomain, mockNonce, fastTransferMessage);
               await expect(prefillTx)
                 .to.emit(deploy.bridgeRouter!, 'Receive')
                 .withArgs(
                   originAndNonce,
                   repr.address,
-                  recipient,
-                  deployerAddress,
+                  fastTransferRecipient,
+                  bridgorAddress,
                   BigNumber.from(TOKEN_VALUE).mul(9995).div(10000),
                 );
               await expect(prefillTx)
                 .to.emit(repr, 'Transfer')
                 .withArgs(
-                  deployerAddress,
-                  recipient,
+                  bridgorAddress,
+                  fastTransferRecipient,
                   BigNumber.from(TOKEN_VALUE).mul(9995).div(10000),
                 );
             });
@@ -545,7 +571,7 @@ const { BridgeMessageTypes } = bridge;
               let deliver = deploy.bridgeRouter!.handle(
                 deploy.remoteDomain,
                 mockNonce,
-                deployerId,
+                remoteBridgeId,
                 fastTransferMessage,
                 { gasLimit: PROTOCOL_PROCESS_GAS },
               );
@@ -553,7 +579,7 @@ const { BridgeMessageTypes } = bridge;
                 .to.emit(repr, 'Transfer')
                 .withArgs(
                   ethers.constants.AddressZero,
-                  deployerAddress,
+                  bridgorAddress,
                   TOKEN_VALUE,
                 );
               await expect(deliver)
@@ -561,7 +587,7 @@ const { BridgeMessageTypes } = bridge;
                 .withArgs(
                   originAndNonce,
                   repr.address,
-                  deployerAddress,
+                  bridgorAddress,
                   ethers.constants.AddressZero,
                   TOKEN_VALUE,
                 );
@@ -570,20 +596,20 @@ const { BridgeMessageTypes } = bridge;
 
           describe('locally-originating asset', async () => {
             let localToken: BridgeToken;
-            let recipient: string;
-            let recipientId: string;
             let fastTransferMessage: string;
 
             before(async () => {
               deploy = await TestBridgeDeploy.deploy(ethers, deployer);
               localToken = await new BridgeToken__factory(deployer).deploy();
               await localToken.initialize();
-              await localToken.mint(deployerAddress, TOKEN_VALUE);
+              await localToken.mint(bridgorAddress, TOKEN_VALUE);
               await localToken.mint(deploy.bridgeRouter!.address, TOKEN_VALUE);
-              await localToken.approve(
-                deploy.bridgeRouter!.address,
-                ethers.constants.MaxUint256,
-              );
+              await localToken
+                .connect(bridgor)
+                .approve(
+                  deploy.bridgeRouter!.address,
+                  ethers.constants.MaxUint256,
+                );
 
               const name = await localToken.name();
               const symbol = await localToken.symbol();
@@ -593,16 +619,12 @@ const { BridgeMessageTypes } = bridge;
                 deploy.testDecimals,
               );
 
-              expect(await localToken.balanceOf(deployerAddress)).to.equal(
+              expect(await localToken.balanceOf(bridgorAddress)).to.equal(
                 BigNumber.from(TOKEN_VALUE),
               );
               expect(
                 await localToken.balanceOf(deploy.bridgeRouter!.address),
               ).to.equal(BigNumber.from(TOKEN_VALUE));
-
-              // generate transfer action
-              recipient = `0x${'00'.repeat(19)}ff`;
-              recipientId = toBytes32(recipient);
 
               const fastTransferMessageObj: types.Message = {
                 tokenId: {
@@ -611,7 +633,7 @@ const { BridgeMessageTypes } = bridge;
                 },
                 action: {
                   type: BridgeMessageTypes.FAST_TRANSFER,
-                  recipient: recipientId,
+                  recipient: fastTransferRecipientId,
                   amount: TOKEN_VALUE,
                   detailsHash: localDetailsHash,
                 },
@@ -621,17 +643,24 @@ const { BridgeMessageTypes } = bridge;
               );
             });
 
-            it('transfers tokens on prefill', async () => {
-              const prefillTx = await deploy.bridgeRouter!.preFill(
-                deploy.remoteDomain,
-                mockNonce,
-                fastTransferMessage,
-              );
+            it(`transfers tokens and dusts on prefill`, async () => {
+              // transfer some dust to the bridge
+              await deployer.sendTransaction({
+                to: deploy.bridgeRouter!.address,
+                value: DUST,
+              });
+
+              await expect(
+                deployer.provider!.getBalance(fastTransferRecipient),
+              ).to.equal(0);
+              const prefillTx = await deploy
+                .bridgeRouter!.connect(bridgor)
+                .preFill(deploy.remoteDomain, mockNonce, fastTransferMessage);
               await expect(prefillTx)
                 .to.emit(localToken, 'Transfer')
                 .withArgs(
-                  deployerAddress,
-                  recipient,
+                  bridgorAddress,
+                  fastTransferRecipient,
                   BigNumber.from(TOKEN_VALUE).mul(9995).div(10000),
                 );
               await expect(prefillTx)
@@ -639,17 +668,21 @@ const { BridgeMessageTypes } = bridge;
                 .withArgs(
                   originAndNonce,
                   localToken.address,
-                  recipient,
-                  deployerAddress,
+                  fastTransferRecipient,
+                  bridgorAddress,
                   BigNumber.from(TOKEN_VALUE).mul(9995).div(10000),
                 );
+              // expect the recipient to get that dust in the prefill
+              await expect(
+                deployer.provider!.getBalance(fastTransferRecipient),
+              ).to.equal(DUST);
             });
 
             it('unlocks tokens on message receipt', async () => {
               let deliver = deploy.bridgeRouter!.handle(
                 deploy.remoteDomain,
                 mockNonce,
-                deployerId,
+                remoteBridgeId,
                 fastTransferMessage,
                 { gasLimit: PROTOCOL_PROCESS_GAS },
               );
@@ -657,7 +690,7 @@ const { BridgeMessageTypes } = bridge;
                 .to.emit(localToken, 'Transfer')
                 .withArgs(
                   deploy.bridgeRouter!.address,
-                  deployerAddress,
+                  bridgorAddress,
                   TOKEN_VALUE,
                 );
               await expect(deliver)
@@ -665,7 +698,7 @@ const { BridgeMessageTypes } = bridge;
                 .withArgs(
                   originAndNonce,
                   localToken.address,
-                  deployerAddress,
+                  bridgorAddress,
                   ethers.constants.AddressZero,
                   TOKEN_VALUE,
                 );
