@@ -40,11 +40,16 @@ export default defineComponent({
     return {
       truncateAddr,
       address: '',
-      // TODO: save transactions in localstorage
-      history: ref([]) as any
+      history: this.getHistory()
     }
   },
   methods: {
+    getHistory() {
+      if (Object.prototype.hasOwnProperty.call(localStorage, 'example_history')) {
+        return ref(JSON.parse(localStorage.getItem('example_history')!))
+      }
+      return ref([])
+    },
     async connect() {
       try {
         const address = await connectWallet()
@@ -57,6 +62,7 @@ export default defineComponent({
     pushHistory(tx: TXData) {
       console.log('new transaction', tx)
       this.history.push({ key: tx.hash, ...tx })
+      localStorage.setItem('example_history', JSON.stringify(this.history))
     }
   }
 });

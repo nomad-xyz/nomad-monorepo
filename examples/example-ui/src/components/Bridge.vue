@@ -101,7 +101,6 @@ export default defineComponent({
     const formRef = ref(null)
     return {
       formRef,
-      sending: false,
       tokenOptions: generateTokenOptions(),
       networkOptions: generateNetworkOptions(),
       formValue: ref({
@@ -136,6 +135,11 @@ export default defineComponent({
           },
         },
       },
+    }
+  },
+  data() {
+    return {
+      sending: false
     }
   },
   methods: {
