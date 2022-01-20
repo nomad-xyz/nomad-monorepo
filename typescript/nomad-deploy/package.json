@@ -29,6 +29,7 @@
     "add-staging-core": "npx ts-node scripts/staging/governance/deployNewCore.ts",
     "add-staging-bridges": "npx ts-node scripts/staging/governance/deployNewBridge.ts",
     "enroll-staging": "npx ts-node scripts/staging/governance/enrollNewChain.ts",
+    "check-staging": "npx ts-node scripts/staging/governance/checkNewChain.ts",
     "deploy-prod-core": "npx ts-node scripts/mainnet/core.ts",
     "deploy-prod-bridges": "npx ts-node scripts/mainnet/bridge.ts"
   },
