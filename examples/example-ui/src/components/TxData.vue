@@ -5,7 +5,16 @@
     <div>Sender: {{ originAddr }}</div>
     <div>Recipient: {{ destAddr }}</div>
     <div>Status: {{ statusText }}</div>
-    <n-button v-if="readyToProcess" @click="process">Claim</n-button>
+
+    <n-button
+      v-if="readyToProcess"
+      @click="process"
+      :loading="processing"
+      :disabled="processing"
+      icon-placement="left"
+    >
+      Claim
+    </n-button>
   </div>
 </template>
 
@@ -14,7 +23,14 @@ import { defineComponent } from 'vue';
 import { utils, BigNumber } from 'ethers'
 import { TransferMessage } from '@nomad-xyz/sdk/nomad/messages/BridgeMessage'
 import { NButton } from 'naive-ui'
-import { getTxMessage, TXData, fromBytes32, resolveRepresentation, getStatusText } from '@/utils/sdk';
+import {
+  getTxMessage,
+  TXData,
+  fromBytes32,
+  resolveRepresentation,
+  getStatusText,
+  processTx
+} from '@/utils/sdk';
 
 export default defineComponent({
   name: 'Transaction Data',
@@ -32,6 +48,7 @@ export default defineComponent({
   },
   data() {
     return {
+      processing: false,
       originAddr: '',
       destAddr: '',
       token: '',
@@ -81,7 +98,16 @@ export default defineComponent({
       }
     },
     async process() {
-      // TODO: process transaction
+      // set processing spinner, disable button
+      this.processing = true
+      try {
+        await processTx(this.tx as TXData)
+        this.processing = false
+        console.log('Processed successfully!')
+      } catch(e) {
+        this.processing = false
+        console.error(e)
+      }
     }
   },
   computed: {

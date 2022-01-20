@@ -40,7 +40,15 @@
       <n-form-item>
         <!-- if no address, user is not connected -->
         <n-button v-if="!address" @click="$emit('connect')">Connect Wallet</n-button>
-        <n-button v-else @click="send">Bridge Tokens</n-button>
+        <n-button
+          v-else
+          @click="send"
+          :loading="sending"
+          :disabled="sending"
+          icon-placement="left"
+        >
+          Bridge Tokens
+        </n-button>
       </n-form-item>
     </n-form>
   </n-card>
@@ -93,6 +101,7 @@ export default defineComponent({
     const formRef = ref(null)
     return {
       formRef,
+      sending: false,
       tokenOptions: generateTokenOptions(),
       networkOptions: generateNetworkOptions(),
       formValue: ref({
@@ -131,6 +140,7 @@ export default defineComponent({
   },
   methods: {
     async send() {
+      this.sending = true
       // TODO: validate before sending
       console.log('send')
       const { amount, token, originNetwork, destinationNetwork } = this.formValue.sendData
@@ -140,16 +150,26 @@ export default defineComponent({
       await switchNetwork(originNetwork)
       await registerNewSigner(originNetwork)
 
-      const transferMessage = await send(originNetwork, destinationNetwork, amount, token, this.address)
-      console.log(transferMessage)
-
-      // emit new transaction
-      const txData: TXData = {
-        origin: originNetwork,
-        destination: destinationNetwork,
-        hash: transferMessage.receipt.transactionHash
+      // send and receive transferMessage
+      let transferMessage
+      try {
+        transferMessage = await send(originNetwork, destinationNetwork, amount, token, this.address)
+        this.sending = false
+        console.log('Transaction dispatched successfully!', transferMessage)
+      } catch(e) {
+        this.sending = false
+        console.error(e)
       }
-      this.$emit('newTx', txData)
+
+      if (transferMessage) {
+        // emit new transaction
+        const txData: TXData = {
+          origin: originNetwork,
+          destination: destinationNetwork,
+          hash: transferMessage.receipt.transactionHash
+        }
+        this.$emit('newTx', txData)
+      }
     }
   }
 });
