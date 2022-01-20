@@ -240,6 +240,7 @@ contract BridgeRouter is Version0, Router {
         uint256 _amount = _applyPreFillFee(_action.amnt());
         // transfer tokens from liquidity provider to token recipient
         _token.safeTransferFrom(_liquidityProvider, _recipient, _amount);
+        // dust the recipient if appropriate
         _dust(_recipient);
         // emit event
         emit Receive(
@@ -352,6 +353,7 @@ contract BridgeRouter is Version0, Router {
             // Tell the token what its detailsHash is
             IBridgeToken(_token).setDetailsHash(_action.detailsHash());
         }
+        // dust the recipient if appropriate
         _dust(_recipient);
         // emit Receive event
         emit Receive(
@@ -384,18 +386,23 @@ contract BridgeRouter is Version0, Router {
     }
 
     /**
-     * @notice Dust the recipient.
+     * @notice Dust the recipient. This feature allows chain operators to use
+     * the Bridge as a faucet if so desired. Any gas asset held by the
+     * bridge will be slowly sent to users who need initial gas bootstrapping
      * @dev Does not dust if insufficient funds, or if user has funds already
      */
     function _dust(address _recipient) internal {
         if (
-            _recipient.balance <= DUST_AMOUNT &&
+            _recipient.balance < DUST_AMOUNT &&
             address(this).balance >= DUST_AMOUNT
         ) {
             // `send` gives execution 2300 gas and returns a `success` boolean.
             // however, we do not care if the call fails. A failed call
             // indicates a smart contract attempting to execute logic, which we
             // specifically do not want.
+            // While we could check EXTCODESIZE, it seems sufficient to rely on
+            // the 2300 gas stipend to ensure that no state change logic can
+            // be executed.
             payable(_recipient).send(DUST_AMOUNT);
         }
     }

@@ -93,6 +93,14 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.TestBridgeMessage__factory>;
     getContractFactory(
+      name: "CantBePaid",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.CantBePaid__factory>;
+    getContractFactory(
+      name: "TestBridgeRouter",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.TestBridgeRouter__factory>;
+    getContractFactory(
       name: "TestEncoding",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.TestEncoding__factory>;
