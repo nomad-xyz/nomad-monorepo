@@ -2,15 +2,18 @@
   "name": "moonbasealpha",
   "id": 5000,
   "paginate": {
-    "from": 1507573,
+    "from": 1555095,
     "blocks": 2000
   },
-  "home": "0x926Df2b652bC8273BB2F06E8de135875bbE1D271",
+  "home": "0x79F0267e3e4E457E13Ed79552D3606382bb0F66a",
   "replicas": [
     {
-      "domain": 3000,
-      "address": "0x1d77eDee9bb5EA223ab83B7a1B67F931879D6e5B"
+      "domain": 2000,
+      "address": "0x6d8aCF60f3ddB6C49dEF2A2b77E56BE2FF1502Cf"
     }
   ],
-  "governanceRouter": "0x857d6dE0a9e3F985768FE164844b3e621893B904"
+  "governanceRouter": "0x22431cD0b489f148fd34baEE3AcCF815750AC732",
+  "bridgeRouter": "n/a",
+  "tokenRegistry": "n/a",
+  "xAppConnectionManager": "0xD99E2c5eD0AacE4c459A850bd2DE0b1c0De12bfD"
 }
