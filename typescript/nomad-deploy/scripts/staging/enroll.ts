@@ -17,7 +17,7 @@ const path = getPathToDeployConfig('staging');
 // Instantiate existing governor deploys on Rinkeby
 const rinkebyCoreDeploy = ExistingCoreDeploy.withPath(
   rinkeby.chain,
-  rinkeby.devConfig,
+  rinkeby.stagingConfig,
   path,
 );
 const rinkebyBridgeDeploy = new ExistingBridgeDeploy(

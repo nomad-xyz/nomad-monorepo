@@ -4,10 +4,11 @@ import { assertBeaconProxy } from '../core/checks';
 import { BridgeDeploy as Deploy } from './BridgeDeploy';
 import TestBridgeDeploy from './TestBridgeDeploy';
 import { checkVerificationInput } from '../core/checks';
+import { AnyBridgeDeploy } from '.';
 
 const emptyAddr = '0x' + '00'.repeat(32);
 
-export async function checkBridgeDeploy(
+export async function checkBridgeDeployValues(
   deploy: Deploy | TestBridgeDeploy,
   remotes: number[],
 ) {
@@ -21,13 +22,6 @@ export async function checkBridgeDeploy(
   }
 
   const bridgeRouter = deploy.contracts.bridgeRouter?.proxy!;
-  await Promise.all(
-    remotes.map(async (remoteDomain) => {
-      const registeredRouter = await bridgeRouter.remotes(remoteDomain);
-      expect(registeredRouter).to.not.equal(emptyAddr);
-    }),
-  );
-
   expect(await bridgeRouter.owner()).to.equal(
     deploy.coreContractAddresses.governance.proxy,
   );
@@ -80,4 +74,40 @@ export async function checkBridgeDeploy(
       ).length,
     ).to.equal(1, 'No eth helper found');
   }
+}
+
+/// Check bridge connections for an n-to-n setup (all connected to all)
+export async function checkBridgeConnections(deploys: AnyBridgeDeploy[]) {
+  for (const deploy of deploys) {
+    const bridgeRouter = deploy.contracts.bridgeRouter?.proxy!;
+    const remotes = deploys.filter(
+      (currDeploy) => deploy.chain.domain !== currDeploy.chain.domain,
+    );
+
+    remotes.forEach(async (remote) => {
+      const remoteDomain = remote.chain.domain;
+      const registeredRouter = await bridgeRouter.remotes(remoteDomain);
+      expect(registeredRouter).to.not.equal(emptyAddr);
+    });
+  }
+}
+
+/// Check bridge connections for an hub and spoke setup
+export async function checkHubAndSpokeBridgeConnections(
+  hub: AnyBridgeDeploy,
+  spokes: AnyBridgeDeploy[],
+) {
+  const hubRouter = hub.contracts.bridgeRouter?.proxy!;
+  spokes.forEach(async (spoke) => {
+    // Hub has registered spoke
+    const spokeDomain = spoke.chain.domain;
+    const hubRegisteredRouter = await hubRouter.remotes(spokeDomain);
+    expect(hubRegisteredRouter).to.not.equal(emptyAddr);
+
+    // Spoke has registered hub
+    const hubDomain = hub.chain.domain;
+    const spokeRouter = spoke.contracts.bridgeRouter?.proxy!;
+    const spokeRegisteredRouter = await spokeRouter.remotes(hubDomain);
+    expect(spokeRegisteredRouter).to.not.equal(emptyAddr);
+  });
 }
