@@ -1,0 +1,19 @@
+{
+  "name": "rinkeby",
+  "id": 2000,
+  "paginate": {
+    "from": 10025167,
+    "blocks": 2000
+  },
+  "home": "0x8eA98384C671E4612fDdA50B7CB9D62Bf8dD7560",
+  "replicas": [
+    {
+      "domain": 5000,
+      "address": "0xD8066555F819D8179f506dBA38a7b51337b093a5"
+    }
+  ],
+  "governanceRouter": "0x954EdA7095D43D6A6aC055892Bd0bAE2FE330FeD",
+  "bridgeRouter": "n/a",
+  "tokenRegistry": "n/a",
+  "xAppConnectionManager": "0x61eBE3cD74B829b2b5880E28F2dCf86D1f7B9C56"
+}

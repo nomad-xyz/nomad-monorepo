@@ -1,0 +1,19 @@
+{
+  "name": "moonbasealpha",
+  "id": 5000,
+  "paginate": {
+    "from": 1555371,
+    "blocks": 2000
+  },
+  "home": "0xFD421144bE0b0E935600D4cdAcC7343BE182B031",
+  "replicas": [
+    {
+      "domain": 2000,
+      "address": "0x925525eD3E4b662e6562b6f8FD8936270036B718"
+    }
+  ],
+  "governanceRouter": "0x02FD8C48191A09150c1b6243A2539F6f9F302e42",
+  "bridgeRouter": "n/a",
+  "tokenRegistry": "n/a",
+  "xAppConnectionManager": "0x49878E27A2D9f79588ad20F0856190496e9758cA"
+}
