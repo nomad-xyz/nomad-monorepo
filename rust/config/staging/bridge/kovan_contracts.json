@@ -1,0 +1,18 @@
+{
+  "bridgeRouter": {
+    "implementation": "0x32C1b6d17C9342b531Eb7e94FB5164d5ea70Acf5",
+    "proxy": "0xA6BC9eaA7D2CEF7ECd2651c228D2c1d23765e008",
+    "beacon": "0x3D920C1d374E39568aF209b99E48cE95177ab0A9"
+  },
+  "tokenRegistry": {
+    "implementation": "0x3BF3a58De6F9Eb4d2AF6CB814ABBb18D89A3ce00",
+    "proxy": "0xDBbe03850fDF986Df1C8f1D856012f80A1f98eCc",
+    "beacon": "0x97003cF31A85AA8dc4b174924949E4a69105eb16"
+  },
+  "bridgeToken": {
+    "implementation": "0x2c9d5fc78758213c59A40dE52E61f0e566DD96d1",
+    "proxy": "0x18C8EcCF36E39D174d269c98B1eb8Fb082EF1cc1",
+    "beacon": "0x79977edB87EaCbf8923f4f81b62811Ffe4D8B27d"
+  },
+  "ethHelper": "0xF36660cBAcb93DA7A31DB59cF13F311E5ae51C2c"
+}

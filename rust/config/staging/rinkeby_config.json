@@ -5,12 +5,27 @@
       "key": "",
       "type": "hexKey"
     },
+    "kovan": {
+      "key": "",
+      "type": "hexKey"
+    },
     "moonbasealpha": {
       "key": "",
       "type": "hexKey"
     }
   },
   "replicas": {
+    "kovan": {
+      "address": "0x9294b586477D6112002aBD2e88f5E873DCf8ed45",
+      "domain": "3000",
+      "name": "kovan",
+      "rpcStyle": "ethereum",
+      "timelag": 5,
+      "connection": {
+        "type": "http",
+        "url": ""
+      }
+    },
     "moonbasealpha": {
       "address": "0x925525eD3E4b662e6562b6f8FD8936270036B718",
       "domain": "5000",

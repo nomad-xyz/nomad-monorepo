@@ -1,0 +1,19 @@
+{
+  "name": "kovan",
+  "id": 3000,
+  "paginate": {
+    "from": 29368769,
+    "blocks": 2000
+  },
+  "home": "0xB4ceF5bd5328c42F3f09b9A43F6010ea93f145f1",
+  "replicas": [
+    {
+      "domain": 2000,
+      "address": "0x9294b586477D6112002aBD2e88f5E873DCf8ed45"
+    }
+  ],
+  "governanceRouter": "0xd1bF8891884a88174E0864B55e67229379516594",
+  "bridgeRouter": "n/a",
+  "tokenRegistry": "n/a",
+  "xAppConnectionManager": "0xccB3a19dFe57dc4Ad807a797c441aa66758157BE"
+}
