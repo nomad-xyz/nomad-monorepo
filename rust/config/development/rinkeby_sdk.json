@@ -8,6 +8,10 @@
   "home": "0xBfCBCCce35D8a6e8056c92f225768EbBfBbf1293",
   "replicas": [
     {
+      "domain": 3000,
+      "address": "0x7DF0496470369FFFACB660A5139e1649ABFE9D21"
+    },
+    {
       "domain": 5000,
       "address": "0xA062dcaEc568Ccf01560F168D0638af2fE663019"
     }
