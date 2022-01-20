@@ -7,7 +7,7 @@ import {
 import { deployNewChainBridge } from '../../../src/bridge';
 import { getPathToDeployConfig } from '../../../src/verification/readDeployOutput';
 
-const path = getPathToDeployConfig('staging');
+const path = getPathToDeployConfig('dev');
 
 // Instantiate existing governor deploys on Rinkeby
 const rinkebyBridgeDeploy = new ExistingBridgeDeploy(

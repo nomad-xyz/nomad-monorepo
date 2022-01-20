@@ -60,10 +60,12 @@ export async function enrollSpoke(
   // turn into a tx request
   const built = await batch.build();
 
-  console.log("unbuilt:");
-  console.log(JSON.stringify({local: batch.local, remote: batch.remote}, null, 2));
+  console.log('unbuilt:');
+  console.log(
+    JSON.stringify({ local: batch.local, remote: batch.remote }, null, 2),
+  );
 
-  console.log("built:");
+  console.log('built:');
   console.log(JSON.stringify(built, null, 2));
 
   // TODO: output governance transaction to a file
