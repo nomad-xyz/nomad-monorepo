@@ -5,45 +5,52 @@ import { ExistingBridgeDeploy } from '../../../src/bridge/BridgeDeploy';
 import { getPathToDeployConfig } from '../../../src/verification/readDeployOutput';
 import { deploysToSDK } from '../../../src/incremental/utils';
 import { enrollSpoke } from '../../../src/incremental';
-import { NomadContext } from '@nomad-xyz/sdk/src';
 import { checkHubToSpokeConnection } from '../../../src/incremental/checks';
+import { NomadContext } from '@nomad-xyz/sdk';
 
 const path = getPathToDeployConfig('dev');
 
 // Instantiate existing governor deploy on Rinkeby
-const rinkebyExistingCoreDeploy = ExistingCoreDeploy.withPath(
+const rinkebyCoreDeploy = ExistingCoreDeploy.withPath(
   rinkeby.chain,
   rinkeby.devConfig,
   path,
 );
-const rinkebyExistingBridgeDeploy = new ExistingBridgeDeploy(
+const rinkebyBridgeDeploy = new ExistingBridgeDeploy(
   rinkeby.chain,
   rinkeby.bridgeConfig,
   path,
 );
 const rinkebyDomain = deploysToSDK(
-  rinkebyExistingCoreDeploy,
-  rinkebyExistingBridgeDeploy,
+  rinkebyCoreDeploy,
+  rinkebyBridgeDeploy,
 );
 
 // Enroll Kovan as spoke to Rinkeby hub
-const kovanExistingCoreDeploy = ExistingCoreDeploy.withPath(
+const kovanCoreDeploy = ExistingCoreDeploy.withPath(
   kovan.chain,
   kovan.devConfig,
   path,
 );
-const kovanExistingBridgeDeploy = new ExistingBridgeDeploy(
+const kovanBridgeDeploy = new ExistingBridgeDeploy(
   kovan.chain,
   kovan.bridgeConfig,
   path,
 );
 const kovanDomain = deploysToSDK(
-  kovanExistingCoreDeploy,
-  kovanExistingBridgeDeploy,
+  kovanCoreDeploy,
+  kovanBridgeDeploy,
 );
 
-const sdk = NomadContext.fromDomains([rinkebyDomain, kovanDomain]);
+// setup SDK
+const sdkDomains = [rinkebyDomain, kovanDomain];
+const sdk = NomadContext.fromDomains(sdkDomains);
+sdkDomains.map(core => {
+    sdk.registerProvider(core.chain.domain, core.provider);
+    sdk.registerSigner(core.chain.domain, core.deployer);
+});
 
+// enroll spoke then check enrollment
 (async () => {
   await enrollSpoke(sdk, kovanDomain.id, kovan.stagingConfig.watchers);
   await checkHubToSpokeConnection(
@@ -52,3 +59,4 @@ const sdk = NomadContext.fromDomains([rinkebyDomain, kovanDomain]);
     kovan.stagingConfig.watchers,
   );
 })();
+
