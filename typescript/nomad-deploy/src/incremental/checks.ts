@@ -54,6 +54,8 @@ export async function checkHubAndSpokeConnections(sdk: NomadContext, spokeDomain
       spokeCore.governanceRouterAddress.toLowerCase(),
       `Wrong remote GovernanceRouter address at hub`,
   );
+
+  console.log("Checks passed!");
 }
 
 export async function checkHubToSpokeConnectionWithWaiter(

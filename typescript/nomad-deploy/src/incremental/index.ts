@@ -61,7 +61,10 @@ export async function enrollSpoke(
 
   if (spokeConfig.environment === 'dev') {
     // in dev, execute the batch directly
-    await batch.execute();
+    console.log("Sending governance transaction...");
+    const txResponse = await batch.execute();
+    const receipt = await txResponse.wait();
+    console.log("Governance tx mined!! ", receipt.transactionHash);
   } else {
     // in staging and prod, output batch to a file
     const built = await batch.build();
@@ -71,8 +74,9 @@ export async function enrollSpoke(
       2,
     );
     const builtStr = JSON.stringify(built, null, 2);
-
+    console.log("Writing governance transaction to file");
     writeBatchOutput(builtStr, unbuiltStr, spokeConfig.environment);
+    console.log("Done!");
     // TODO: send to gnosis safe directly
   }
 }

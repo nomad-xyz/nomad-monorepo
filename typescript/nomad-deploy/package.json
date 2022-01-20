@@ -23,6 +23,7 @@
     "add-dev-core": "npx ts-node scripts/development/governance/deployNewCore.ts",
     "add-dev-bridges": "npx ts-node scripts/development/governance/deployNewBridge.ts",
     "enroll-dev": "npx ts-node scripts/development/governance/enrollNewChain.ts",
+    "check-dev": "npx ts-node scripts/development/governance/checkNewChain.ts",
     "deploy-staging-core": "npx ts-node scripts/staging/core.ts",
     "deploy-staging-bridges": "npx ts-node scripts/staging/bridge.ts",
     "add-staging-core": "npx ts-node scripts/staging/governance/deployNewCore.ts",
