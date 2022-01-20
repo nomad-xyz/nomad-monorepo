@@ -1,76 +1,76 @@
 [
   {
     "name": "BridgeToken Implementation",
-    "address": "0x2c9d5fc78758213c59A40dE52E61f0e566DD96d1",
+    "address": "0x592E82bce3095DDE7F80E90F321DeEf72f1Ba00a",
     "constructorArguments": []
   },
   {
     "name": "BridgeToken UpgradeBeacon",
-    "address": "0x79977edB87EaCbf8923f4f81b62811Ffe4D8B27d",
+    "address": "0xB3f1e4d8eB9F47Fa56116978713Ee8Df8A8dCC01",
     "constructorArguments": [
-      "0x2c9d5fc78758213c59A40dE52E61f0e566DD96d1",
-      "0x65ffF99466d026d5d189E0173bb2424543D3b5C4"
+      "0x592E82bce3095DDE7F80E90F321DeEf72f1Ba00a",
+      "0xC76f53cD2C7Ac383e564FbB3790Df1702B21A574"
     ]
   },
   {
     "name": "BridgeToken Proxy",
-    "address": "0x18C8EcCF36E39D174d269c98B1eb8Fb082EF1cc1",
+    "address": "0x6F8Bf67F0187E109cE1D0110736109808b3e5E9c",
     "constructorArguments": [
-      "0x79977edB87EaCbf8923f4f81b62811Ffe4D8B27d",
+      "0xB3f1e4d8eB9F47Fa56116978713Ee8Df8A8dCC01",
       "0x"
     ],
     "isProxy": true
   },
   {
     "name": "TokenRegistry Implementation",
-    "address": "0x3BF3a58De6F9Eb4d2AF6CB814ABBb18D89A3ce00",
+    "address": "0x63A0E2380F50c48d226d2666fF7646A45542205a",
     "constructorArguments": []
   },
   {
     "name": "TokenRegistry UpgradeBeacon",
-    "address": "0x97003cF31A85AA8dc4b174924949E4a69105eb16",
+    "address": "0x2E6Ae9Ca1C987D2F4716de414B44FC099533E4ad",
     "constructorArguments": [
-      "0x3BF3a58De6F9Eb4d2AF6CB814ABBb18D89A3ce00",
-      "0x65ffF99466d026d5d189E0173bb2424543D3b5C4"
+      "0x63A0E2380F50c48d226d2666fF7646A45542205a",
+      "0xC76f53cD2C7Ac383e564FbB3790Df1702B21A574"
     ]
   },
   {
     "name": "TokenRegistry Proxy",
-    "address": "0xDBbe03850fDF986Df1C8f1D856012f80A1f98eCc",
+    "address": "0x04062bbE05607afFcbc70FbAB1A36EF661b51760",
     "constructorArguments": [
-      "0x97003cF31A85AA8dc4b174924949E4a69105eb16",
-      "0x485cc95500000000000000000000000079977edb87eacbf8923f4f81b62811ffe4d8b27d000000000000000000000000ccb3a19dfe57dc4ad807a797c441aa66758157be"
+      "0x2E6Ae9Ca1C987D2F4716de414B44FC099533E4ad",
+      "0x485cc955000000000000000000000000b3f1e4d8eb9f47fa56116978713ee8df8a8dcc01000000000000000000000000fa148438b26d36bce290a45e12aa00bdf0b9ca2e"
     ],
     "isProxy": true
   },
   {
     "name": "BridgeRouter Implementation",
-    "address": "0x32C1b6d17C9342b531Eb7e94FB5164d5ea70Acf5",
+    "address": "0x8423980e7A20cB370b3406aBB649c0F9123F8056",
     "constructorArguments": []
   },
   {
     "name": "BridgeRouter UpgradeBeacon",
-    "address": "0x3D920C1d374E39568aF209b99E48cE95177ab0A9",
+    "address": "0x2e256d42DC17850229B438E3614a5bdBbf0e5F44",
     "constructorArguments": [
-      "0x32C1b6d17C9342b531Eb7e94FB5164d5ea70Acf5",
-      "0x65ffF99466d026d5d189E0173bb2424543D3b5C4"
+      "0x8423980e7A20cB370b3406aBB649c0F9123F8056",
+      "0xC76f53cD2C7Ac383e564FbB3790Df1702B21A574"
     ]
   },
   {
     "name": "BridgeRouter Proxy",
-    "address": "0xA6BC9eaA7D2CEF7ECd2651c228D2c1d23765e008",
+    "address": "0xe2364b8B5BE2BE6B32B5BA77e29F4c22944E3ce8",
     "constructorArguments": [
-      "0x3D920C1d374E39568aF209b99E48cE95177ab0A9",
-      "0x485cc955000000000000000000000000dbbe03850fdf986df1c8f1d856012f80a1f98ecc000000000000000000000000ccb3a19dfe57dc4ad807a797c441aa66758157be"
+      "0x2e256d42DC17850229B438E3614a5bdBbf0e5F44",
+      "0x485cc95500000000000000000000000004062bbe05607affcbc70fbab1a36ef661b51760000000000000000000000000fa148438b26d36bce290a45e12aa00bdf0b9ca2e"
     ],
     "isProxy": true
   },
   {
     "name": "ETH Helper",
-    "address": "0xF36660cBAcb93DA7A31DB59cF13F311E5ae51C2c",
+    "address": "0x8679A6f835b4Bd647035d623571894665099ac36",
     "constructorArguments": [
       "0xd0a1e359811322d97991e03f863a0c30c2cf029c",
-      "0xA6BC9eaA7D2CEF7ECd2651c228D2c1d23765e008"
+      "0xe2364b8B5BE2BE6B32B5BA77e29F4c22944E3ce8"
     ]
   }
 ]

@@ -2,18 +2,18 @@
   "name": "kovan",
   "id": 3000,
   "paginate": {
-    "from": 29368769,
+    "from": 29371350,
     "blocks": 2000
   },
-  "home": "0xB4ceF5bd5328c42F3f09b9A43F6010ea93f145f1",
+  "home": "0x85789e726B31cB74ba471aeF5FF93c3f68AE510F",
   "replicas": [
     {
       "domain": 2000,
-      "address": "0x9294b586477D6112002aBD2e88f5E873DCf8ed45"
+      "address": "0x3C4BD86F76E524EA81B3E84eE75C964A2ae20bc1"
     }
   ],
-  "governanceRouter": "0xd1bF8891884a88174E0864B55e67229379516594",
+  "governanceRouter": "0x01403db34b7aFCb5144D9c37876da5ef58b66646",
   "bridgeRouter": "n/a",
   "tokenRegistry": "n/a",
-  "xAppConnectionManager": "0xccB3a19dFe57dc4Ad807a797c441aa66758157BE"
+  "xAppConnectionManager": "0xFA148438B26D36bcE290a45e12AA00Bdf0B9ca2e"
 }

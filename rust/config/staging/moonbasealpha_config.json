@@ -12,7 +12,7 @@
   },
   "replicas": {
     "rinkeby": {
-      "address": "0xD8066555F819D8179f506dBA38a7b51337b093a5",
+      "address": "0x4058C320fe3Ee874FeC5e83B5BcA9267641C60bE",
       "domain": "2000",
       "name": "rinkeby",
       "rpcStyle": "ethereum",
@@ -24,7 +24,7 @@
     }
   },
   "home": {
-    "address": "0xFD421144bE0b0E935600D4cdAcC7343BE182B031",
+    "address": "0xeA5EE132A66c2cE09AEB8baDdabb26EcF33603AE",
     "domain": "5000",
     "name": "moonbasealpha",
     "rpcStyle": "ethereum",
@@ -40,7 +40,7 @@
   },
   "db": "db_path",
   "index": {
-    "from": "1555371",
+    "from": "1556676",
     "chunk": "2000"
   }
 }

@@ -1,31 +1,31 @@
 {
-  "upgradeBeaconController": "0x5756b170677b9E10db29741FE14ef1D761FEFCB3",
-  "xAppConnectionManager": "0x61eBE3cD74B829b2b5880E28F2dCf86D1f7B9C56",
-  "updaterManager": "0x23f17c14ed0f529FAa25DD0a8ab542Dd05fc9A8D",
+  "upgradeBeaconController": "0xc87243FC20ba9CcbaeaF223C193d5AB056113609",
+  "xAppConnectionManager": "0xB72E8910e67B5743E9255F1BEa2F9e0EADbB4E65",
+  "updaterManager": "0xe12f91d610e880292200c49870f4b80B32236fBd",
   "governance": {
-    "implementation": "0xc5dB53513eB47C857A5bEff381b111588CB4623F",
-    "proxy": "0x954EdA7095D43D6A6aC055892Bd0bAE2FE330FeD",
-    "beacon": "0xd29b41335092D1427463D4e4a5fC28D90f2A695c"
+    "implementation": "0x7b87FFF56Ae297a76966802cCB80668FEe59560c",
+    "proxy": "0x681bb680067909552C868b54329F8b14342837E4",
+    "beacon": "0x02AA899c385420A0aC6CBd699f2a2D525e3C4D12"
   },
   "home": {
-    "implementation": "0xCc12975702af4ab9faaAFb77259422C16a73b02B",
-    "proxy": "0x8eA98384C671E4612fDdA50B7CB9D62Bf8dD7560",
-    "beacon": "0x311DD715Fdaf80aD5Cf2dF2d8A6C05D7207205e4"
+    "implementation": "0xFD95a4A81B776De8f006bD948494feF579E4E61A",
+    "proxy": "0x86BE4e9Bc9d1dd25866477a343ea8FD2cCf11dF9",
+    "beacon": "0x2286968480CB6A5d22460769d56D4081cD9b1645"
   },
   "replicas": {
     "3000": {
-      "implementation": "0x25404979eFf47268Ab7f0376039f10c193b584DB",
-      "proxy": "0xf49f30cb48e742AEC6a9632b2E40cd01a8952542",
-      "beacon": "0xa72359d3BE8C34C7ab82ac3A5bd9b61a3A74D1a3"
+      "implementation": "0x2D701969F694e0CFa4f1F0978B1A16307FC16e42",
+      "proxy": "0x3F28A3e66326c3aa494d4F8e9477d1397EE94432",
+      "beacon": "0xC2175E11894DCb181a3D0e2bA783bc7CA47a5Bcc"
     },
     "5000": {
-      "implementation": "0x25404979eFf47268Ab7f0376039f10c193b584DB",
-      "proxy": "0xD8066555F819D8179f506dBA38a7b51337b093a5",
-      "beacon": "0xa72359d3BE8C34C7ab82ac3A5bd9b61a3A74D1a3"
+      "implementation": "0x2D701969F694e0CFa4f1F0978B1A16307FC16e42",
+      "proxy": "0x4058C320fe3Ee874FeC5e83B5BcA9267641C60bE",
+      "beacon": "0xC2175E11894DCb181a3D0e2bA783bc7CA47a5Bcc"
     }
   },
   "recoveryManager": "0x812c096810e8eFAA73efF841B601Ab82a7be9aB0",
-  "updater": "0x201dd86063Dc251cA5a576d1b7365C38e5fB4CD5",
+  "updater": "0x6b237D5AF6E5116Fe27116C0F6257Caa6721d043",
   "governor": {
     "address": "0x812c096810e8eFAA73efF841B601Ab82a7be9aB0",
     "domain": 2000

@@ -2,22 +2,22 @@
   "name": "rinkeby",
   "id": 2000,
   "paginate": {
-    "from": 10025167,
+    "from": 0,
     "blocks": 2000
   },
-  "home": "0x8eA98384C671E4612fDdA50B7CB9D62Bf8dD7560",
+  "home": "0x86BE4e9Bc9d1dd25866477a343ea8FD2cCf11dF9",
   "replicas": [
     {
       "domain": 3000,
-      "address": "0xf49f30cb48e742AEC6a9632b2E40cd01a8952542"
+      "address": "0x3F28A3e66326c3aa494d4F8e9477d1397EE94432"
     },
     {
       "domain": 5000,
-      "address": "0xD8066555F819D8179f506dBA38a7b51337b093a5"
+      "address": "0x4058C320fe3Ee874FeC5e83B5BcA9267641C60bE"
     }
   ],
-  "governanceRouter": "0x954EdA7095D43D6A6aC055892Bd0bAE2FE330FeD",
+  "governanceRouter": "0x681bb680067909552C868b54329F8b14342837E4",
   "bridgeRouter": "n/a",
   "tokenRegistry": "n/a",
-  "xAppConnectionManager": "0x61eBE3cD74B829b2b5880E28F2dCf86D1f7B9C56"
+  "xAppConnectionManager": "0xB72E8910e67B5743E9255F1BEa2F9e0EADbB4E65"
 }
