@@ -98,7 +98,7 @@ export async function checkHubAndSpokeBridgeConnections(
   spokes: AnyBridgeDeploy[],
 ) {
   const hubRouter = hub.contracts.bridgeRouter?.proxy!;
-  spokes.forEach(async (spoke) => {
+  for (const spoke of spokes) {
     // Hub has registered spoke
     const spokeDomain = spoke.chain.domain;
     const hubRegisteredRouter = await hubRouter.remotes(spokeDomain);
@@ -109,5 +109,5 @@ export async function checkHubAndSpokeBridgeConnections(
     const spokeRouter = spoke.contracts.bridgeRouter?.proxy!;
     const spokeRegisteredRouter = await spokeRouter.remotes(hubDomain);
     expect(spokeRegisteredRouter).to.not.equal(emptyAddr);
-  });
+  }
 }

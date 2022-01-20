@@ -11,6 +11,7 @@ import {
 import { getPathToDeployConfig } from '../../src/verification/readDeployOutput';
 import { NomadContext } from '@nomad-xyz/sdk';
 import { enrollSpoke } from '../../src/incremental';
+import { checkHubToSpokeConnection } from '../../src/incremental/checks';
 
 const path = getPathToDeployConfig('staging');
 
@@ -56,4 +57,11 @@ const kovanDomain = deploysToSDK(
 
 const sdk = NomadContext.fromDomains([rinkebyDomain, kovanDomain]);
 
-enrollSpoke(sdk, kovanDomain.id, kovan.stagingConfig.watchers);
+(async () => {
+  await enrollSpoke(sdk, kovanDomain.id, kovan.stagingConfig.watchers);
+  await checkHubToSpokeConnection(
+    sdk,
+    kovanDomain.id,
+    kovan.stagingConfig.watchers,
+  );
+})();
