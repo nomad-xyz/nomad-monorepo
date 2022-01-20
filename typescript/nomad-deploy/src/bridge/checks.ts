@@ -109,5 +109,17 @@ export async function checkHubAndSpokeBridgeConnections(
     const spokeRouter = spoke.contracts.bridgeRouter?.proxy!;
     const spokeRegisteredRouter = await spokeRouter.remotes(hubDomain);
     expect(spokeRegisteredRouter).to.not.equal(emptyAddr);
+
+    // Spokes are not registered in each other
+    const otherSpokes = spokes.filter(otherSpoke => otherSpoke.chain.domain !== spoke.chain.domain);
+    for (const otherSpoke of otherSpokes) {
+      // spoke => otherSpoke is not registered
+      const otherSpokeRegisteredRemote = await spokeRouter.remotes(otherSpoke.chain.domain);
+      expect(otherSpokeRegisteredRemote).to.equal(emptyAddr);
+      // otherSpoke => spoke is not registered
+      const otherSpokeRouter = otherSpoke.contracts.bridgeRouter?.proxy!;
+      const spokeRegisteredRemote = await otherSpokeRouter.remotes(spoke.chain.domain);
+      expect(spokeRegisteredRemote).to.equal(emptyAddr);
+    }
   }
 }
