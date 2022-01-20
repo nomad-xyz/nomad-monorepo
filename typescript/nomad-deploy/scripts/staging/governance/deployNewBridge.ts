@@ -16,11 +16,12 @@ const rinkebyBridgeDeploy = new ExistingBridgeDeploy(
   path,
 );
 
-// Deploy Kovan core and bridge with Rinkeby hub
+// make new Kovan bridge Deploy
 const kovanBridgeDeploy = new BridgeDeploy(
   kovan.chain,
   kovan.bridgeConfig,
   path,
 );
 
+// Deploy Kovan bridge with Rinkeby hub
 deployNewChainBridge(kovanBridgeDeploy, rinkebyBridgeDeploy);

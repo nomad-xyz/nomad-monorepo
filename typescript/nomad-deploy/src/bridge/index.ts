@@ -163,6 +163,8 @@ export async function deployNewChainBridge(
   await transferOwnershipOfBridge(newDeploy);
 
   await checkBridgeDeployValues(newDeploy, [hubDeploy.chain.domain]);
+
+  writeBridgeDeployOutput([newDeploy]);
 }
 
 /**

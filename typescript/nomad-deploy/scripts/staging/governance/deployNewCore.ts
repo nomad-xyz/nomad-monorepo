@@ -1,4 +1,5 @@
 import * as rinkeby from '../../../config/testnets/rinkeby';
+import * as moonbasealpha from '../../../config/testnets/moonbasealpha';
 import * as kovan from '../../../config/testnets/kovan';
 import { CoreDeploy, ExistingCoreDeploy } from '../../../src/core/CoreDeploy';
 import { deployNewChain } from '../../../src/core';
@@ -13,7 +14,15 @@ const rinkebyCoreDeploy = ExistingCoreDeploy.withPath(
   path,
 );
 
-// Deploy Knew ovan core and bridge with Rinkeby hub
+// instantiate other existing deploys
+const moonbasealphaCoreDeploy = ExistingCoreDeploy.withPath(
+    moonbasealpha.chain,
+    moonbasealpha.stagingConfig,
+  path,
+);
+
+// make new Kovan core Deploy
 const kovanCoreDeploy = new CoreDeploy(kovan.chain, kovan.stagingConfig);
 
-deployNewChain(kovanCoreDeploy, rinkebyCoreDeploy);
+// deploy Kovan core
+deployNewChain(kovanCoreDeploy, rinkebyCoreDeploy, [moonbasealphaCoreDeploy]);
