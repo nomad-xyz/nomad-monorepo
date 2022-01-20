@@ -50,7 +50,7 @@
 import { defineComponent, ref } from 'vue';
 import { NForm, NFormItem, NInput, NSelect, NButton, NCard } from 'naive-ui';
 import { tokens, networks, TokenName, NetworkName } from '@/config'
-import { switchNetwork, registerNewSigner, send } from '@/utils/sdk'
+import { switchNetwork, registerNewSigner, send, TXData } from '@/utils/sdk'
 
 function generateTokenOptions() {
   return Object.keys(tokens).map(t => {
@@ -74,7 +74,7 @@ interface SendData {
 
 export default defineComponent({
   name: 'Bridge',
-  emits: ['connect'],
+  emits: ['connect', 'newTx'],
   props: {
     address: {
       type: String,
@@ -142,6 +142,14 @@ export default defineComponent({
 
       const transferMessage = await send(originNetwork, destinationNetwork, amount, token, this.address)
       console.log(transferMessage)
+
+      // emit new transaction
+      const txData: TXData = {
+        origin: originNetwork,
+        destination: destinationNetwork,
+        hash: transferMessage.receipt.transactionHash
+      }
+      this.$emit('newTx', txData)
     }
   }
 });

@@ -11,18 +11,18 @@
     <a href="https://www.npmjs.com/package/@nomad-xyz/sdk" target="_blank" class="link">NPM Package</a>
     <a href="https://docs.nomad.xyz" target="_blank" class="link">Docs</a>
     <div class="main">
-      <bridge @connect="connect" :address="address" />
+      <bridge @connect="connect" :address="address" @new-tx="pushHistory" />
       <balances v-if="address" :address="address" />
       <div v-else class="spacer"></div>
-      <history v-if="address" :address="address" />
+      <history :tx-history="history" />
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue';
+import { defineComponent, ref } from 'vue';
 import { NButton, NTag } from 'naive-ui';
-import { connectWallet, truncateAddr } from '@/utils/sdk'
+import { connectWallet, truncateAddr, TXData } from '@/utils/sdk'
 import Bridge from './components/Bridge.vue';
 import Balances from './components/Balances.vue';
 import History from './components/History.vue';
@@ -39,7 +39,9 @@ export default defineComponent({
   data() {
     return {
       truncateAddr,
-      address: ''
+      address: '',
+      // TODO: save transactions in localstorage
+      history: ref([]) as any
     }
   },
   methods: {
@@ -51,6 +53,10 @@ export default defineComponent({
         console.error('error connecting wallet')
         this.address = ''
       }
+    },
+    pushHistory(tx: TXData) {
+      console.log('new transaction', tx)
+      this.history.push({ key: tx.hash, ...tx })
     }
   }
 });

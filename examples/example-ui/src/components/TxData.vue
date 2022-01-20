@@ -81,7 +81,7 @@ export default defineComponent({
       }
     },
     async process() {
-      // process transaction
+      // TODO: process transaction
     }
   },
   computed: {
@@ -89,15 +89,14 @@ export default defineComponent({
       return getStatusText(this.status)
     },
     readyToProcess(): boolean {
-      // // networks not subsidized, require user to return to claim funds
-      // const manualProcessNets = ['ethereum', 'kovan']
-      // if (!this.confirmAt) return false
-      // // get timestamp in seconds
-      // const now = BigNumber.from(Date.now()).div(1000)
+      // networks not subsidized, require user to return to claim funds
+      const manualProcessNets = ['ethereum', 'kovan']
+      if (!this.confirmAt) return false
+      // get timestamp in seconds
+      const now = BigNumber.from(Date.now()).div(1000)
       // check if confirmAt time has passed
       // check if network is one that needs manual processing
-      // return now.gt(this.confirmAt) && manualProcessNets.includes(this.tx.destinationNetwork)
-      return true
+      return now.gt(this.confirmAt) && manualProcessNets.includes(this.tx.destinationNetwork)
     }
   }
 });
