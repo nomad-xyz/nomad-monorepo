@@ -6,7 +6,7 @@ import { getPathToDeployConfig } from '../../src/verification/readDeployOutput';
 import { ExistingCoreDeploy } from '../../src/core/CoreDeploy';
 import { ExistingBridgeDeploy } from '../../src/bridge/BridgeDeploy';
 import { NomadContext } from '@nomad-xyz/sdk';
-import { checkHubToSpokeConnection } from '../../src/incremental/checks';
+import { checkHubToSpokeConnectionWithWaiter } from '../../src/incremental/checks';
 
 const path = getPathToDeployConfig('dev');
 
@@ -45,7 +45,7 @@ const sdk = NomadContext.fromDomains([tomDomain, daffyDomain]);
 
 (async () => {
   await enrollSpoke(sdk, daffyDomain.id, daffy.devConfig);
-  await checkHubToSpokeConnection(
+  await checkHubToSpokeConnectionWithWaiter(
     sdk,
     daffyDomain.id,
     daffy.devConfig.watchers,

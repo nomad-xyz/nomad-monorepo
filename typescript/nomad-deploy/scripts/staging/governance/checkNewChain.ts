@@ -4,34 +4,34 @@ import { ExistingCoreDeploy } from '../../../src/core/CoreDeploy';
 import { ExistingBridgeDeploy } from '../../../src/bridge/BridgeDeploy';
 import { getPathToDeployConfig } from '../../../src/verification/readDeployOutput';
 import { deploysToSDK } from '../../../src/incremental/utils';
-import { enrollSpoke } from '../../../src/incremental';
+import { checkHubAndSpokeConnections } from '../../../src/incremental/checks';
 import { NomadContext } from '@nomad-xyz/sdk';
 
-const path = getPathToDeployConfig('dev');
+const path = getPathToDeployConfig('staging');
 
 // Instantiate existing governor deploy on Rinkeby
 const rinkebyCoreDeploy = ExistingCoreDeploy.withPath(
-  rinkeby.chain,
-  rinkeby.devConfig,
-  path,
+    rinkeby.chain,
+    rinkeby.stagingConfig,
+    path,
 );
 const rinkebyBridgeDeploy = new ExistingBridgeDeploy(
-  rinkeby.chain,
-  rinkeby.bridgeConfig,
-  path,
+    rinkeby.chain,
+    rinkeby.bridgeConfig,
+    path,
 );
 const rinkebyDomain = deploysToSDK(rinkebyCoreDeploy, rinkebyBridgeDeploy);
 
 // Enroll Kovan as spoke to Rinkeby hub
 const kovanCoreDeploy = ExistingCoreDeploy.withPath(
-  kovan.chain,
-  kovan.devConfig,
-  path,
+    kovan.chain,
+    kovan.stagingConfig,
+    path,
 );
 const kovanBridgeDeploy = new ExistingBridgeDeploy(
-  kovan.chain,
-  kovan.bridgeConfig,
-  path,
+    kovan.chain,
+    kovan.bridgeConfig,
+    path,
 );
 const kovanDomain = deploysToSDK(kovanCoreDeploy, kovanBridgeDeploy);
 
@@ -40,9 +40,12 @@ const sdkDomains = [rinkebyDomain, kovanDomain];
 const sdk = NomadContext.fromDomains(sdkDomains);
 const sdkCores = [rinkebyCoreDeploy, kovanCoreDeploy];
 sdkCores.forEach((core) => {
-  sdk.registerProvider(core.chain.domain, core.provider);
-  sdk.registerSigner(core.chain.domain, core.deployer);
+    sdk.registerProvider(core.chain.domain, core.provider);
+    sdk.registerSigner(core.chain.domain, core.deployer);
 });
 
-// enroll spoke then check enrollment
-enrollSpoke(sdk, kovanDomain.id, kovan.devConfig);
+checkHubAndSpokeConnections(
+    sdk,
+    kovanDomain.id,
+    kovan.stagingConfig.watchers,
+);
