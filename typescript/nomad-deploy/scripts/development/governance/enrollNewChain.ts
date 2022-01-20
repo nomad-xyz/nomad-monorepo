@@ -39,7 +39,8 @@ const kovanDomain = deploysToSDK(kovanCoreDeploy, kovanBridgeDeploy);
 // setup SDK
 const sdkDomains = [rinkebyDomain, kovanDomain];
 const sdk = NomadContext.fromDomains(sdkDomains);
-sdkDomains.map((core) => {
+const sdkCores = [rinkebyCoreDeploy, kovanCoreDeploy];
+sdkCores.forEach((core) => {
   sdk.registerProvider(core.chain.domain, core.provider);
   sdk.registerSigner(core.chain.domain, core.deployer);
 });

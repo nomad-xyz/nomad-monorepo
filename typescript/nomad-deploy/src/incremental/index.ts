@@ -1,6 +1,7 @@
 import { NomadContext } from '@nomad-xyz/sdk/';
 import { canonizeId } from '@nomad-xyz/sdk/utils';
 import { CoreConfig } from '../core/CoreDeploy';
+import { writeBatchOutput } from './utils';
 
 /**
  * Prepares and executes necessary calls to governing
@@ -70,7 +71,8 @@ export async function enrollSpoke(
       2,
     );
     const builtStr = JSON.stringify(built, null, 2);
-    // TODO: output to file
+
+    writeBatchOutput(builtStr, unbuiltStr, spokeConfig.environment);
     // TODO: send to gnosis safe directly
   }
 }

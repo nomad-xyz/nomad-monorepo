@@ -44,7 +44,7 @@ const sdk = NomadContext.fromDomains([tomDomain, daffyDomain]);
 });
 
 (async () => {
-  await enrollSpoke(sdk, daffyDomain.id, daffy.devConfig.watchers);
+  await enrollSpoke(sdk, daffyDomain.id, daffy.devConfig);
   await checkHubToSpokeConnection(
     sdk,
     daffyDomain.id,
