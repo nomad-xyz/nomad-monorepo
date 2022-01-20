@@ -34,5 +34,5 @@ export const config: CoreConfig = {
 };
 
 export const bridgeConfig: BridgeConfig = {
-  weth: '0xAcc15dC74880C9944775448304B263D191c6077F',
+  weth: '0xAeaaf0e2c81Af264101B9129C00F4440cCF0F720',
 };

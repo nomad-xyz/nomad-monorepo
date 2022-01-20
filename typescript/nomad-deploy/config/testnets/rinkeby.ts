@@ -50,7 +50,7 @@ export const stagingConfig: CoreConfig = {
   recoveryManager: '0x24F6c874F56533d9a1422e85e5C7A806ED11c036',
   governor: {
     domain: chainJson.domain,
-    address: '0xa4849f1D96B26066f9C631FCdc8F1457D27Fb5EC',
+    address: '0x812c096810e8eFAA73efF841B601Ab82a7be9aB0', // rinkeby gnosis safe - 1/1 signers, signer = deployer key (0xa4849f1D96B26066f9C631FCdc8F1457D27Fb5EC)
   },
   optimisticSeconds: 60 * 30, // 30 minutes
   recoveryTimelock: 180, // 3 minutes
