@@ -2,6 +2,9 @@ import { parseMessage } from '@nomad-xyz/sdk/src/nomad/messages/NomadMessage';
 import { ethers } from 'ethers';
 import { EventType, NomadEvent } from './event';
 import { Statistics } from './types';
+import { parseBody } from '@nomad-xyz/sdk/src/nomad/messages/BridgeMessage';
+import { DBDriver } from './db';
+
 
 class StatisticsCollector {
   s: Statistics;
@@ -181,7 +184,7 @@ function bytes32ToAddress(s: string) {
   return '0x'+s.slice(26)
 }
 
-class NomadMessage {
+export class NomadMessage {
   origin: number;
   destination: number;
   root: string;
@@ -267,84 +270,9 @@ class NomadMessage {
   }
 }
 
-import {Pool} from 'pg';
-import { parseBody } from '@nomad-xyz/sdk/src/nomad/messages/BridgeMessage';
 
-// expand(3, 2) returns "($1, $2), ($3, $4), ($5, $6)" 
-function expand(rowCount: number, columnCount: number, startAt=1){
-  var index = startAt
-  return Array(rowCount).fill(0).map(v => `(${Array(columnCount).fill(0).map(v => `$${index++}`).join(", ")})`).join(", ")
-}
 
-class DBDriver {
-  pool: Pool;
-  syncedOnce: boolean;
 
-  constructor() {
-    this.pool = new Pool();
-    this.syncedOnce = false;
-  }
-
-  async connect() {
-    await this.pool.connect()
-  }
-
-  get startupSync() {
-    const value = this.syncedOnce;
-    this.syncedOnce = true;
-    return !value;
-  }
-
-  async insert(messages: NomadMessage[]) {
-    const rows = messages.length;
-    if (!rows) return ;
-    const columns = 18;
-    const query = `INSERT INTO messages (hash, origin, destination, sender, recipient, root, state, dispatched_at, updated_at, relayed_at, processed_at, bridge_msg_type, bridge_msg_to, bridge_msg_amount, bridge_msg_allow_fast, bridge_msg_details_hash, bridge_msg_token_domain, bridge_msg_token_id) VALUES ${expand(rows, columns)};`;
-    const values = messages.map(m => m.intoDB()).flat();
-    return await this.pool.query(query, values)
-  }
-
-  async update(messages: NomadMessage[]) {
-    const rows = messages.length;
-    if (!rows) return ;
-    const promises = messages.map(m => {
-      const query = `UPDATE messages SET
-      origin = $2,
-      destination = $3,
-      sender = $4,
-      recipient = $5,
-      root = $6,
-      state = $7,
-      dispatched_at = $8,
-      updated_at = $9,
-      relayed_at = $10,
-      processed_at = $11,
-      bridge_msg_type = $12,
-      bridge_msg_to = $13,
-      bridge_msg_amount = $14,
-      bridge_msg_allow_fast = $15,
-      bridge_msg_details_hash = $16,
-      bridge_msg_token_domain = $17,
-      bridge_msg_token_id = $18
-      WHERE hash = $1
-      `;
-      return this.pool.query(query, m.intoDB());
-    })
-
-    return await Promise.all(promises);
-  }
-
-  async getExistingHashes(): Promise<string[]> {
-    const res = await this.pool.query(`select hash from messages;`);
-    return res.rows.map(r => r.hash) as string[]
-  }
-
-}
-
-enum DBAction{
-  Insert,
-  Update,
-}
 
 export class Processor extends Consumer {
   messages: NomadMessage[];
@@ -352,21 +280,19 @@ export class Processor extends Consumer {
   msgByOriginAndRoot: Map<string, number[]>;
   consumed: number; // for debug
   domains: number[];
-  syncInsertQueue: string[];
-  syncUpdateQueue: string[];
+  syncQueue: string[];
   db: DBDriver;
 
-  constructor() {
+  constructor(db: DBDriver) {
     super();
     this.messages = [];
     this.msgToIndex = new Map();
     this.msgByOriginAndRoot = new Map();
     this.consumed = 0;
     this.domains = [];
-    this.syncInsertQueue = [];
-    this.syncUpdateQueue = [];
+    this.syncQueue = [];
 
-    this.db = new DBDriver();
+    this.db = db;
   }
 
   async consume(...events: NomadEvent[]): Promise<void> {
@@ -389,30 +315,37 @@ export class Processor extends Consumer {
 
   async sync() {
     const [inserts, updates] = await this.getMsgForSync();
-    console.log(inserts.filter(i => !i).length)
-    await Promise.all([this.db.insert(inserts), this.db.update(updates)])
+    await Promise.all([this.db.insertMessage(inserts), this.db.updateMessage(updates)])
   }
 
-  addToSyncQueue(hash: string, action: DBAction) {
-    if (this.syncInsertQueue.indexOf(hash) < 0 && this.syncUpdateQueue.indexOf(hash) < 0) {
-      if (action == DBAction.Insert) this.syncInsertQueue.push(hash)
-      else this.syncUpdateQueue.push(hash)
-    }
+  addToSyncQueue(hash: string) {
+    if (this.syncQueue.indexOf(hash) < 0 ) this.syncQueue.push(hash)
   }
 
   async getMsgForSync(): Promise<[NomadMessage[], NomadMessage[]]> {
-    let existingHashes: string[] = [];
-    if (this.db.startupSync) {
-      existingHashes = await this.db.getExistingHashes();
-      this.syncUpdateQueue.push(
-        ...this.syncInsertQueue.filter(hash => existingHashes.indexOf(hash) >= 0)
-      )
-    }
-    const inserts = this.syncInsertQueue.filter(hash => this.syncUpdateQueue.indexOf(hash) < 0).map(hash => this.getMsg(hash)!).filter(m=>!!m);
-    this.syncInsertQueue = [];
-    const updates = this.syncUpdateQueue.map(hash => this.getMsg(hash)!).filter(m=>!!m);
-    this.syncUpdateQueue = [];
-    return [inserts, updates];
+    let existingHashes = await this.db.getExistingHashes();
+
+    const insert: string[] = [];
+    const update: string[] = [];
+
+    this.syncQueue.forEach(hash => {
+      if (existingHashes.indexOf(hash) < 0) {
+        insert.push(hash);
+      } else {
+        update.push(hash);
+      }
+    });
+
+    this.syncQueue = [];
+
+    return [
+      this.mapHashesToMessages(insert),
+      this.mapHashesToMessages(update),
+    ];
+  }
+
+  mapHashesToMessages(hashes: string[]): NomadMessage[] {
+    return hashes.map(hash => this.getMsg(hash)!).filter(m=>!!m);
   }
 
   dispatched(e: NomadEvent) {
@@ -427,7 +360,7 @@ export class Processor extends Consumer {
       e.ts,
     );
     this.add(m);
-    this.addToSyncQueue(m.hash, DBAction.Insert);
+    this.addToSyncQueue(m.hash);
 
     if (!this.domains.includes(e.domain)) this.domains.push(e.domain);
   }
@@ -439,7 +372,7 @@ export class Processor extends Consumer {
         if (m.state < MsgState.Updated) {
           m.state = MsgState.Updated;
           m.timings.updated(e.ts);
-          this.addToSyncQueue(m.hash, DBAction.Update);
+          this.addToSyncQueue(m.hash);
         }
       });
   }
@@ -454,7 +387,7 @@ export class Processor extends Consumer {
         if (m.state < MsgState.Relayed) {
           m.state = MsgState.Relayed;
           m.timings.relayed(e.ts);
-          this.addToSyncQueue(m.hash, DBAction.Update);
+          this.addToSyncQueue(m.hash);
         }
       });
   }
@@ -465,7 +398,7 @@ export class Processor extends Consumer {
       if (m.state < MsgState.Processed) {
         m.state = MsgState.Processed;
         m.timings.processed(e.ts);
-        this.addToSyncQueue(m.hash, DBAction.Update);
+        this.addToSyncQueue(m.hash);
       }
     }
   }

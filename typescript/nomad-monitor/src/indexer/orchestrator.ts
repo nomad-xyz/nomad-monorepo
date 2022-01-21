@@ -1,6 +1,7 @@
 import { NomadContext } from '@nomad-xyz/sdk/src';
 import Logger from 'bunyan';
 import { Consumer } from './consumer';
+import { DBDriver } from './db';
 import { Indexer } from './indexer';
 import { IndexerCollector } from './metrics';
 import { Statistics } from './types';
@@ -15,6 +16,7 @@ export class Orchestrator {
   freshStart: boolean;
   metrics: IndexerCollector;
   logger: Logger;
+  db: DBDriver;
 
   constructor(
     sdk: NomadContext,
@@ -22,6 +24,7 @@ export class Orchestrator {
     gov: number,
     metrics: IndexerCollector,
     logger: Logger,
+    db: DBDriver
   ) {
     this.sdk = sdk;
     this.consumer = c;
@@ -31,6 +34,7 @@ export class Orchestrator {
     this.freshStart = true;
     this.metrics = metrics;
     this.logger = logger;
+    this.db = db;
   }
 
   async init() {

@@ -11,7 +11,7 @@ export class Indexer {
   sdk: NomadContext;
   orchestrator: Orchestrator;
   persistance: Persistance;
-  block2timeCache: KVCache<number, number>;
+  block2timeCache: KVCache;
   eventCallback: undefined | ((event: NomadEvent) => void);
 
   constructor(domain: number, sdk: NomadContext, orchestrator: Orchestrator) {
@@ -19,10 +19,11 @@ export class Indexer {
     this.sdk = sdk;
     this.orchestrator = orchestrator;
     this.persistance = new RamPersistance(
-      `/tmp/persistance_${this.domain}.json`,
+      `/tmp/persistance_${this.domain}.json`
     );
     this.block2timeCache = new KVCache(
-      `/tmp/persistance_blocktime_cache_${this.domain}`,
+      String(this.domain),
+      this.orchestrator.db
     );
   }
 
@@ -31,11 +32,11 @@ export class Indexer {
   }
 
   async getBlockTimestamp(blockNumber: number): Promise<number> {
-    const possibleTime = this.block2timeCache.get(blockNumber);
-    if (possibleTime) return possibleTime;
+    const possibleTime = this.block2timeCache.get(String(blockNumber));
+    if (possibleTime) return parseInt(possibleTime);
     const [block, error] = await retry(
       async () => await this.provider.getBlock(blockNumber),
-      5,
+      6,
     );
     if (!block) {
       throw (
@@ -46,11 +47,12 @@ export class Indexer {
       );
     }
     const time = block.timestamp * 1000;
-    this.block2timeCache.set(blockNumber, time);
+    await this.block2timeCache.set(String(blockNumber), String(time));
     return time;
   }
 
   async init() {
+    await this.block2timeCache.init();
     await this.persistance.init();
   }
 
@@ -80,24 +82,45 @@ export class Indexer {
     this.orchestrator.logger.info(
       `Fetching events for domain ${this.domain} from: ${from}, to: ${to}`,
     );
-    const [fetchedEvents, error] = await retry(async () => {
-      const homeEvents = await this.fetchHome(from, to);
-      const replicasEvents = (
-        await Promise.all(replicas.map((r) => this.fetchReplica(r, from, to)))
-      ).flat();
-      return [...homeEvents, ...replicasEvents];
-    }, 5);
 
-    if (error) throw error;
-    if (!fetchedEvents) throw new Error('kek');
+    const fetchEvents = async (from: number, to: number) => {
+      const [fetchedEvents, error] = await retry(async () => {
+        const homeEvents = await this.fetchHome(from, to);
+        const replicasEvents = (
+          await Promise.all(replicas.map((r) => this.fetchReplica(r, from, to)))
+        ).flat();
 
-    fetchedEvents.sort((a, b) => a.ts - b.ts);
-    this.persistance.store(...fetchedEvents);
+        return [...homeEvents, ...replicasEvents]
+      }, 5);
+
+      if (error) throw error;
+      return fetchedEvents
+    }
+    
+    const allEvents = [];
+
+    const batchSize = 20000;
+    let batchFrom = from;
+    let batchTo = from + batchSize;
+
+    while (true) {
+      const events = await fetchEvents(batchFrom, batchTo);
+      if (!events) throw new Error(`KEk`);
+      allEvents.push(...events);
+      if (batchTo >= to) break;
+      batchFrom = batchTo + 1;
+      batchTo = Math.min(to, batchFrom + batchSize);
+    }
+
+    if (!allEvents) throw new Error('kek');
+
+    allEvents.sort((a, b) => a.ts - b.ts);
+    this.persistance.store(...allEvents);
 
     this.dummyTestEventsIntegrity();
     this.orchestrator.logger.info(`Fetched all for domain ${this.domain}`);
 
-    return fetchedEvents;
+    return allEvents;
   }
 
   dummyTestEventsIntegrity() {
@@ -341,7 +364,6 @@ export class RamPersistance extends Persistance {
     this.block2events = new Map();
     this.blocks = [];
     this.storePath = storePath;
-    
   }
 
   updateFromTo(block: number) {
