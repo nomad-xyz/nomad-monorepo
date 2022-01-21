@@ -35,9 +35,12 @@ npm run test:unit
 
 ## Integration notes
 
+IMPORTANT: The current testnet deploy does not include a bridge between Kovan and Moonbase Alpha. This is known as the Hub and Spokes model. On Mainnet, we think of Rinkeby (on mainnet: Ethereum) as the hub which would be connected to every other Nomad-supported chain. The spokes (Kovan and Moonbase Alpha) would be connected to Rinkeby, but would not be connected to each other.
+
 Validation:
  - Some native assets should be disabled on non-native chains. For example, native ETH is not available on Moonbeam, user should select WETH
  - Origin and destination networks must be different
+ - Origin/destination must be supported (cannot select Kovan/Moonbase Alpha)
  - Send amount must not exceed user's balance
  - User should be connected to their wallet
  - User should be on the origin network
