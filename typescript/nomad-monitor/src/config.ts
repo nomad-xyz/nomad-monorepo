@@ -26,7 +26,7 @@ export class MonitorConfig {
     const environment = process.env.ENVIRONMENT ?? 'development';
 
     this.origin = origin;
-    this.remotes = getNetworks().filter((m) => m != origin);
+    this.remotes = getReplicas(origin)
     switch(environment){
       case 'production': {
         this.context = contexts.mainnet
@@ -99,6 +99,58 @@ function getNetworks() {
   }
 
   return networks;
+}
+
+function getReplicas(origin: string) {
+  let replicas: string[] = [];
+  switch (environment) {
+    case 'production':
+      switch(origin){
+        case 'ethereum':
+          replicas = ['moonbeam']
+          break;
+        case 'moonbeam':
+          replicas = ['ethereum']
+          break;
+        default: 
+          throw new Error(`Invalid Origin, no replicas available for ${origin}`)
+      }
+      break;
+
+    case 'staging':
+      switch(origin){
+        case 'kovan':
+          replicas = ['rinkeby']
+          break;
+        case 'moonbasealpha':
+          replicas = ['rinkeby']
+          break;
+        case 'rinkeby':
+            replicas = ['kovan', 'moonbasealpha']
+            break;
+        default: 
+          throw new Error(`Invalid Origin, no replicas available for ${origin}`)
+      }
+      break;
+    
+    default:
+      switch(origin){
+        case 'kovan':
+          replicas = ['rinkeby']
+          break;
+        case 'moonbasealpha':
+          replicas = ['rinkeby']
+          break;
+        case 'rinkeby':
+            replicas = ['kovan', 'moonbasealpha']
+            break;
+        default: 
+          throw new Error(`Invalid Origin, no replicas available for ${origin}`)
+      }
+      break;
+  }
+
+  return replicas;
 }
 
 export function getRpcsFromEnv() {
