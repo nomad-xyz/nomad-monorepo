@@ -5,18 +5,18 @@
       "key": "",
       "type": "hexKey"
     },
-    "moonbasealpha": {
+    "rinkeby": {
       "key": "",
       "type": "hexKey"
     }
   },
   "replicas": {
-    "moonbasealpha": {
-      "address": "0x3333744724611Ef93521446670b4cC4009338E58",
-      "domain": "5000",
-      "name": "moonbasealpha",
+    "rinkeby": {
+      "address": "0x3F28A3e66326c3aa494d4F8e9477d1397EE94432",
+      "domain": "2000",
+      "name": "rinkeby",
       "rpcStyle": "ethereum",
-      "timelag": 5,
+      "timelag": 100,
       "connection": {
         "type": "http",
         "url": ""
@@ -24,7 +24,7 @@
     }
   },
   "home": {
-    "address": "0xA2d62FbcD779231894586CFC569E8a085662d5Bb",
+    "address": "0x85789e726B31cB74ba471aeF5FF93c3f68AE510F",
     "domain": "3000",
     "name": "kovan",
     "rpcStyle": "ethereum",
@@ -40,7 +40,7 @@
   },
   "db": "db_path",
   "index": {
-    "from": "29193952",
+    "from": "29371350",
     "chunk": "2000"
   }
 }

@@ -1,45 +1,70 @@
 import { NomadDomain } from './domain';
 
+export const rinkeby: NomadDomain = {
+  name: 'rinkeby',
+  id: 2000,
+  paginate: {
+    from: 10024912,
+    blocks: 2000,
+  },
+  home: '0xBfCBCCce35D8a6e8056c92f225768EbBfBbf1293',
+  replicas: [
+    {
+      domain: 3000,
+      address: '0x7DF0496470369FFFACB660A5139e1649ABFE9D21',
+    },
+    {
+      domain: 5000,
+      address: '0xA062dcaEc568Ccf01560F168D0638af2fE663019',
+    },
+  ],
+  governanceRouter: '0xB1F0bB0d6a40d5003f2A62D9a146791A90270F1d',
+  bridgeRouter: '0xeACafFb9fBCe3d4c4C5D07AF5DFa51CcF5a348b7',
+  tokenRegistry: '0xa6391c179beF326c42E0f1eaEb3764412d9CdccB',
+  ethHelper: '0x074cd4d8629445Fda3b17574FCB848eda767058b',
+  xAppConnectionManager: '0x7e365A910383cE8Dfa6860B080a9D4cd58d2BD13',
+};
+
 export const kovan: NomadDomain = {
   name: 'kovan',
   id: 3000,
   paginate: {
-    from: 29193581,
+    from: 29367895,
     blocks: 2000,
   },
-  home: '0x706b4e61018793bA84BF23A314524c511170Ce07',
+  home: '0x4071e4E6AB8F8F1620200B7CF0b92ba930D9aBB6',
   replicas: [
     {
-      domain: 5000,
-      address: '0x3E8B3E047b6a7B6342E74b15813137b2891817Cd',
+      domain: 2000,
+      address: '0xFA58C14B693C44140208211dDa4A81c182B557c1',
     },
   ],
-  governanceRouter: '0x45F8c10cC8077081e062A7F643ADD6EABc7464C2',
-  bridgeRouter: '0x7454A5cce9Ae2C52fB0B1B6D732A6a7d9CABA12C',
-  tokenRegistry: '0x22f6977Bb15f55D2d8318F3EF4D27e64e5A2bb7F',
-  ethHelper: '0x974CD1c543bd144C23bA7963b057eb0E54Fd6c9b',
-  xAppConnectionManager: '0xAb243125Be2EA3A79167ad203744EF490A0ec568',
+  governanceRouter: '0x25d3Da24cA79E80D15f808866351311D282AC332',
+  bridgeRouter: '0xa50E2db92c48f1c20C42338e6091E6B73da376a4',
+  tokenRegistry: '0x7fe65Cd0b589B39E7744DE73ad225085F0FE7f39',
+  ethHelper: '0xEFf85cD6763fEc984470bB1F433777d73aF1298B',
+  xAppConnectionManager: '0xE469D8587D45BF85297BD924b159E726E7CA5408',
 };
 
 export const moonbasealpha: NomadDomain = {
   name: 'moonbasealpha',
   id: 5000,
   paginate: {
-    from: 1507573,
+    from: 1555095,
     blocks: 2000,
   },
-  home: '0x926Df2b652bC8273BB2F06E8de135875bbE1D271',
+  home: '0x79F0267e3e4E457E13Ed79552D3606382bb0F66a',
   replicas: [
     {
-      domain: 3000,
-      address: '0x1d77eDee9bb5EA223ab83B7a1B67F931879D6e5B',
+      domain: 2000,
+      address: '0x6d8aCF60f3ddB6C49dEF2A2b77E56BE2FF1502Cf',
     },
   ],
-  governanceRouter: '0x857d6dE0a9e3F985768FE164844b3e621893B904',
-  bridgeRouter: '0x376017BF1De11dd15c236bB0e36D5e265966c9b8',
-  tokenRegistry: '0xdC6aC677ea9057D0114Ab5609af9E70f71a519BC',
-  ethHelper: '0x83df3076BbacA1C435ecAbEA2de33dc5d5A404d8',
-  xAppConnectionManager: '0x314cc8432F4ee03dF5A11ee55eEDFcFe7f5fee72',
+  governanceRouter: '0x22431cD0b489f148fd34baEE3AcCF815750AC732',
+  bridgeRouter: '0x07235F5AE672B80649D79ebceBe749Ba4E520754',
+  tokenRegistry: '0x9F671D2A7e48b97Ad7E080fbf495d060c536De94',
+  ethHelper: '0x71a0CAfbc6bd7F16188B141850d9Bdce47981B1c',
+  xAppConnectionManager: '0xD99E2c5eD0AacE4c459A850bd2DE0b1c0De12bfD',
 };
 
-export const devDomains = [kovan, moonbasealpha];
+export const devDomains = [rinkeby, kovan, moonbasealpha];

@@ -1,5 +1,9 @@
 import * as proxyUtils from '../proxyUtils';
-import { checkBridgeDeploy } from './checks';
+import {
+  checkBridgeDeployValues,
+  checkBridgeConnections,
+  checkHubAndSpokeBridgeConnections,
+} from './checks';
 import * as xAppContracts from '@nomad-xyz/contract-interfaces/bridge';
 import fs from 'fs';
 import { BridgeDeploy } from './BridgeDeploy';
@@ -8,7 +12,7 @@ import assert from 'assert';
 import { getPathToBridgeConfigFromCore } from '../verification/readDeployOutput';
 import { canonizeId } from '@nomad-xyz/sdk/utils';
 
-type AnyBridgeDeploy = BridgeDeploy | TestBridgeDeploy;
+export type AnyBridgeDeploy = BridgeDeploy | TestBridgeDeploy;
 
 export type BridgeDeployOutput = {
   bridgeRouter?: string;
@@ -57,9 +61,11 @@ export async function deployBridgesComplete(deploys: AnyBridgeDeploy[]) {
       const remotes = deploys
         .filter((remote) => remote.chain.domain != local.chain.domain)
         .map((remote) => remote.chain.domain);
-      await checkBridgeDeploy(local, remotes);
+      await checkBridgeDeployValues(local, remotes);
     }),
   );
+
+  await checkBridgeConnections(deploys);
 
   if (!isTestDeploy) {
     // output the Bridge deploy information to a subdirectory
@@ -118,9 +124,11 @@ export async function deployBridgesHubAndSpoke(
       const remotes = deploys
         .filter((remote) => remote.chain.domain !== local.chain.domain)
         .map((remote) => remote.chain.domain);
-      await checkBridgeDeploy(local, remotes);
+      await checkBridgeDeployValues(local, remotes);
     }),
   );
+
+  await checkHubAndSpokeBridgeConnections(hub, spokes);
 
   if (!isTestDeploy) {
     // output the Bridge deploy information to a subdirectory
@@ -154,7 +162,9 @@ export async function deployNewChainBridge(
   // transfer ownership of BridgeRouter to Governance
   await transferOwnershipOfBridge(newDeploy);
 
-  await checkBridgeDeploy(newDeploy, [hubDeploy.chain.domain]);
+  await checkBridgeDeployValues(newDeploy, [hubDeploy.chain.domain]);
+
+  writeBridgeDeployOutput([newDeploy]);
 }
 
 /**

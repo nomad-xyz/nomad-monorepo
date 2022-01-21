@@ -1,18 +1,18 @@
 {
   "bridgeRouter": {
-    "implementation": "0x98c8770D6f50d185a4C6C45582fDa3131aCd8832",
-    "proxy": "0x7454A5cce9Ae2C52fB0B1B6D732A6a7d9CABA12C",
-    "beacon": "0xD512a8E04757D9A1034B38594d6840c1c5153DEB"
+    "implementation": "0x01652e694BbD82C0900776c0406C3DFaa00e1e91",
+    "proxy": "0xa50E2db92c48f1c20C42338e6091E6B73da376a4",
+    "beacon": "0x5D1F5F8eF74Fb8626FE2d482618F8517a3cBD8F7"
   },
   "tokenRegistry": {
-    "implementation": "0x25Cce83673E4ED078de20472f7e94a1a5FDDd02b",
-    "proxy": "0x22f6977Bb15f55D2d8318F3EF4D27e64e5A2bb7F",
-    "beacon": "0x58FF6137cCd7C65d93C1F05dd73e7b4373F4ba38"
+    "implementation": "0x3e8391dEB0f2ad863d8b61dfbcadE009BD5243A1",
+    "proxy": "0x7fe65Cd0b589B39E7744DE73ad225085F0FE7f39",
+    "beacon": "0xB4D1355eB66122a768BCE006b0Ef7219aC1dae35"
   },
   "bridgeToken": {
-    "implementation": "0x82E81AbA2b5992973dD45811d96Bd5C1098C8971",
-    "proxy": "0x053F0cA8a8b94964dA76598f2E45555bf45591f9",
-    "beacon": "0x193ef167A7ad3244dbFCdced91E2C88A662A7103"
+    "implementation": "0xc56D98fE297D0Fa6699e760c6760A4A8Ffbe32Cf",
+    "proxy": "0x0fC39710d455416243AB27a13EE7ea709d5685f3",
+    "beacon": "0xb3808FE90989C90Fb986A3EC10f91D5901bb7801"
   },
-  "ethHelper": "0x974CD1c543bd144C23bA7963b057eb0E54Fd6c9b"
+  "ethHelper": "0xEFf85cD6763fEc984470bB1F433777d73aF1298B"
 }

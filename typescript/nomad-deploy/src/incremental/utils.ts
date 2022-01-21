@@ -1,6 +1,11 @@
 import { NomadDomain } from '@nomad-xyz/sdk/nomad';
 import { BridgeDeploy } from '../bridge/BridgeDeploy';
 import { CoreDeploy } from '../core/CoreDeploy';
+import {
+  isValidEnvironment,
+  VALID_ENVIRONMENTS,
+} from '../verification/readDeployOutput';
+import fs from 'fs';
 
 /**
  * Structure that allows to poll an async block
@@ -109,4 +114,39 @@ export function deploysToSDK(
     xAppConnectionManager: core.contracts.xAppConnectionManager!.address,
     safeService,
   };
+}
+
+export function writeBatchOutput(
+  builtStr: string,
+  unbuiltStr: string,
+  environment: string,
+) {
+  let dir = getPathToBatchOutput(environment);
+
+  fs.mkdirSync(dir, { recursive: true });
+
+  fs.writeFileSync(`${dir}/built.json`, builtStr);
+
+  fs.writeFileSync(`${dir}/unbuilt.json`, unbuiltStr);
+}
+
+export function getPathToBatchOutput(environment: string) {
+  if (!isValidEnvironment) {
+    throw new Error(
+      `${environment} is not a valid environment. Please choose from ${JSON.stringify(
+        VALID_ENVIRONMENTS,
+        null,
+        2,
+      )}`,
+    );
+  }
+  let folder;
+  if (environment == 'staging') {
+    folder = 'staging';
+  } else if (environment == 'prod') {
+    folder = 'mainnet';
+  } else {
+    folder = 'development';
+  }
+  return `../../governance/${folder}`;
 }

@@ -744,6 +744,7 @@ export async function deployHubAndSpoke(hub: CoreDeploy, spokes: CoreDeploy[]) {
   }
 
   // store block numbers for each chain, so that agents know where to start
+  console.log('Recording starting blocks for each network...');
   await Promise.all(deploys.map((d) => d.recordFromBlock()));
 
   // deploy nomad on each chain
@@ -833,6 +834,7 @@ export async function deployHubAndSpoke(hub: CoreDeploy, spokes: CoreDeploy[]) {
 export async function deployNewChain(
   newDeploy: CoreDeploy,
   hubDeploy: CoreDeploy,
+  oldSpokeDeploys: CoreDeploy[],
 ) {
   if (!newDeploy || !hubDeploy) {
     throw new Error('Bad deploy input for deployNewChain');
@@ -851,6 +853,9 @@ export async function deployNewChain(
     isTestDeploy,
     `Updater for ${newDeploy.chain.name} Home is ${newDeploy.config.updater}`,
   );
+
+  // store block numbers for new chain, so that agents know where to start
+  await newDeploy.recordFromBlock();
 
   // wait for providers to be ready
   log(isTestDeploy, 'awaiting provider ready');
@@ -887,6 +892,8 @@ export async function deployNewChain(
     [hubDeploy.chain.domain],
     hubDeploy.chain.domain,
   );
+
+  writeHubAndSpokeOutput(hubDeploy, [newDeploy], oldSpokeDeploys);
 }
 
 /**
@@ -910,7 +917,7 @@ export function writePartials(dir: string) {
   }
 }
 
-function writeOutput(local: CoreDeploy, remotes: CoreDeploy[], dir: string) {
+function writeOutput(local: CoreDeploy, remotes: CoreDeploy[], dir: string, isFreshDeploy: boolean = false) {
   const config = CoreDeploy.buildConfig(local, remotes);
   const sdk = CoreDeploy.buildSDK(local, remotes);
   const name = local.chain.name;
@@ -925,10 +932,12 @@ function writeOutput(local: CoreDeploy, remotes: CoreDeploy[], dir: string) {
     `${dir}/${name}_contracts.json`,
     JSON.stringify(local.contractOutput, null, 2),
   );
-  fs.writeFileSync(
-    `${dir}/${name}_verification.json`,
-    JSON.stringify(local.verificationInput, null, 2),
-  );
+  if (isFreshDeploy) {
+    fs.writeFileSync(
+        `${dir}/${name}_verification.json`,
+        JSON.stringify(local.verificationInput, null, 2),
+    );
+  }
 }
 
 /**
@@ -955,18 +964,19 @@ export function writeDeployOutput(deploys: CoreDeploy[]) {
  *
  * @param deploys - The array of chain deploys
  */
-export function writeHubAndSpokeOutput(hub: CoreDeploy, spokes: CoreDeploy[]) {
-  log(hub.test, `Have 1 Hub and ${spokes.length} Spoke deploys`);
+export function writeHubAndSpokeOutput(hub: CoreDeploy, newSpokes: CoreDeploy[], oldSpokes: CoreDeploy[] = []) {
+  log(hub.test, `Have 1 Hub and ${newSpokes.length + oldSpokes.length} Spoke deploys`);
 
   const dir = getPathToDeployConfig(hub.config.environment);
 
   // write spoke outputs
-  for (let spoke of spokes) {
+  for (let spoke of newSpokes) {
     writeOutput(spoke, [hub], dir);
   }
 
   // write hub output
-  writeOutput(hub, spokes, dir);
+  const isFreshDeploy = oldSpokes.length == 0;
+  writeOutput(hub, [...newSpokes, ...oldSpokes], dir, isFreshDeploy);
 
   // write partials
   writePartials(dir);

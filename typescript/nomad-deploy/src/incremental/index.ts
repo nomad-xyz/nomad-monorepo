@@ -1,5 +1,7 @@
 import { NomadContext } from '@nomad-xyz/sdk/';
 import { canonizeId } from '@nomad-xyz/sdk/utils';
+import { CoreConfig } from '../core/CoreDeploy';
+import { writeBatchOutput } from './utils';
 
 /**
  * Prepares and executes necessary calls to governing
@@ -12,7 +14,7 @@ import { canonizeId } from '@nomad-xyz/sdk/utils';
 export async function enrollSpoke(
   sdk: NomadContext,
   spokeDomain: number,
-  watchers: string[],
+  spokeConfig: CoreConfig,
 ): Promise<void> {
   let hubCore = await sdk.governorCore();
   let hubBridge = sdk.mustGetBridge(hubCore.domain);
@@ -23,7 +25,7 @@ export async function enrollSpoke(
 
   // enroll watchers
   await Promise.all(
-    watchers.map(async (watcher) => {
+    spokeConfig.watchers.map(async (watcher) => {
       const call =
         await hubCore.xAppConnectionManager.populateTransaction.setWatcherPermission(
           watcher,
@@ -57,13 +59,24 @@ export async function enrollSpoke(
     );
   batch.pushLocal(enrollBridgeCall);
 
-  // turn into a tx request
-  await batch.build();
-
-  // TODO: output governance transaction to a file
-  // TODO: output information needed to execute transaction to a file
-  // TODO: for staging and prod, send to gnosis safe instead of executing
-  // if(staging || prod) {await gnosis.send(batch);} else {await batch.execute();}
-  // send to the chain
-  await batch.execute();
+  if (spokeConfig.environment === 'dev') {
+    // in dev, execute the batch directly
+    console.log("Sending governance transaction...");
+    const txResponse = await batch.execute();
+    const receipt = await txResponse.wait();
+    console.log("Governance tx mined!! ", receipt.transactionHash);
+  } else {
+    // in staging and prod, output batch to a file
+    const built = await batch.build();
+    const unbuiltStr = JSON.stringify(
+      { local: batch.local, remote: batch.remote },
+      null,
+      2,
+    );
+    const builtStr = JSON.stringify(built, null, 2);
+    console.log("Writing governance transaction to file");
+    writeBatchOutput(builtStr, unbuiltStr, spokeConfig.environment);
+    console.log("Done!");
+    // TODO: send to gnosis safe directly
+  }
 }

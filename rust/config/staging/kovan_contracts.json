@@ -1,28 +1,24 @@
 {
-  "upgradeBeaconController": "0x09365db3e46dA81f83CD61bff796e98cfD5A10fF",
-  "xAppConnectionManager": "0x9A4fF79203e3E06BbCD468872c79011F1CDA8435",
-  "updaterManager": "0xfc1A057709F33C7Ea1eCB6F40f50b97936D70B78",
+  "upgradeBeaconController": "0xC76f53cD2C7Ac383e564FbB3790Df1702B21A574",
+  "xAppConnectionManager": "0xFA148438B26D36bcE290a45e12AA00Bdf0B9ca2e",
+  "updaterManager": "0x2B2a2f5EE2B46822DA28407F8c95aec8B0ceD7BF",
   "governance": {
-    "implementation": "0xf3dBaB225024025E115a6cb369069872c3865B7E",
-    "proxy": "0x2960C101Cb72eCC35a515e247608b17B46f38bA6",
-    "beacon": "0x671aa0aBdE2199507770842A854d4e26aA8d9bc0"
+    "implementation": "0x51Ad29cE7CdBA2a1AB2E1EbE2f15df9A34BefDfF",
+    "proxy": "0x01403db34b7aFCb5144D9c37876da5ef58b66646",
+    "beacon": "0x240fccBf3213c5243272661cAa0eA2be6cF877AF"
   },
   "home": {
-    "implementation": "0xebBf6DEBf58D471B1211AC9135f61E14748445fe",
-    "proxy": "0xA2d62FbcD779231894586CFC569E8a085662d5Bb",
-    "beacon": "0x15bC7E3819afDf705528813D1D9f2C3d30e7a901"
+    "implementation": "0x65240027C0E62652b944A828903696f376946ea7",
+    "proxy": "0x85789e726B31cB74ba471aeF5FF93c3f68AE510F",
+    "beacon": "0x278D1885509b8caCd4c92f0Ae2D48B7eA40ddEFd"
   },
   "replicas": {
-    "5000": {
-      "implementation": "0x8AAA571372f15d09707046D474A042cce5Ea78e0",
-      "proxy": "0x2fFEa0eBe27cF63cbE4b8bb621b817F7fe40f27B",
-      "beacon": "0x2288e06888B149d3FE6905FEcE4878fdf502Da0d"
+    "2000": {
+      "implementation": "0x9c6f06Fe1Ec71BEd7d4E64A5935BaE7b67AC2787",
+      "proxy": "0x3C4BD86F76E524EA81B3E84eE75C964A2ae20bc1",
+      "beacon": "0x18cebAAc57b458AC99AfE5AbE58166BDd43d461F"
     }
   },
-  "recoveryManager": "0x24F6c874F56533d9a1422e85e5C7A806ED11c036",
-  "updater": "0x5340fe2F454B861E71647bd80596A3463e095C9c",
-  "governor": {
-    "address": "0xa4849f1D96B26066f9C631FCdc8F1457D27Fb5EC",
-    "domain": 3000
-  }
+  "recoveryManager": "0xa4849f1D96B26066f9C631FCdc8F1457D27Fb5EC",
+  "updater": "0x5340fe2F454B861E71647bd80596A3463e095C9c"
 }

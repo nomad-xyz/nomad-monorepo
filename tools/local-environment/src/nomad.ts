@@ -58,7 +58,7 @@ import { NonceManager } from "@ethersproject/experimental";
 import { ethers } from "ethers";
 import { Logger, LogLevel } from "./logger";
 import { checkCoreDeploy } from "@nomad-xyz/deploy/src/core/checks";
-import { checkBridgeDeploy } from "@nomad-xyz/deploy/src/bridge/checks";
+import { checkHubAndSpokeBridgeConnections } from "@nomad-xyz/deploy/src/bridge/checks";
 import { checkHubToSpokeConnection } from "@nomad-xyz/deploy/src/incremental/checks";
 import { utils } from ".";
 
@@ -817,7 +817,8 @@ export class Nomad {
       [govCoreDeploy.chain.domain],
       govCoreDeploy.chain.domain
     );
-    await checkBridgeDeploy(newBridgeDeploy, [govCoreDeploy.chain.domain]);
+
+    await checkHubAndSpokeBridgeConnections(govBridgeDeploy, [newBridgeDeploy]);
     await checkHubToSpokeConnection(this.multiprovider!, newNetwork.domain, [
       this.getWatcherKey(newNetwork)!.toAddress(),
     ]);

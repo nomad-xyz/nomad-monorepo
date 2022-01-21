@@ -1,0 +1,61 @@
+{
+  "environment": "dev",
+  "signers": {
+    "rinkeby": {
+      "key": "",
+      "type": "hexKey"
+    },
+    "kovan": {
+      "key": "",
+      "type": "hexKey"
+    },
+    "moonbasealpha": {
+      "key": "",
+      "type": "hexKey"
+    }
+  },
+  "replicas": {
+    "kovan": {
+      "address": "0xFA58C14B693C44140208211dDa4A81c182B557c1",
+      "domain": "3000",
+      "name": "kovan",
+      "rpcStyle": "ethereum",
+      "timelag": 5,
+      "connection": {
+        "type": "http",
+        "url": ""
+      }
+    },
+    "moonbasealpha": {
+      "address": "0x6d8aCF60f3ddB6C49dEF2A2b77E56BE2FF1502Cf",
+      "domain": "5000",
+      "name": "moonbasealpha",
+      "rpcStyle": "ethereum",
+      "timelag": 5,
+      "connection": {
+        "type": "http",
+        "url": ""
+      }
+    }
+  },
+  "home": {
+    "address": "0xBfCBCCce35D8a6e8056c92f225768EbBfBbf1293",
+    "domain": "2000",
+    "name": "rinkeby",
+    "rpcStyle": "ethereum",
+    "timelag": 100,
+    "connection": {
+      "type": "http",
+      "url": ""
+    }
+  },
+  "tracing": {
+    "level": "debug",
+    "fmt": "json"
+  },
+  "db": "db_path",
+  "index": {
+    "from": "10024912",
+    "chunk": "2000"
+  }
+}

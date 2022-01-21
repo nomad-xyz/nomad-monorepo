@@ -1,4 +1,4 @@
-import { TypedEvent } from '@nomad-xyz/contract-interfaces/dist/core/commons';
+import { TypedEvent } from '@nomad-xyz/contract-interfaces/core/commons';
 import { ethers } from 'ethers';
 import { NomadContext } from '..';
 import { CoreContracts } from '../contracts';
