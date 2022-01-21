@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@nomad-xyz/contract-interfaces": "^1.1.1",
-    "@nomad-xyz/sdk": "^1.2.3",
+    "@nomad-xyz/sdk": "^1.2.4",
     "core-js": "^3.6.5",
     "ethers": "^5.5.3",
     "naive-ui": "^2.24.1",

@@ -4,7 +4,7 @@ import DEVIcon from './assets/DEV.png'
 
 import { TokenIdentifier } from '@nomad-xyz/sdk/nomad'
 
-export type NetworkName = 'kovan' | 'moonbasealpha'
+export type NetworkName = 'kovan' | 'moonbasealpha' | 'rinkeby'
 export type TokenName = 'WETH' | 'USDT' | 'ETH' | 'DEV'
 
 export type TokenMetadata = {
@@ -41,23 +41,43 @@ export const DEV: TokenIdentifier = {
   id: '0x0000000000000000000000000000000000000802',
 }
 
+export const rWETH: TokenIdentifier= {
+  domain: 'rinkeby',
+  id: '0xc778417e063141139fce010982780140aa0cd5ab'
+}
 
 export const tokens: { [key: string]: TokenMetadata } = {
-  WETH: {
-    nativeNetwork: 'kovan', // must be lowercase
-    symbol: 'WETH',
+  ETH: {
+    nativeNetwork: 'rinkeby',
+    symbol: 'Rinkeby ETH',
     icon: wETHIcon,
     decimals: 18,
-    tokenIdentifier: WETH,
+    tokenIdentifier: rWETH,
+    nativeOnly: true,
+  },
+  WETH: {
+    nativeNetwork: 'rinkeby',
+    symbol: 'Rinkeby WETH',
+    icon: wETHIcon,
+    decimals: 18,
+    tokenIdentifier: rWETH,
     nativeOnly: false,
   },
-  ETH: {
+  kETH: {
     nativeNetwork: 'kovan',
-    symbol: 'ETH',
+    symbol: 'kETH',
     icon: wETHIcon,
     decimals: 18,
     tokenIdentifier: WETH,
     nativeOnly: true,
+  },
+  kWETH: {
+    nativeNetwork: 'kovan', // must be lowercase
+    symbol: 'kWETH',
+    icon: wETHIcon,
+    decimals: 18,
+    tokenIdentifier: WETH,
+    nativeOnly: false,
   },
   USDT: {
     nativeNetwork: 'kovan',
@@ -78,6 +98,15 @@ export const tokens: { [key: string]: TokenMetadata } = {
 }
 
 export const networks: { [key: string]: NetworkMetadata } = {
+  rinkeby: {
+    name: 'rinkeby',
+    chainID: 4,
+    domainID: 2000,
+    nativeToken: tokens.rETH,
+    rpcUrl: process.env.VUE_APP_RINKEBY_RPC!,
+    blockExplorer: 'https://rinkeby.etherscan.io/',
+    confirmationTimeInMinutes: 2
+  },
   kovan: {
     name: 'kovan', // must be lowercase
     chainID: 42,
