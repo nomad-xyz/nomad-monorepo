@@ -10,6 +10,7 @@ use crate::{
 
 /// The status of a message in the replica
 #[repr(u8)]
+#[derive(Debug, Clone, Copy)]
 pub enum MessageStatus {
     /// Message is unknown
     None = 0,

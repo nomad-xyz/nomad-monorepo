@@ -2,7 +2,9 @@ use crate::events::home::{Dispatch, HomeEvents};
 use ethers::core::types::H256;
 use nomad_core::{accumulator::merkle::MerkleTree, Decode, NomadMessage, SignedUpdate};
 use std::collections::{BTreeMap, VecDeque};
-use tokio::{sync::mpsc, task::JoinHandle};
+
+type E = Box<dyn std::error::Error>;
+type Result<T> = std::result::Result<T, E>;
 
 pub struct HomeModel {
     local_domain: u32,
@@ -15,9 +17,6 @@ pub struct HomeModel {
     queue: VecDeque<H256>,
     messages: BTreeMap<u32, BTreeMap<u32, NomadMessage>>,
 }
-
-type E = Box<dyn std::error::Error>;
-type Result<T> = std::result::Result<T, E>;
 
 // Getters
 impl HomeModel {
@@ -72,7 +71,7 @@ impl HomeModel {
 
 // Business
 impl HomeModel {
-    async fn handle_dispatch(&mut self, dispatch: Dispatch) -> Result<()> {
+    fn handle_dispatch(&mut self, dispatch: Dispatch) -> Result<bool> {
         if self.committed_root != dispatch.committed_root {
             panic!("out of order events");
         }
@@ -91,10 +90,10 @@ impl HomeModel {
         self.insert_message(message.destination, message.nonce, message)?;
         self.tree.push_leaf(dispatch.message_hash, 32)?;
         self.queue.push_back(self.tree.hash());
-        Ok(())
+        Ok(self.failed)
     }
 
-    async fn handle_update(&mut self, signed_update: SignedUpdate) -> Result<()> {
+    fn handle_update(&mut self, signed_update: SignedUpdate) -> Result<bool> {
         if self.failed {
             panic!("update while in failed state");
         }
@@ -103,35 +102,35 @@ impl HomeModel {
 
         if !self.queue.contains(&signed_update.update.new_root) {
             self.failed = true;
-            return Ok(());
+            return Ok(self.failed);
         }
 
         // pop off the queue until we've removed new_root
         while self.queue.pop_front() != Some(new_root) {}
         self.committed_root = new_root;
 
-        Ok(())
+        Ok(self.failed)
     }
 
-    async fn handle_event(&mut self, event: HomeEvents) -> Result<()> {
+    pub fn handle(&mut self, event: HomeEvents) -> Result<bool> {
         match event {
-            HomeEvents::Dispatch(dispatch) => self.handle_dispatch(dispatch).await,
-            HomeEvents::Update(update) => self.handle_update(update).await,
+            HomeEvents::Dispatch(dispatch) => self.handle_dispatch(dispatch),
+            HomeEvents::Update(update) => self.handle_update(update),
             HomeEvents::ImproperUpdate { .. } => {
                 self.failed = true;
-                Ok(())
+                Ok(self.failed)
             }
             HomeEvents::UpdaterSlashed { .. } => {
                 self.failed = true;
-                Ok(())
+                Ok(self.failed)
             }
             HomeEvents::NewUpdaterManager { updater_manager } => {
                 self.updater_manager = updater_manager;
-                Ok(())
+                Ok(self.failed)
             }
             HomeEvents::DoubleUpdate { .. } => {
                 self.failed = true;
-                Ok(())
+                Ok(self.failed)
             }
             HomeEvents::NewUpdater {
                 old_updater,
@@ -142,22 +141,8 @@ impl HomeModel {
                     "old updater does not match current"
                 );
                 self.updater = new_updater;
-                Ok(())
+                Ok(self.failed)
             }
         }
-    }
-}
-
-impl HomeModel {
-    // Spawn a home model
-    pub fn spawn(mut self, mut events: mpsc::Receiver<HomeEvents>) -> JoinHandle<()> {
-        tokio::spawn(async move {
-            loop {
-                match events.recv().await {
-                    Some(e) => self.handle_event(e).await.unwrap(),
-                    None => return (),
-                }
-            }
-        })
     }
 }

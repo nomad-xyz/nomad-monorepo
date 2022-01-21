@@ -16,7 +16,10 @@ pub enum ReplicaEvents {
         new_confirm_at: U256,
     },
     // Nomad Base
-    Update(SignedUpdate),
+    Update {
+        update: SignedUpdate,
+        logged_at: U256,
+    },
     DoubleUpdate(DoubleUpdate),
     NewUpdater {
         old_updater: H256,
