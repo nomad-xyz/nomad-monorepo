@@ -113,13 +113,15 @@ export class NomadEvent {
 }
 
 function parseDestinationAndNonce(
-  h: ethers.BigNumber | { hex: string },
+  h: ethers.BigNumber | { hex?: string, _hex?: string }
 ): [number, number] {
   let hexString = '';
   if (h instanceof ethers.BigNumber) {
     hexString = h.toHexString();
-  } else {
-    hexString = h.hex;
+  } else{
+    const hex = h.hex || h._hex;
+    if (!hex) throw new Error(`Has no hex: ${JSON.stringify(h)}`);
+    hexString = hex;
   }
 
   const without0x = hexString.slice(2);

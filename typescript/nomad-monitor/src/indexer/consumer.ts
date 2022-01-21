@@ -1,3 +1,4 @@
+import { parseMessage } from '@nomad-xyz/sdk/src/nomad/messages/NomadMessage';
 import { ethers } from 'ethers';
 import { EventType, NomadEvent } from './event';
 import { Statistics } from './types';
@@ -105,7 +106,7 @@ class StatisticsCollector {
 }
 
 export abstract class Consumer {
-  abstract consume(...evens: NomadEvent[]): void;
+  abstract consume(...evens: NomadEvent[]): Promise<void>;
   abstract stats(): Statistics;
 }
 
@@ -176,6 +177,10 @@ class Timings {
   }
 }
 
+function bytes32ToAddress(s: string) {
+  return '0x'+s.slice(26)
+}
+
 class NomadMessage {
   origin: number;
   destination: number;
@@ -183,7 +188,16 @@ class NomadMessage {
   hash: string;
   leafIndex: ethers.BigNumber;
   destinationAndNonce: ethers.BigNumber;
-  message: string;
+  raw: string;
+  nomadSender: string;
+  nomadRecipient: string;
+  bridgeMsgType?: string;
+  bridgeMsgTo?: string;
+  bridgeMsgAmount?: ethers.BigNumber;
+  bridgeMsgAllowFast?: boolean;
+  bridgeMsgDetailsHash?: string;
+  bridgeMsgTokenDomain?: number;
+  bridgeMsgTokenId?: string;
   state: MsgState;
   timings: Timings;
 
@@ -203,8 +217,23 @@ class NomadMessage {
     this.hash = hash;
     this.leafIndex = leafIndex;
     this.destinationAndNonce = destinationAndNonce;
-    this.message = message;
-
+    this.raw = message;
+    const parsed = parseMessage(message);
+    this.nomadSender = parsed.sender;
+    this.nomadRecipient = parsed.recipient;
+    try {
+      const bridgeMessage = parseBody(parsed.body);
+      this.bridgeMsgType = bridgeMessage.action.type as string;
+      this.bridgeMsgTo = bridgeMessage.action.to;
+      this.bridgeMsgAmount = bridgeMessage.action.amount;
+      this.bridgeMsgAllowFast = bridgeMessage.action.allowFast;
+      this.bridgeMsgDetailsHash = bridgeMessage.action.detailsHash;
+      this.bridgeMsgTokenDomain = bridgeMessage.token.domain as number;
+      this.bridgeMsgTokenId = bridgeMessage.token.id as string;
+    } catch(e) {
+      // pass
+    }
+    
     this.state = MsgState.Dispatched;
     this.timings = new Timings(createdAt);
   }
@@ -212,6 +241,109 @@ class NomadMessage {
   get originAndRoot(): string {
     return `${this.origin}${this.root}`;
   }
+
+  intoDB(): [string, number, number, string, string, string, number, number, number, number, number, string | undefined, string | undefined, string | undefined, boolean | undefined, string | undefined , number | undefined, string | undefined
+  ] {
+    return [
+      this.hash,
+      this.origin,
+      this.destination,
+      bytes32ToAddress(this.nomadSender),
+      bytes32ToAddress(this.nomadRecipient),
+      this.root,
+      this.state,
+      this.timings.dispatchedAt,
+      this.timings.updatedAt,
+      this.timings.relayedAt,
+      this.timings.processedAt,
+      this.bridgeMsgType,
+      this.bridgeMsgTo ? bytes32ToAddress(this.bridgeMsgTo): undefined,
+      this.bridgeMsgAmount?.toString(),
+      this.bridgeMsgAllowFast,
+      this.bridgeMsgDetailsHash,
+      this.bridgeMsgTokenDomain,
+      this.bridgeMsgTokenId ? bytes32ToAddress(this.bridgeMsgTokenId): undefined,
+    ]
+  }
+}
+
+import {Pool} from 'pg';
+import { parseBody } from '@nomad-xyz/sdk/src/nomad/messages/BridgeMessage';
+
+// expand(3, 2) returns "($1, $2), ($3, $4), ($5, $6)" 
+function expand(rowCount: number, columnCount: number, startAt=1){
+  var index = startAt
+  return Array(rowCount).fill(0).map(v => `(${Array(columnCount).fill(0).map(v => `$${index++}`).join(", ")})`).join(", ")
+}
+
+class DBDriver {
+  pool: Pool;
+  syncedOnce: boolean;
+
+  constructor() {
+    this.pool = new Pool();
+    this.syncedOnce = false;
+  }
+
+  async connect() {
+    await this.pool.connect()
+  }
+
+  get startupSync() {
+    const value = this.syncedOnce;
+    this.syncedOnce = true;
+    return !value;
+  }
+
+  async insert(messages: NomadMessage[]) {
+    const rows = messages.length;
+    if (!rows) return ;
+    const columns = 18;
+    const query = `INSERT INTO messages (hash, origin, destination, sender, recipient, root, state, dispatched_at, updated_at, relayed_at, processed_at, bridge_msg_type, bridge_msg_to, bridge_msg_amount, bridge_msg_allow_fast, bridge_msg_details_hash, bridge_msg_token_domain, bridge_msg_token_id) VALUES ${expand(rows, columns)};`;
+    const values = messages.map(m => m.intoDB()).flat();
+    return await this.pool.query(query, values)
+  }
+
+  async update(messages: NomadMessage[]) {
+    const rows = messages.length;
+    if (!rows) return ;
+    const promises = messages.map(m => {
+      const query = `UPDATE messages SET
+      origin = $2,
+      destination = $3,
+      sender = $4,
+      recipient = $5,
+      root = $6,
+      state = $7,
+      dispatched_at = $8,
+      updated_at = $9,
+      relayed_at = $10,
+      processed_at = $11,
+      bridge_msg_type = $12,
+      bridge_msg_to = $13,
+      bridge_msg_amount = $14,
+      bridge_msg_allow_fast = $15,
+      bridge_msg_details_hash = $16,
+      bridge_msg_token_domain = $17,
+      bridge_msg_token_id = $18
+      WHERE hash = $1
+      `;
+      return this.pool.query(query, m.intoDB());
+    })
+
+    return await Promise.all(promises);
+  }
+
+  async getExistingHashes(): Promise<string[]> {
+    const res = await this.pool.query(`select hash from messages;`);
+    return res.rows.map(r => r.hash) as string[]
+  }
+
+}
+
+enum DBAction{
+  Insert,
+  Update,
 }
 
 export class Processor extends Consumer {
@@ -220,6 +352,9 @@ export class Processor extends Consumer {
   msgByOriginAndRoot: Map<string, number[]>;
   consumed: number; // for debug
   domains: number[];
+  syncInsertQueue: string[];
+  syncUpdateQueue: string[];
+  db: DBDriver;
 
   constructor() {
     super();
@@ -228,9 +363,13 @@ export class Processor extends Consumer {
     this.msgByOriginAndRoot = new Map();
     this.consumed = 0;
     this.domains = [];
+    this.syncInsertQueue = [];
+    this.syncUpdateQueue = [];
+
+    this.db = new DBDriver();
   }
 
-  consume(...events: NomadEvent[]): void {
+  async consume(...events: NomadEvent[]): Promise<void> {
     for (const event of events) {
       if (event.eventType === EventType.HomeDispatch) {
         this.dispatched(event);
@@ -244,6 +383,36 @@ export class Processor extends Consumer {
 
       this.consumed += 1;
     }
+
+    await this.sync()
+  }
+
+  async sync() {
+    const [inserts, updates] = await this.getMsgForSync();
+    console.log(inserts.filter(i => !i).length)
+    await Promise.all([this.db.insert(inserts), this.db.update(updates)])
+  }
+
+  addToSyncQueue(hash: string, action: DBAction) {
+    if (this.syncInsertQueue.indexOf(hash) < 0 && this.syncUpdateQueue.indexOf(hash) < 0) {
+      if (action == DBAction.Insert) this.syncInsertQueue.push(hash)
+      else this.syncUpdateQueue.push(hash)
+    }
+  }
+
+  async getMsgForSync(): Promise<[NomadMessage[], NomadMessage[]]> {
+    let existingHashes: string[] = [];
+    if (this.db.startupSync) {
+      existingHashes = await this.db.getExistingHashes();
+      this.syncUpdateQueue.push(
+        ...this.syncInsertQueue.filter(hash => existingHashes.indexOf(hash) >= 0)
+      )
+    }
+    const inserts = this.syncInsertQueue.filter(hash => this.syncUpdateQueue.indexOf(hash) < 0).map(hash => this.getMsg(hash)!).filter(m=>!!m);
+    this.syncInsertQueue = [];
+    const updates = this.syncUpdateQueue.map(hash => this.getMsg(hash)!).filter(m=>!!m);
+    this.syncUpdateQueue = [];
+    return [inserts, updates];
   }
 
   dispatched(e: NomadEvent) {
@@ -258,6 +427,7 @@ export class Processor extends Consumer {
       e.ts,
     );
     this.add(m);
+    this.addToSyncQueue(m.hash, DBAction.Insert);
 
     if (!this.domains.includes(e.domain)) this.domains.push(e.domain);
   }
@@ -269,6 +439,7 @@ export class Processor extends Consumer {
         if (m.state < MsgState.Updated) {
           m.state = MsgState.Updated;
           m.timings.updated(e.ts);
+          this.addToSyncQueue(m.hash, DBAction.Update);
         }
       });
   }
@@ -283,6 +454,7 @@ export class Processor extends Consumer {
         if (m.state < MsgState.Relayed) {
           m.state = MsgState.Relayed;
           m.timings.relayed(e.ts);
+          this.addToSyncQueue(m.hash, DBAction.Update);
         }
       });
   }
@@ -293,6 +465,7 @@ export class Processor extends Consumer {
       if (m.state < MsgState.Processed) {
         m.state = MsgState.Processed;
         m.timings.processed(e.ts);
+        this.addToSyncQueue(m.hash, DBAction.Update);
       }
     }
   }

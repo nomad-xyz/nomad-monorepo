@@ -1,4 +1,4 @@
-import { mainnet } from '@nomad-xyz/sdk';
+import { mainnet } from '@nomad-xyz/sdk/src';
 import { Processor } from './consumer';
 import { Orchestrator } from './orchestrator';
 import * as dotenv from 'dotenv';
@@ -11,6 +11,7 @@ const infuraKey = process.env.INFURA_KEY!;
 const moonbeamRPC = process.env.MOONBEAM_RPC!;
 const environment = process.env.ENVIRONMENT!;
 
+console.log(infuraKey, moonbeamRPC, environment);
 
 (async () => {
   const ctx = mainnet;
@@ -26,6 +27,7 @@ const environment = process.env.ENVIRONMENT!;
   const m = new IndexerCollector(environment, logger);
 
   const o = new Orchestrator(mainnet, c, mainnet.domainNumbers[0], m, logger);
+  await o.init();
 
   await o.startConsuming();
 })();

@@ -1,5 +1,5 @@
 import { Orchestrator } from './orchestrator';
-import { NomadContext } from '@nomad-xyz/sdk';
+import { NomadContext } from '@nomad-xyz/sdk/src';
 import fs from 'fs';
 import { ContractType, EventType, NomadEvent, EventSource } from './event';
 import { Home, Replica } from '@nomad-xyz/contract-interfaces/core';
@@ -301,7 +301,7 @@ export abstract class Persistance {
   }
 
   abstract store(...events: NomadEvent[]): void;
-  abstract init(): Promise<boolean>;
+  abstract init(): Promise<void>;
   abstract sortSorage(): void;
   abstract allEvents(): NomadEvent[];
   abstract persist(): void;
@@ -315,13 +315,13 @@ export class FilePersistance extends Persistance {
   }
 
   store(...events: NomadEvent[]): void {}
-  async init(): Promise<boolean> {
+  async init(): Promise<void> {
     if (fs.existsSync(this.path)) {
       this.from = 13;
       this.height = 14;
-      return true;
+      return ;
     } else {
-      return false;
+      return ;
     }
   }
   sortSorage() {}
@@ -341,9 +341,7 @@ export class RamPersistance extends Persistance {
     this.block2events = new Map();
     this.blocks = [];
     this.storePath = storePath;
-    try {
-      this.load();
-    } catch (_) {}
+    
   }
 
   updateFromTo(block: number) {
@@ -367,8 +365,11 @@ export class RamPersistance extends Persistance {
     });
     this.persist();
   }
-  async init(): Promise<boolean> {
-    return true;
+  async init(): Promise<void> {
+    try {
+      await this.load();
+    } catch (_) {}
+    return;
   }
   sortSorage() {
     this.blocks = this.blocks.sort();
@@ -378,7 +379,7 @@ export class RamPersistance extends Persistance {
     return new EventsRange(this);
   }
 
-  persist() {
+  persistToFile() {
     fs.writeFileSync(
       this.storePath,
       JSON.stringify(
@@ -395,7 +396,21 @@ export class RamPersistance extends Persistance {
     );
   }
 
-  load() {
+  persistToDB() {
+
+  }
+
+  persist() {
+    this.persistToFile();
+    this.persistToDB()
+  }
+
+  async load() {
+    this.loadFromFile()
+  }
+
+  loadFromFile() {
+
     const object = JSON.parse(
       fs.readFileSync(this.storePath, 'utf8'),
       reviver,
