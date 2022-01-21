@@ -1,4 +1,4 @@
-import { NomadContext } from '@nomad-xyz/sdk';
+import { NomadContext } from '@nomad-xyz/sdk/src';
 import Logger from 'bunyan';
 import { Consumer } from './consumer';
 import { Indexer } from './indexer';
@@ -31,9 +31,11 @@ export class Orchestrator {
     this.freshStart = true;
     this.metrics = metrics;
     this.logger = logger;
+  }
 
-    this.initIndexers();
-    this.initalFeedConsumer();
+  async init() {
+    await this.initIndexers();
+    await this.initalFeedConsumer();
   }
 
   async indexAll() {
@@ -44,7 +46,7 @@ export class Orchestrator {
     ).flat();
     events.sort((a, b) => a.ts - b.ts);
     this.logger.info(`Received ${events.length} events after reindexing`);
-    this.consumer.consume(...events);
+    await this.consumer.consume(...events);
   }
 
   async index(domain: number) {
@@ -60,17 +62,18 @@ export class Orchestrator {
     return await indexer.updateAll(replicas);
   }
 
-  initalFeedConsumer() {
+  async initalFeedConsumer() {
     const events = Array.from(this.indexers.values())
       .map((indexer) => indexer.persistance.allEvents())
       .flat();
     events.sort((a, b) => a.ts - b.ts);
-    this.consumer.consume(...events);
+    await this.consumer.consume(...events);
   }
 
-  initIndexers() {
+  async initIndexers() {
     for (const domain of this.sdk.domainNumbers) {
       const indexer = new Indexer(domain, this.sdk, this);
+      await indexer.init();
       this.indexers.set(domain, indexer);
     }
   }
