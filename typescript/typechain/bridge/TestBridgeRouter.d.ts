@@ -19,12 +19,14 @@ import { Listener, Provider } from "@ethersproject/providers";
 import { FunctionFragment, EventFragment, Result } from "@ethersproject/abi";
 import { TypedEventFilter, TypedEvent, TypedListener } from "./commons";
 
-interface BridgeRouterInterface extends ethers.utils.Interface {
+interface TestBridgeRouterInterface extends ethers.utils.Interface {
   functions: {
     "DUST_AMOUNT()": FunctionFragment;
     "PRE_FILL_FEE_DENOMINATOR()": FunctionFragment;
     "PRE_FILL_FEE_NUMERATOR()": FunctionFragment;
     "VERSION()": FunctionFragment;
+    "drain()": FunctionFragment;
+    "dustEmUp(address)": FunctionFragment;
     "enrollCustom(uint32,bytes32,address)": FunctionFragment;
     "enrollRemoteRouter(uint32,bytes32)": FunctionFragment;
     "handle(uint32,uint32,bytes32,bytes)": FunctionFragment;
@@ -55,6 +57,8 @@ interface BridgeRouterInterface extends ethers.utils.Interface {
     values?: undefined
   ): string;
   encodeFunctionData(functionFragment: "VERSION", values?: undefined): string;
+  encodeFunctionData(functionFragment: "drain", values?: undefined): string;
+  encodeFunctionData(functionFragment: "dustEmUp", values: [string]): string;
   encodeFunctionData(
     functionFragment: "enrollCustom",
     values: [BigNumberish, BytesLike, string]
@@ -123,6 +127,8 @@ interface BridgeRouterInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "VERSION", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "drain", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "dustEmUp", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "enrollCustom",
     data: BytesLike
@@ -174,7 +180,7 @@ interface BridgeRouterInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: "Send"): EventFragment;
 }
 
-export class BridgeRouter extends BaseContract {
+export class TestBridgeRouter extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this;
   attach(addressOrName: string): this;
   deployed(): Promise<this>;
@@ -215,7 +221,7 @@ export class BridgeRouter extends BaseContract {
     toBlock?: string | number | undefined
   ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>;
 
-  interface: BridgeRouterInterface;
+  interface: TestBridgeRouterInterface;
 
   functions: {
     DUST_AMOUNT(overrides?: CallOverrides): Promise<[BigNumber]>;
@@ -225,6 +231,15 @@ export class BridgeRouter extends BaseContract {
     PRE_FILL_FEE_NUMERATOR(overrides?: CallOverrides): Promise<[BigNumber]>;
 
     VERSION(overrides?: CallOverrides): Promise<[number]>;
+
+    drain(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>;
+
+    dustEmUp(
+      _dustee: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>;
 
     enrollCustom(
       _domain: BigNumberish,
@@ -310,6 +325,15 @@ export class BridgeRouter extends BaseContract {
 
   VERSION(overrides?: CallOverrides): Promise<number>;
 
+  drain(
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
+
+  dustEmUp(
+    _dustee: string,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
+
   enrollCustom(
     _domain: BigNumberish,
     _id: BytesLike,
@@ -393,6 +417,10 @@ export class BridgeRouter extends BaseContract {
     PRE_FILL_FEE_NUMERATOR(overrides?: CallOverrides): Promise<BigNumber>;
 
     VERSION(overrides?: CallOverrides): Promise<number>;
+
+    drain(overrides?: CallOverrides): Promise<boolean>;
+
+    dustEmUp(_dustee: string, overrides?: CallOverrides): Promise<void>;
 
     enrollCustom(
       _domain: BigNumberish,
@@ -520,6 +548,15 @@ export class BridgeRouter extends BaseContract {
 
     VERSION(overrides?: CallOverrides): Promise<BigNumber>;
 
+    drain(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>;
+
+    dustEmUp(
+      _dustee: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>;
+
     enrollCustom(
       _domain: BigNumberish,
       _id: BytesLike,
@@ -608,6 +645,15 @@ export class BridgeRouter extends BaseContract {
     ): Promise<PopulatedTransaction>;
 
     VERSION(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    drain(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>;
+
+    dustEmUp(
+      _dustee: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>;
 
     enrollCustom(
       _domain: BigNumberish,

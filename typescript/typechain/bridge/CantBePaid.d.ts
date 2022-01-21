@@ -11,34 +11,19 @@ import {
   PopulatedTransaction,
   BaseContract,
   ContractTransaction,
-  Overrides,
-  PayableOverrides,
-  CallOverrides,
 } from "ethers";
 import { BytesLike } from "@ethersproject/bytes";
 import { Listener, Provider } from "@ethersproject/providers";
 import { FunctionFragment, EventFragment, Result } from "@ethersproject/abi";
 import { TypedEventFilter, TypedEvent, TypedListener } from "./commons";
 
-interface IWethInterface extends ethers.utils.Interface {
-  functions: {
-    "approve(address,uint256)": FunctionFragment;
-    "deposit()": FunctionFragment;
-  };
-
-  encodeFunctionData(
-    functionFragment: "approve",
-    values: [string, BigNumberish]
-  ): string;
-  encodeFunctionData(functionFragment: "deposit", values?: undefined): string;
-
-  decodeFunctionResult(functionFragment: "approve", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "deposit", data: BytesLike): Result;
+interface CantBePaidInterface extends ethers.utils.Interface {
+  functions: {};
 
   events: {};
 }
 
-export class IWeth extends BaseContract {
+export class CantBePaid extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this;
   attach(addressOrName: string): this;
   deployed(): Promise<this>;
@@ -79,63 +64,15 @@ export class IWeth extends BaseContract {
     toBlock?: string | number | undefined
   ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>;
 
-  interface: IWethInterface;
+  interface: CantBePaidInterface;
 
-  functions: {
-    approve(
-      _who: string,
-      _wad: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>;
+  functions: {};
 
-    deposit(
-      overrides?: PayableOverrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>;
-  };
-
-  approve(
-    _who: string,
-    _wad: BigNumberish,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>;
-
-  deposit(
-    overrides?: PayableOverrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>;
-
-  callStatic: {
-    approve(
-      _who: string,
-      _wad: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
-    deposit(overrides?: CallOverrides): Promise<void>;
-  };
+  callStatic: {};
 
   filters: {};
 
-  estimateGas: {
-    approve(
-      _who: string,
-      _wad: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>;
+  estimateGas: {};
 
-    deposit(
-      overrides?: PayableOverrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>;
-  };
-
-  populateTransaction: {
-    approve(
-      _who: string,
-      _wad: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>;
-
-    deposit(
-      overrides?: PayableOverrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>;
-  };
+  populateTransaction: {};
 }
