@@ -19,74 +19,74 @@ const { BridgeMessageTypes } = bridge;
 
 const DUST = BigNumber.from('60000000000000000');
 
+describe('Duster', async () => {
+  let instance: TestBridgeRouter;
+  let deployer: types.Signer;
+  let revertingDustee: CantBePaid;
+
+  before(async () => {
+    [deployer] = await ethers.getSigners();
+    instance = await new TestBridgeRouter__factory(deployer).deploy();
+    revertingDustee = await new CantBePaid__factory(deployer).deploy();
+  });
+
+  async function drain() {
+    await instance.drain();
+  }
+
+  async function doesDust(dustee: string) {
+    const preBalance = await instance.provider.getBalance(dustee);
+    await expect(instance.dustEmUp(dustee)).to.not.be.reverted;
+    const postBalance = await instance.provider.getBalance(dustee);
+    expect(postBalance).to.equal(preBalance.add(DUST));
+    await drain();
+  }
+
+  async function doesNotDust(dustee: string) {
+    const preBalance = await instance.provider.getBalance(dustee);
+    await expect(instance.dustEmUp(dustee)).to.not.be.reverted;
+    const postBalance = await instance.provider.getBalance(dustee);
+    expect(postBalance).to.equal(preBalance);
+    await drain();
+  }
+
+  it('dusts not dust if bridge has 0 balance', async () => {
+    await doesNotDust('0x' + '11'.repeat(20));
+  });
+
+  it('does not dust if the bridge has balance < dust', async () => {
+    deployer.sendTransaction({ to: instance.address, value: 5 });
+    await doesNotDust('0x' + '11'.repeat(20));
+  });
+
+  it('does not dust if the recipient has >= dust', async () => {
+    const recipient = '0x' + '11'.repeat(20);
+    await deployer.sendTransaction({ to: instance.address, value: DUST });
+    await deployer.sendTransaction({ to: recipient, value: DUST });
+    await doesNotDust(recipient);
+  });
+
+  it('dusts if the recipient has balance 0 ', async () => {
+    const recipient = '0x' + '22'.repeat(20);
+    await deployer.sendTransaction({ to: instance.address, value: DUST });
+    await doesDust(recipient);
+  });
+
+  it('dusts if the recipient has balance < Dust', async () => {
+    const recipient = '0x' + '33'.repeat(20);
+    await deployer.sendTransaction({ to: instance.address, value: DUST });
+    await deployer.sendTransaction({ to: recipient, value: 5 });
+    await doesDust(recipient);
+  });
+
+  it('does not revert if the recipieint is unpayable', async () => {
+    await deployer.sendTransaction({ to: instance.address, value: DUST });
+    await doesNotDust(revertingDustee.address);
+  });
+});
+
 [true, false].map((ENABLE_FAST) => {
-  describe.only('BridgeRouter', async () => {
-    describe('Duster', async () => {
-      let instance: TestBridgeRouter;
-      let deployer: types.Signer;
-      let revertingDustee: CantBePaid;
-
-      before(async () => {
-        [deployer] = await ethers.getSigners();
-        instance = await new TestBridgeRouter__factory(deployer).deploy();
-        revertingDustee = await new CantBePaid__factory(deployer).deploy();
-      });
-
-      async function drain() {
-        await instance.drain();
-      }
-
-      async function doesDust(dustee: string) {
-        const balance = await instance.provider.getBalance(dustee);
-        await expect(instance.dustEmUp(dustee)).to.not.be.reverted;
-        expect(await instance.provider.getBalance(dustee)).to.equal(
-          balance.add(DUST),
-        );
-        await drain();
-      }
-
-      async function doesNotDust(dustee: string) {
-        const balance = await instance.provider.getBalance(dustee);
-        await expect(instance.dustEmUp(dustee)).to.not.be.reverted;
-        expect(await instance.provider.getBalance(dustee)).to.equal(balance);
-        await drain();
-      }
-
-      it('dusts not dust if bridge has 0 balance', async () => {
-        await doesNotDust('0x' + '11'.repeat(20));
-      });
-
-      it('does not dust if the bridge has balance < dust', async () => {
-        deployer.sendTransaction({ to: instance.address, value: 5 });
-        await doesNotDust('0x' + '11'.repeat(20));
-      });
-
-      it('dusts if the recipient has balance 0 ', async () => {
-        const recipient = '0x' + '44'.repeat(20);
-        deployer.sendTransaction({ to: instance.address, value: DUST });
-        await doesDust(recipient);
-      });
-
-      it('dusts if the recipient has balance < Dust', async () => {
-        const recipient = '0x' + '33'.repeat(20);
-        deployer.sendTransaction({ to: instance.address, value: DUST });
-        deployer.sendTransaction({ to: recipient, value: 5 });
-        await doesDust(recipient);
-      });
-
-      it('does not dust if the recipient has >= dust', async () => {
-        const recipient = '0x' + '22'.repeat(20);
-        deployer.sendTransaction({ to: instance.address, value: DUST });
-        deployer.sendTransaction({ to: recipient, value: DUST });
-        await doesNotDust(recipient);
-      });
-
-      it('does not revert if the recipieint is unpayable', async () => {
-        deployer.sendTransaction({ to: instance.address, value: DUST });
-        await doesNotDust(revertingDustee.address);
-      });
-    });
-
+  describe('BridgeRouter', async () => {
     describe(ENABLE_FAST ? 'Fast Liquidity' : 'No Fast Liquidity', async () => {
       let deployer: types.Signer;
       let deployerAddress: string;
@@ -101,7 +101,7 @@ const DUST = BigNumber.from('60000000000000000');
 
       let remoteBridgeId: string;
 
-      const fastTransferRecipient = '0x' + '22'.repeat(20);
+      const fastTransferRecipient = '0x' + '98'.repeat(20);
       const fastTransferRecipientId = hexlify(
         canonizeId(fastTransferRecipient),
       );
@@ -721,9 +721,11 @@ const DUST = BigNumber.from('60000000000000000');
                 value: DUST,
               });
 
+              // expect fast transfer guy to need dust
               await expect(
-                deployer.provider!.getBalance(fastTransferRecipient),
+                await deployer.provider!.getBalance(fastTransferRecipient),
               ).to.equal(0);
+
               const prefillTx = await deploy
                 .bridgeRouter!.connect(bridgor)
                 .preFill(deploy.remoteDomain, mockNonce, fastTransferMessage);
@@ -743,16 +745,19 @@ const DUST = BigNumber.from('60000000000000000');
                   bridgorAddress,
                   BigNumber.from(TOKEN_VALUE).mul(9995).div(10000),
                 );
+
               // expect the recipient to get that dust in the prefill
-              await expect(
-                deployer.provider!.getBalance(fastTransferRecipient),
+              expect(
+                await deployer.provider!.getBalance(fastTransferRecipient),
               ).to.equal(DUST);
-              await expect(
-                deployer.provider!.getBalance(deploy.bridgeRouter!.address),
+              expect(
+                await deployer.provider!.getBalance(
+                  deploy.bridgeRouter!.address,
+                ),
               ).to.equal(0);
             });
 
-            it('unlocks tokens on message receipt', async () => {
+            it('unlocks tokens for the liquidity provider on message receipt', async () => {
               let deliver = deploy.bridgeRouter!.handle(
                 deploy.remoteDomain,
                 mockNonce,
