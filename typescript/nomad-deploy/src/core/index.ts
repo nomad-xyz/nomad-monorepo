@@ -464,7 +464,7 @@ export async function transferGovernorship(gov: CoreDeploy, non: CoreDeploy) {
     governorAddress,
     non.overrides,
   );
-  await tx.wait(gov.chain.confirmations);
+  await tx.wait(non.chain.confirmations);
   log(gov.test, `${non.chain.name}: governorship transferred`);
 }
 
@@ -862,6 +862,7 @@ export async function deployNewChain(
   await Promise.all([newDeploy.ready(), hubDeploy.ready()]);
   log(isTestDeploy, 'done readying');
 
+  // START TRANSACTIONS ON NEW CHAIN
   // deploy nomad on the new chain
   await deployNomad(newDeploy);
 
@@ -877,21 +878,34 @@ export async function deployNewChain(
     `connected ${hubDeploy.chain.name} on ${newDeploy.chain.name}`,
   );
 
-  // deploy a replica for the new chain on hub chain
-  // note: this will have to be enrolled via Governance messages
-  await deployUnenrolledReplica(hubDeploy, newDeploy);
-
+  // transfer governorship from new deploy to hub deploy
   await transferGovernorship(hubDeploy, newDeploy);
 
   // relinquish control of new chain
   await relinquish(newDeploy);
+  // END TRANSACTIONS ON NEW CHAIN
 
   // checks new chain deploy is correct
   await checkCoreDeploy(
-    newDeploy,
-    [hubDeploy.chain.domain],
-    hubDeploy.chain.domain,
+      newDeploy,
+      [hubDeploy.chain.domain],
+      hubDeploy.chain.domain,
   );
+
+  // START TRANSACTION ON HUB CHAIN
+  // deploy a replica for the new chain on hub chain
+  // note: this will have to be enrolled via Governance messages
+  await deployUnenrolledReplica(hubDeploy, newDeploy);
+
+  // relinquish control of newly deployed replica on Hub
+  const newReplica = hubDeploy.contracts.replicas[newDeploy.chain.domain]!.proxy;
+  const govAddress = hubDeploy.contracts.governance?.proxy.address!;
+  await newReplica.transferOwnership(govAddress, hubDeploy.overrides);
+  log(
+      isTestDeploy,
+      `${hubDeploy.chain.name}: Dispatched relinquish Replica for ${newDeploy.chain.domain}`,
+  );
+  // END TRANSACTION ON HUB CHAIN
 
   writeHubAndSpokeOutput(hubDeploy, [newDeploy], oldSpokeDeploys);
 }
