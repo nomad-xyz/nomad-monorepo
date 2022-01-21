@@ -2,6 +2,7 @@ import { ethers } from 'ethers';
 import { NomadEvent } from './event';
 import fs from 'fs';
 import { Mean } from './types';
+import { DBDriver } from './db';
 
 export function sleep(ms: number) {
   return new Promise((resolve) => {
@@ -13,7 +14,7 @@ export async function retry<T>(
   callback: () => Promise<T>,
   tries: number,
 ): Promise<[T | undefined, any]> {
-  let timeout = 3000;
+  let timeout = 5000;
   let lastError: any = undefined;
   for (let attempt = 0; attempt < tries; attempt++) {
     try {
@@ -62,32 +63,34 @@ export function reviver(key: any, value: any): any {
   return value;
 }
 
-export class KVCache<K, V> {
-  m: Map<K, V>;
-  path: string;
+export class KVCache {
+  m: Map<string, string>;
+  name: string;
+  db: DBDriver;
 
-  constructor(path: string) {
+  constructor(name: string, db: DBDriver) {
+    this.db = db;
     this.m = new Map();
-    this.path = path;
-    this.tryLoad();
+    this.name = name;
   }
 
-  save() {
-    fs.writeFileSync(this.path, JSON.stringify(this.m, replacer));
+  async init() {
+    await this.tryLoad();
   }
 
-  tryLoad() {
+  async tryLoad() {
     try {
-      this.m = JSON.parse(fs.readFileSync(this.path, 'utf8'), reviver);
+      this.m = await this.db.getAllKeyPair(this.name)
+
     } catch (_) {}
   }
 
-  set(k: K, v: V) {
+  async set(k: string, v: string) {
     this.m.set(k, v);
-    this.save();
+    await this.db.setKeyPair(this.name, k, v);
   }
 
-  get(k: K): V | undefined {
+  get(k: string): string | undefined {
     return this.m.get(k);
   }
 }

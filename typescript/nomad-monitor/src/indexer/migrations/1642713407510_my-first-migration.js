@@ -29,9 +29,27 @@ exports.up = pgm => {
           default: pgm.func('current_timestamp'),
         },
     })
-    pgm.createIndex('messages', 'id')
+    pgm.createIndex('messages', 'id');
+
+    pgm.createTable('kv_storage', {
+        id: 'id',
+        namespace: {type: 'varchar', notNull: true},
+        key: {type: 'varchar', notNull: true},
+        value: {type: 'varchar', notNull: true},
+        createdAt: {
+          type: 'timestamp',
+          notNull: true,
+          default: pgm.func('current_timestamp'),
+        },
+    })
+    pgm.createIndex('kv_storage', 'id');
+    pgm.addConstraint('kv_storage', 'unique_namespace_key', {
+        unique: ['namespace', 'key']
+    })
 };
 
 exports.down = pgm => {
-    pgm.dropTable('messages')
+    pgm.dropTable('messages');
+    pgm.dropConstraint('kv_storage', 'unique_namespace_key')
+    pgm.dropTable('kv_storage');
 };

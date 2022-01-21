@@ -5,13 +5,13 @@ import * as dotenv from 'dotenv';
 import { ethers } from 'ethers';
 import { IndexerCollector } from './metrics';
 import Logger from 'bunyan';
+import { DBDriver } from './db';
+
 dotenv.config({});
 
 const infuraKey = process.env.INFURA_KEY!;
 const moonbeamRPC = process.env.MOONBEAM_RPC!;
 const environment = process.env.ENVIRONMENT!;
-
-console.log(infuraKey, moonbeamRPC, environment);
 
 (async () => {
   const ctx = mainnet;
@@ -23,10 +23,13 @@ console.log(infuraKey, moonbeamRPC, environment);
 
   ctx.registerRpcProvider(moonbeamId, moonbeamRPC);
   const logger = createLogger('indexer', environment);
-  const c = new Processor();
+
+  const db = new DBDriver();
+  
+  const c = new Processor(db);
   const m = new IndexerCollector(environment, logger);
 
-  const o = new Orchestrator(mainnet, c, mainnet.domainNumbers[0], m, logger);
+  const o = new Orchestrator(mainnet, c, mainnet.domainNumbers[0], m, logger, db);
   await o.init();
 
   await o.startConsuming();
