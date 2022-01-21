@@ -10,6 +10,11 @@ This package includes the `MultiProvider`, as well as an `NomadContext` for
 interacting with deployed Nomad systems. The dev, staging, and mainnet Nomad
 systems have pre-built objects for quick development.
 
+## Examples
+
+ - [Counter xApp](https://github.com/nomad-xyz/nomad-monorepo/tree/main/examples/counter-xapp)
+ - [Bridge UI](https://github.com/nomad-xyz/nomad-monorepo/tree/main/examples/example-ui)
+
 ### Intended Usage
 
 ```ts

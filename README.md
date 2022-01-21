@@ -25,7 +25,9 @@ In other words, Nomad is designed to prioritize:
 
 You can read more about Nomad's architecture [at our main documentation site](https://www.docs.nomad.xyz/) or [within the docs folder of this repository](./docs/README.md).
 
-## Integrating with Nomad
+## Building xApps(cross-chain applications) using Nomad
+
+[Counter xApp Example](https://github.com/nomad-xyz/nomad-monorepo/tree/main/examples/counter-xapp)
 
 Nomad establishes communication channels with other chains, but it's up to xApp (pronounced "zap", and short for "cross-chain applications")
 developers to use those. This repo provides a standard pattern for integrating
@@ -66,6 +68,13 @@ maintain their `XAppConnectionManager` and guard from fraud. Please see the
 documentation in the `rust/` directory and the
 [Nomad architecture documentation](https://www.docs.nomad.xyz/)
 for more details.
+
+## Integrating the Nomad Token Bridge
+
+[Example UI](https://github.com/nomad-xyz/nomad-monorepo/tree/main/examples/example-ui)
+[SDK](https://www.npmjs.com/package/@nomad-xyz/sdk)
+
+The Nomad token bridge is a xApp built and maintained by the core team. You can easily integrate bridging into your own application using our SDK!
 
 ## Working on Nomad
 
