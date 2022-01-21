@@ -11,3 +11,4 @@ tokio = { version = "1.0.1", features = ["rt", "macros"] }
 
 ethers = { git = "https://github.com/gakonst/ethers-rs", branch = "master" }
 nomad-core = { version = "0.1.0", path = "../nomad-core" }
+async-trait = "0.1.52"
