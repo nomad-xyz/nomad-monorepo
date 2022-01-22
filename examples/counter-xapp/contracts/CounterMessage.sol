@@ -29,7 +29,14 @@ The Message Library should contain the following for each type of message:
    and return them in the form of Solidity arguments
 
 TypedMemView is a library for working with memory in Solidity.
-We use TypedMemView (bytes29 view) to create a custom serialization format for xApp messages. A bytes29 view uses a 1-byte type tag on the front of the array to denote the message type. When getting a reference to a bytes29 view using `view.ref(0)`, it gives you a reference to the array 1-byte beyond the start, thus skipping over the type tag and starting at the data. Thus, indexing functions for bytes29 start at the actual data. To access the bytes29 message type (encoded in the tag), we can call `view.typeOf()`. There are more details below.
+We use TypedMemView (bytes29 view) to create a custom serialization format for 
+xApp messages. A bytes29 view uses a 1-byte type tag on the front of the array 
+to denote the message type. When getting a reference to a bytes29 view using 
+`view.ref(0)`, it gives you a reference to the array 1-byte beyond the start, 
+thus skipping over the type tag and starting at the data. Thus, indexing 
+functions for bytes29 start at the actual data. To access the bytes29 message 
+type (encoded in the tag), we can call `view.typeOf()`. There are more details 
+below.
 
 Example using TypedMemView:
 - lets say we want to send a message that specifies that we want to send some 
@@ -104,7 +111,8 @@ the counter on that chain's app by a certain amount. To increment the counter
 on chain A, you must send an Increment message from the counter app on chain B 
 to the counter app on chain A. If you would like to increment the counter on 
 chain B, you must send an Increment message from the counter app on chain A to 
-the counter app on chain B. Below, we define how to define, format, and parse messages specific to this cross-chain Counter app.
+the counter app on chain B. Below, we define how to define, format, and parse 
+messages specific to this cross-chain Counter app.
 */
 library CounterMessage {
   using TypedMemView for bytes;
