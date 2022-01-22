@@ -52,6 +52,9 @@ module.exports = {
     },
     mainnet: {
       url: `https://mainnet.infura.io/v3/${infuraKey}`,
+    },
+    moonbeam: {
+      url: process.env.MOONBEAM_RPC,
     }
   },
   typechain: {

@@ -12,6 +12,7 @@ const envError = (network: string) =>
 // list of networks supported by Etherscan
 const etherscanNetworks = [
   'mainnet',
+  'moonbeam',
   'ethereum',
   'kovan',
   'goerli',
