@@ -115,96 +115,96 @@ the counter app on chain B. Below, we define how to define, format, and parse
 messages specific to this cross-chain Counter app.
 */
 library CounterMessage {
-  using TypedMemView for bytes;
-  using TypedMemView for bytes29;
+    using TypedMemView for bytes;
+    using TypedMemView for bytes29;
 
-  enum Types {
-    Invalid, // 0
-    Inc, // 1 - increment count
-    Dec // 2 - decrement count
-  }
+    enum Types {
+        Invalid, // 0
+        Inc, // 1 - increment count
+        Dec // 2 - decrement count
+    }
 
-  // ============ Formatters ============
+    // ============ Formatters ============
 
-  /**
-   * @notice Given the amount you want to increment count on the receiving
-   * chain's contract, format a bytes message encoding the information
-   * @param _amount The amount to increment the remote contract's count
-   * @return The encoded bytes message
-   */
-  function formatIncrement(uint256 _amount)
-    internal
-    pure
-    returns (bytes memory)
-  {
-    return abi.encodePacked(uint8(Types.Inc), _amount);
-  }
+    /**
+     * @notice Given the amount you want to increment count on the receiving
+     * chain's contract, format a bytes message encoding the information
+     * @param _amount The amount to increment the remote contract's count
+     * @return The encoded bytes message
+     */
+    function formatIncrement(uint256 _amount)
+        internal
+        pure
+        returns (bytes memory)
+    {
+        return abi.encodePacked(uint8(Types.Inc), _amount);
+    }
 
-  /**
-   * @notice Given the amount you want to decrement count on the receiving
-   * chain's contract, format a bytes message encoding the information
-   * @param _amount The amount to decrement the remote contract's count
-   * @return The encoded bytes message
-   */
-  function formatDecrement(uint256 _amount)
-    internal
-    pure
-    returns (bytes memory)
-  {
-    return abi.encodePacked(uint8(Types.Dec), _amount);
-  }
+    /**
+     * @notice Given the amount you want to decrement count on the receiving
+     * chain's contract, format a bytes message encoding the information
+     * @param _amount The amount to decrement the remote contract's count
+     * @return The encoded bytes message
+     */
+    function formatDecrement(uint256 _amount)
+        internal
+        pure
+        returns (bytes memory)
+    {
+        return abi.encodePacked(uint8(Types.Dec), _amount);
+    }
 
-  // ============ Identifiers ============
+    // ============ Identifiers ============
 
-  /**
-   * @notice Get the type that the TypedMemView is cast to
-   * @param _view The message
-   * @return _type The type of the message (one of the enum Types)
-   */
-  function messageType(bytes29 _view) internal pure returns (Types _type) {
-    _type = Types(uint8(_view.typeOf()));
-  }
+    /**
+     * @notice Get the type that the TypedMemView is cast to
+     * @param _view The message
+     * @return _type The type of the message (one of the enum Types)
+     */
+    function messageType(bytes29 _view) internal pure returns (Types _type) {
+        _type = Types(uint8(_view.typeOf()));
+    }
 
-  /**
-   * @notice Determine whether the message is an Increment message
-   * @param _view The message
-   * @return _isIncrement True if the message is of type Increment
-   */
-  function isIncrement(bytes29 _view)
-    internal
-    pure
-    returns (bool _isIncrement)
-  {
-    _isIncrement = messageType(_view) == Types.Inc;
-  }
+    /**
+     * @notice Determine whether the message is an Increment message
+     * @param _view The message
+     * @return _isIncrement True if the message is of type Increment
+     */
+    function isIncrement(bytes29 _view)
+        internal
+        pure
+        returns (bool _isIncrement)
+    {
+        _isIncrement = messageType(_view) == Types.Inc;
+    }
 
-  /**
-   * @notice Determine whether the message is an Decrement message
-   * @param _view The message
-   * @return _isDecrement True if the message is of type Decrement
-   */
-  function isDecrement(bytes29 _view)
-    internal
-    pure
-    returns (bool _isDecrement)
-  {
-    _isDecrement = messageType(_view) == Types.Dec;
-  }
+    /**
+     * @notice Determine whether the message is an Decrement message
+     * @param _view The message
+     * @return _isDecrement True if the message is of type Decrement
+     */
+    function isDecrement(bytes29 _view)
+        internal
+        pure
+        returns (bool _isDecrement)
+    {
+        _isDecrement = messageType(_view) == Types.Dec;
+    }
 
-  // ============ Getters ============
+    // ============ Getters ============
 
-  /**
-   * @notice Parse the amount sent within an Increment or Decrement message
-   * @param _view The message
-   * @return _amount The amount encoded in the message
-   */
-  function getAmount(bytes29 _view) internal pure returns (uint256 _amount) {
-    require(
-      isIncrement(_view) || isDecrement(_view),
-      "MessageTemplate/number: view must be of type increment or decrement"
-    );
+    /**
+     * @notice Parse the amount sent within an Increment or Decrement message
+     * @param _view The message
+     * @return _amount The amount encoded in the message
+     */
+    function getAmount(bytes29 _view) internal pure returns (uint256 _amount) {
+        require(
+            isIncrement(_view) || isDecrement(_view),
+            "MessageTemplate/number: view must be of type increment or decrement"
+        );
 
-    // bytes 0 to 32 are the amount field for an Inc/Dec message
-    _amount = uint256(_view.index(0, 32));
-  }
+        // bytes 0 to 32 are the amount field for an Inc/Dec message
+        _amount = uint256(_view.index(0, 32));
+    }
 }
