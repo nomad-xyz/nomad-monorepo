@@ -1,6 +1,7 @@
 use ethers::core::types::H256;
 use nomad_core::{DoubleUpdate, SignedUpdate};
 
+#[derive(Debug, Clone)]
 pub struct Dispatch {
     pub(crate) message_hash: H256,
     pub(crate) leaf_index: u32,
@@ -10,6 +11,7 @@ pub struct Dispatch {
     pub(crate) message: Vec<u8>,
 }
 
+#[derive(Debug, Clone)]
 pub enum HomeEvents {
     Dispatch(Dispatch),
     ImproperUpdate {

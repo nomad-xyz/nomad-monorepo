@@ -1,11 +1,13 @@
-use crate::events::home::{Dispatch, HomeEvents};
 use ethers::core::types::H256;
 use nomad_core::{accumulator::merkle::MerkleTree, Decode, NomadMessage, SignedUpdate};
 use std::collections::{BTreeMap, VecDeque};
 
-type E = Box<dyn std::error::Error>;
-type Result<T> = std::result::Result<T, E>;
+use crate::{
+    error::Result,
+    events::home::{Dispatch, HomeEvents},
+};
 
+#[derive(Debug)]
 pub struct HomeModel {
     local_domain: u32,
     updater: H256,

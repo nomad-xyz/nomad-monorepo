@@ -1,6 +1,7 @@
 use ethers::core::types::{H256, U256};
 use nomad_core::{DoubleUpdate, SignedUpdate};
 
+#[derive(Debug, Clone)]
 pub enum ReplicaEvents {
     Process {
         message_hash: H256,

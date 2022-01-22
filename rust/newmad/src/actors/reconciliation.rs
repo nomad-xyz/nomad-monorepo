@@ -7,10 +7,20 @@ pub trait Dispatcher<I>: Send + Sync
 where
     I: Instruction,
 {
-    // convert an instruction into a transaction
-    // dispatch that action to the chain
+    type Tx: std::fmt::Debug + Send + Sync;
+
+    /// Translate an instruction to a transaction
+    fn translate(&self, inst: I) -> Self::Tx;
+
+    // dispatch a transaction to the chain and
     // manage its lifecycle
-    async fn dispatch(&mut self, inst: I);
+    async fn dispatch(&mut self, tx: Self::Tx);
+
+    // convert an instruction into a transaction, then dispatch it
+    async fn execute(&mut self, inst: I) {
+        let tx = self.translate(inst);
+        self.dispatch(tx).await
+    }
 }
 
 #[derive(Debug)]
@@ -29,7 +39,7 @@ where
             loop {
                 let inst = self.instructions.recv().await;
                 match inst {
-                    Some(inst) => self.chain.dispatch(inst).await,
+                    Some(inst) => self.chain.execute(inst).await,
                     None => break,
                 }
             }

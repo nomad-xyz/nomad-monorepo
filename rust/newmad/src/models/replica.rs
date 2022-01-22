@@ -1,12 +1,11 @@
 use std::collections::HashMap;
 
-use crate::events::replica::ReplicaEvents;
 use ethers::{core::types::H256, prelude::U256};
 use nomad_core::{MessageStatus, SignedUpdate};
 
-type E = Box<dyn std::error::Error>;
-type Result<T> = std::result::Result<T, E>;
+use crate::{error::Result, events::replica::ReplicaEvents};
 
+#[derive(Debug)]
 pub struct ReplicaModel {
     local_domain: u32,
     optimistic_seconds: U256,
