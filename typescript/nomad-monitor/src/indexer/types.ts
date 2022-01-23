@@ -18,11 +18,13 @@ export class BasicCountStages {
   dispatched: number;
   updated: number;
   relayed: number;
+  received: number;
   processed: number;
   constructor() {
     this.dispatched = 0;
     this.updated = 0;
     this.relayed = 0;
+    this.received = 0;
     this.processed = 0;
   }
 
@@ -31,6 +33,7 @@ export class BasicCountStages {
       dispatched: this.dispatched,
       updated: this.updated,
       relayed: this.relayed,
+      received: this.received,
       processed: this.processed,
     };
   }
@@ -39,11 +42,13 @@ export class BasicCountStages {
 export class BasicTiming {
   meanUpdate: Mean;
   meanRelay: Mean;
+  meanReceive: Mean;
   meanProcess: Mean;
   meanE2E: Mean;
   constructor() {
     this.meanUpdate = new Mean();
     this.meanRelay = new Mean();
+    this.meanReceive = new Mean();
     this.meanProcess = new Mean();
     this.meanE2E = new Mean();
   }
@@ -52,6 +57,7 @@ export class BasicTiming {
     return {
       meanUpdate: this.meanUpdate.mean(),
       meanRelay: this.meanRelay.mean(),
+      meanReceive: this.meanReceive.mean(),
       meanProcess: this.meanProcess.mean(),
       meanE2E: this.meanE2E.mean(),
     };
