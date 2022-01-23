@@ -9,8 +9,8 @@ exports.up = pgm => {
         origin: {type: 'integer', notNull: true},
         destination: {type: 'integer', notNull: true},
         nonce: {type: 'integer', notNull: true},
-        sender: {type: 'varchar(42)', notNull: true}, // Nomad sender (bridge router) 
-        recipient: {type: 'varchar(42)', notNull: true}, // Nomad recipient (bridge router) 
+        nomad_sender: {type: 'varchar(42)', notNull: true}, // Nomad sender (bridge router) 
+        nomad_recipient: {type: 'varchar(42)', notNull: true}, // Nomad recipient (bridge router) 
         root: {type: 'varchar(66)', notNull: true},
         state: {type: 'integer', notNull: true}, // one of several states: Dispatched(0), Updated(1), Relayed(2), Processed(3)
         dispatched_at: {type: 'bigint', notNull: true}, // TS at which the transaction got to state dispatched
@@ -18,8 +18,9 @@ exports.up = pgm => {
         relayed_at: {type: 'bigint', notNull: true}, // TS at which the transaction got to state relayed
         processed_at: {type: 'bigint', notNull: true}, // TS at which the transaction got to state processed
         // Bridge message internals
+        sender: {type: 'varchar(42)', notNull: false}, // sender
         bridge_msg_type: {type: 'varchar(14)', notNull: false}, // Mostly 'transaction'
-        bridge_msg_to: {type: 'varchar(42)', notNull: false}, // Real recipient on destination domain
+        recipient: {type: 'varchar(42)', notNull: false}, // Real recipient on destination domain
         bridge_msg_amount: {type: 'varchar(256)', notNull: false}, // Amount of Token
         bridge_msg_allow_fast: {type: 'boolean', notNull: false}, // Allow fast?
         bridge_msg_details_hash: {type: 'varchar(66)', notNull: false}, // Details hash - don't know what it is (need to do homework)

@@ -3,6 +3,7 @@ import { ethers } from 'ethers';
 export enum ContractType {
   Home = 'home',
   Replica = 'replica',
+  BridgeRouter = 'bridgeRouter',
 }
 
 export enum EventType {
@@ -10,6 +11,8 @@ export enum EventType {
   HomeUpdate = 'homeUpdate',
   ReplicaUpdate = 'replicaUpdate',
   ReplicaProcess = 'replicaProcess',
+  BridgeRouterSend = 'bridgeRouterSend',
+  BridgeRouterReceive = 'bridgeRouterReceive',
 }
 
 export enum EventSource {
@@ -29,6 +32,16 @@ export type EventData = {
   message?: string;
   signature?: string;
   homeDomain?: number;
+  // Bridge router options
+  token?: string;
+  from?: string;
+  toDomain?: number;
+  toId?: string;
+  amount?: ethers.BigNumber;
+  fastLiquidityEnabled?: boolean;
+  originAndNonce?: ethers.BigNumber;
+  recipient?: string;
+  liquidityProvider?: string;
 };
 
 export class NomadEvent {
@@ -56,7 +69,7 @@ export class NomadEvent {
     this.contractType = contractType;
     this.replicaOrigin = replicaOrigin;
     this.ts =
-      /*source === EventSource.Fetch && */ contractType == ContractType.Home
+      /*source === EventSource.Fetch && */ (contractType == ContractType.Home || contractType == ContractType.BridgeRouter)
         ? ts - 45000
         : ts; // if the event was fetched from RPC for past (we asked RPC when event happened) happened on another chain we want to make sure that event at chain of origin happened before it was relayed to destination
     this.eventData = eventData;
@@ -74,6 +87,18 @@ export class NomadEvent {
       this.eventData.destinationAndNonce!,
     );
     return [destination, nonce];
+  }
+
+  originAndNonce(): [number, number] {
+    if (this.eventType !== EventType.BridgeRouterReceive) {
+      throw new Error(
+        `Destination method is not availiable for non BridgeRouterReceive`,
+      );
+    }
+    const [origin, nonce] = parseDestinationAndNonce(
+      this.eventData.originAndNonce!,
+    );
+    return [origin, nonce];
   }
 
   toObject() {

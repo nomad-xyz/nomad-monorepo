@@ -58,6 +58,8 @@ export function reviver(key: any, value: any): any {
       return NomadEvent.fromObject(value.value);
     } else if (value.dataType === 'BigNumber') {
       return ethers.BigNumber.from(value.value);
+    } else if (value.type === 'BigNumber') {
+      return ethers.BigNumber.from(value.hex);
     }
   }
   return value;
@@ -96,4 +98,13 @@ export class KVCache {
 
 export function logToFile(s: string) {
   fs.appendFileSync('/tmp/log.log', s + '\n');
+}
+
+import crypto from 'crypto';
+
+export function hash(...vals: string[]): string {
+  const hash = crypto.createHash('md5');
+  vals.forEach(v => hash.update(v))
+  return hash.digest('hex')
+  
 }

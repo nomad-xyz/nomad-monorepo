@@ -38,8 +38,8 @@ export class DBDriver {
   async insertMessage(messages: NomadMessage[]) {
     const rows = messages.length;
     if (!rows) return;
-    const columns = 19;
-    const query = `INSERT INTO messages (hash, origin, destination, nonce, sender, recipient, root, state, dispatched_at, updated_at, relayed_at, processed_at, bridge_msg_type, bridge_msg_to, bridge_msg_amount, bridge_msg_allow_fast, bridge_msg_details_hash, bridge_msg_token_domain, bridge_msg_token_id) VALUES ${expand(
+    const columns = 20;
+    const query = `INSERT INTO messages (hash, origin, destination, nonce, nomad_sender, nomad_recipient, root, state, dispatched_at, updated_at, relayed_at, processed_at, bridge_msg_type, recipient, bridge_msg_amount, bridge_msg_allow_fast, bridge_msg_details_hash, bridge_msg_token_domain, bridge_msg_token_id, sender) VALUES ${expand(
       rows,
       columns,
     )};`;
@@ -55,8 +55,8 @@ export class DBDriver {
         origin = $2,
         destination = $3,
         nonce = $4,
-        sender = $5,
-        recipient = $6,
+        nomad_sender = $5,
+        nomad_recipient = $6,
         root = $7,
         state = $8,
         dispatched_at = $9,
@@ -64,12 +64,13 @@ export class DBDriver {
         relayed_at = $11,
         processed_at = $12,
         bridge_msg_type = $13,
-        bridge_msg_to = $14,
+        recipient = $14,
         bridge_msg_amount = $15,
         bridge_msg_allow_fast = $16,
         bridge_msg_details_hash = $17,
         bridge_msg_token_domain = $18,
-        bridge_msg_token_id = $19
+        bridge_msg_token_id = $19,
+        sender = $20
         WHERE hash = $1
         `;
       return this.pool.query(query, m.intoDB());

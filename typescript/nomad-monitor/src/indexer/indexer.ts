@@ -5,6 +5,7 @@ import { ContractType, EventType, NomadEvent, EventSource } from './event';
 import { Home, Replica } from '@nomad-xyz/contract-interfaces/core';
 import { ethers } from 'ethers';
 import { KVCache, replacer, retry, reviver } from './utils';
+import { BridgeRouter } from '@nomad-xyz/contract-interfaces/bridge';
 
 export class Indexer {
   domain: number;
@@ -68,6 +69,10 @@ export class Indexer {
     return this.sdk.getCore(this.domain)!.home;
   }
 
+  bridgeRouter(): BridgeRouter {
+    return this.sdk.getBridge(this.domain)!.bridgeRouter;
+  }
+
   replicaForDomain(domain: number): Replica {
     return this.sdk.getReplicaFor(domain, this.domain)!;
   }
@@ -89,8 +94,9 @@ export class Indexer {
         const replicasEvents = (
           await Promise.all(replicas.map((r) => this.fetchReplica(r, from, to)))
         ).flat();
+        const bridgeRouterEvents = await this.fetchBridgeRouter(from, to);
 
-        return [...homeEvents, ...replicasEvents];
+        return [...homeEvents, ...replicasEvents, ...bridgeRouterEvents];
       }, 5);
 
       if (error) throw error;
@@ -189,6 +195,66 @@ export class Indexer {
 
   savePersistance() {
     this.persistance.persist();
+  }
+
+  async fetchBridgeRouter(from: number, to: number) {
+    const br = this.bridgeRouter();
+    const allEvents = [];
+    {
+      const events = await br.queryFilter(br.filters.Send(), from, to);
+      const parsedEvents = await Promise.all(
+        events.map(
+          async (event) =>
+            new NomadEvent(
+              this.domain,
+              EventType.BridgeRouterSend,
+              ContractType.BridgeRouter,
+              0,
+              await this.getBlockTimestamp(event.blockNumber),
+              {
+                token: event.args[0],
+                from: event.args[1],
+                toDomain: event.args[2],
+                toId: event.args[3],
+                amount: event.args[4],
+                fastLiquidityEnabled: event.args[5],
+              },
+              event.blockNumber,
+              EventSource.Fetch,
+            ),
+        ),
+      );
+      allEvents.push(...parsedEvents)
+    }
+
+    {
+      const events = await br.queryFilter(br.filters.Receive(), from, to);
+      const parsedEvents = await Promise.all(
+        events.map(
+          async (event) =>
+            new NomadEvent(
+              this.domain,
+              EventType.BridgeRouterReceive,
+              ContractType.BridgeRouter,
+              0,
+              await this.getBlockTimestamp(event.blockNumber),
+              {
+                originAndNonce: event.args[0],
+                token: event.args[1],
+                recipient: event.args[2],
+                liquidityProvider: event.args[3],
+                amount: event.args[4],
+              },
+              event.blockNumber,
+              EventSource.Fetch,
+            ),
+        ),
+      );
+      allEvents.push(...parsedEvents)
+    }
+
+    return allEvents
+
   }
 
   async fetchHome(from: number, to: number) {

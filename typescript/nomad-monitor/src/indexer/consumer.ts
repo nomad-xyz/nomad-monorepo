@@ -27,6 +27,11 @@ class StatisticsCollector {
     this.s.counts.domainStatistics.get(domain)!.relayed += 1;
   }
 
+  addReceived(domain: number) {
+    this.s.counts.total.received += 1;
+    this.s.counts.domainStatistics.get(domain)!.received += 1;
+  }
+
   addProcessed(domain: number) {
     this.s.counts.total.processed += 1;
     this.s.counts.domainStatistics.get(domain)!.processed += 1;
@@ -51,8 +56,17 @@ class StatisticsCollector {
     }
   }
 
-  contributeProcessTimings(m: NomadMessage) {
+  contributeReceiveTimings(m: NomadMessage) {
     this.contributeRelayTimings(m);
+    const inReceiveStat = m.timings.inReceived();
+    if (inReceiveStat) {
+      this.s.timings.total.meanReceive.add(inReceiveStat);
+      this.s.timings.domainStatistics.get(m.origin)!.meanReceive.add(inReceiveStat);
+    }
+  }
+
+  contributeProcessTimings(m: NomadMessage) {
+    this.contributeReceiveTimings(m);
     const inProcessStat = m.timings.inProcessed();
     if (inProcessStat) {
       this.s.timings.total.meanProcess.add(inProcessStat);
@@ -79,6 +93,9 @@ class StatisticsCollector {
       case MsgState.Relayed:
         this.addRelayed(m.origin);
         break;
+      case MsgState.Received:
+        this.addReceived(m.origin);
+        break;
       case MsgState.Processed:
         this.addProcessed(m.origin);
         break;
@@ -94,6 +111,9 @@ class StatisticsCollector {
         break;
       case MsgState.Relayed:
         this.contributeRelayTimings(m);
+        break;
+      case MsgState.Received:
+        this.contributeReceiveTimings(m);
         break;
       case MsgState.Processed:
         this.contributeProcessTimings(m);
@@ -117,6 +137,7 @@ enum MsgState {
   Dispatched,
   Updated,
   Relayed,
+  Received,
   Processed,
 }
 
@@ -125,12 +146,14 @@ class Timings {
   updatedAt: number;
   relayedAt: number;
   processedAt: number;
+  receivedAt: number;
 
   constructor(ts: number) {
     this.dispatchedAt = ts;
     this.updatedAt = 0;
     this.relayedAt = 0;
     this.processedAt = 0;
+    this.receivedAt = 0;
   }
 
   updated(ts: number) {
@@ -139,6 +162,10 @@ class Timings {
 
   relayed(ts: number) {
     this.relayedAt = ts;
+  }
+
+  received(ts: number) {
+    this.receivedAt = ts;
   }
 
   processed(ts: number) {
@@ -159,11 +186,21 @@ class Timings {
     return undefined;
   }
 
+  inReceived(): number | undefined {
+    if (this.receivedAt) {
+      return (
+        this.receivedAt -
+        (this.relayedAt || this.updatedAt || this.dispatchedAt)
+      ); // because of the problem with time that it is not ideal from RPC we could have skipped some stages. we take the last available
+    }
+    return undefined;
+  }
+
   inProcessed(): number | undefined {
     if (this.processedAt) {
       return (
         this.processedAt -
-        (this.relayedAt || this.updatedAt || this.dispatchedAt)
+        (this.receivedAt || this.relayedAt || this.updatedAt || this.dispatchedAt)
       ); // because of the problem with time that it is not ideal from RPC we could have skipped some stages. we take the last available
     }
     return undefined;
@@ -173,7 +210,7 @@ class Timings {
     if (this.processedAt) {
       return (
         this.processedAt -
-        (this.dispatchedAt || this.updatedAt || this.relayedAt)
+        (this.dispatchedAt || this.updatedAt || this.relayedAt || this.receivedAt)
       ); // same as for .inRelayed() and .inProcessed() but opposit order
     }
     return undefined;
@@ -184,6 +221,8 @@ function bytes32ToAddress(s: string) {
   return '0x' + s.slice(26);
 }
 
+
+
 export class NomadMessage {
   origin: number;
   destination: number;
@@ -193,8 +232,10 @@ export class NomadMessage {
   leafIndex: ethers.BigNumber;
   destinationAndNonce: ethers.BigNumber;
   raw: string;
+  sender?: string;
   nomadSender: string;
   nomadRecipient: string;
+  hasBridgeMessage: boolean;
   bridgeMsgType?: string;
   bridgeMsgTo?: string;
   bridgeMsgAmount?: ethers.BigNumber;
@@ -225,23 +266,29 @@ export class NomadMessage {
     this.destinationAndNonce = destinationAndNonce;
     this.raw = message;
     const parsed = parseMessage(message);
-    this.nomadSender = parsed.sender;
-    this.nomadRecipient = parsed.recipient;
+    this.nomadSender = bytes32ToAddress(parsed.sender);
+    this.nomadRecipient = bytes32ToAddress(parsed.recipient);
     try {
       const bridgeMessage = parseBody(parsed.body);
       this.bridgeMsgType = bridgeMessage.action.type as string;
-      this.bridgeMsgTo = bridgeMessage.action.to;
+      this.bridgeMsgTo = bytes32ToAddress(bridgeMessage.action.to);
       this.bridgeMsgAmount = bridgeMessage.action.amount;
       this.bridgeMsgAllowFast = bridgeMessage.action.allowFast;
       this.bridgeMsgDetailsHash = bridgeMessage.action.detailsHash;
       this.bridgeMsgTokenDomain = bridgeMessage.token.domain as number;
-      this.bridgeMsgTokenId = bridgeMessage.token.id as string;
+      this.bridgeMsgTokenId = bytes32ToAddress(bridgeMessage.token.id as string);
+      this.hasBridgeMessage = true;
     } catch (e) {
+      this.hasBridgeMessage = false;
       // pass
     }
 
     this.state = MsgState.Dispatched;
     this.timings = new Timings(createdAt);
+  }
+
+  updateSender(sender: string) {
+    this.sender = sender;
   }
 
   get originAndRoot(): string {
@@ -268,14 +315,15 @@ export class NomadMessage {
     string | undefined,
     number | undefined,
     string | undefined,
+    string | undefined,
   ] {
     return [
       this.hash,
       this.origin,
       this.destination,
       this.nonce,
-      bytes32ToAddress(this.nomadSender),
-      bytes32ToAddress(this.nomadRecipient),
+      this.nomadSender,
+      this.nomadRecipient,
       this.root,
       this.state,
       this.timings.dispatchedAt,
@@ -283,15 +331,92 @@ export class NomadMessage {
       this.timings.relayedAt,
       this.timings.processedAt,
       this.bridgeMsgType,
-      this.bridgeMsgTo ? bytes32ToAddress(this.bridgeMsgTo) : undefined,
+      this.bridgeMsgTo,
       this.bridgeMsgAmount?.toString(),
       this.bridgeMsgAllowFast,
       this.bridgeMsgDetailsHash,
       this.bridgeMsgTokenDomain,
-      this.bridgeMsgTokenId
-        ? bytes32ToAddress(this.bridgeMsgTokenId)
-        : undefined,
+      this.bridgeMsgTokenId,
+      this.sender,
     ];
+  }
+}
+
+class SenderLostAndFound {
+  p: Processor;
+  dispatchEventsWithMessages: [NomadEvent, NomadMessage][];
+  bridgeRouterSendEvents: NomadEvent[];
+  constructor(p: Processor) {
+    this.p = p;
+    this.dispatchEventsWithMessages = []
+    this.bridgeRouterSendEvents = []
+  }
+
+  bridgeRouterSend(e: NomadEvent): string | undefined {
+    // check if we have dispatch events with block >= current && block <= current + 4;
+    const hash = this.findMatchingDispatchAndUpdateAndRemove(e);
+    if (hash) {
+      return hash
+    } else {
+      //add event for further fixing from dispatch side
+      this.bridgeRouterSendEvents.push(e);
+      return undefined;
+    }
+
+  }
+  findMatchingDispatchAndUpdateAndRemove(brSend: NomadEvent): string|undefined {
+    const index = this.dispatchEventsWithMessages.findIndex(
+      ([dispatch, m]) => this.match(dispatch, brSend, m)
+    );
+    
+    if (index >= 0) {
+      const some = this.dispatchEventsWithMessages.at(index);
+      if (some) {
+        const [_, msg] = some;
+        // console.log(`Set sender to ${brSend.eventData.from!} for message: ${msg.hash}`)
+        msg.sender = brSend.eventData.from!;
+        this.dispatchEventsWithMessages.splice(index, 1);
+        return msg.hash;
+      }
+      
+    }
+    return undefined;
+  }
+
+  match(dispatch: NomadEvent, brSend: NomadEvent, m: NomadMessage): boolean {
+    return brSend.eventData.toDomain! === m.destination && //brSend.eventData.token?.toLowerCase() === m.bridgeMsgTokenId?.toLowerCase() &&
+    bytes32ToAddress(brSend.eventData.toId!).toLowerCase() === m.bridgeMsgTo?.toLowerCase() && 
+    brSend.eventData.amount!.eq(m.bridgeMsgAmount!) && 
+    (
+      brSend.block === dispatch.block //&&  // (dispatch.block - brSend.block <= 2 || brSend.block - dispatch.block <= 30)
+    )
+  }
+
+  findMatchingBRSendUpdateAndRemove(dispatch: NomadEvent, m: NomadMessage): boolean {
+    const index = this.bridgeRouterSendEvents.findIndex(
+      (brSend) => this.match(dispatch, brSend, m)
+    );
+    if (index >= 0) {
+      const brSend = this.bridgeRouterSendEvents.at(index);
+      if (brSend) {
+        m.sender = brSend.eventData.from!;
+      }
+      this.bridgeRouterSendEvents.splice(index, 1);
+      return true;
+    }
+    return false;
+  }
+
+  dispatch(e: NomadEvent, m: NomadMessage): boolean {
+    if (!m.hasBridgeMessage) return false;
+
+    if (this.findMatchingBRSendUpdateAndRemove(e, m)) {
+      return true;
+    } else {
+      this.dispatchEventsWithMessages.push([e,m]);
+      return false;
+    }
+
   }
 }
 
@@ -304,6 +429,7 @@ export class Processor extends Consumer {
   syncQueue: string[];
   db: DBDriver;
   logger: Logger;
+  senderRegistry: SenderLostAndFound;
 
   constructor(db: DBDriver, logger: Logger) {
     super();
@@ -313,6 +439,7 @@ export class Processor extends Consumer {
     this.consumed = 0;
     this.domains = [];
     this.syncQueue = [];
+    this.senderRegistry = new SenderLostAndFound(this);
 
     this.db = db;
     this.logger = logger;
@@ -328,6 +455,10 @@ export class Processor extends Consumer {
         this.replicaUpdate(event);
       } else if (event.eventType === EventType.ReplicaProcess) {
         this.process(event);
+      } else if (event.eventType === EventType.BridgeRouterSend) {
+        this.bridgeRouterSend(event);
+      } else if (event.eventType === EventType.BridgeRouterReceive) {
+        this.bridgeRouterReceive(event);
       }
 
       this.consumed += 1;
@@ -340,6 +471,8 @@ export class Processor extends Consumer {
     const [inserts, updates] = await this.getMsgForSync();
 
     this.logger.info(`Inserting ${inserts.length} messages and updating ${updates.length}`);
+
+    console.log(`Updating:`, updates.length, updates[0]?.sender)
 
     await Promise.all([
       this.db.insertMessage(inserts),
@@ -374,7 +507,9 @@ export class Processor extends Consumer {
     return hashes.map((hash) => this.getMsg(hash)!).filter((m) => !!m);
   }
 
+
   dispatched(e: NomadEvent) {
+
     const m = new NomadMessage(
       e.domain,
       ...e.destinationAndNonce(),
@@ -385,11 +520,16 @@ export class Processor extends Consumer {
       e.eventData.message!,
       e.ts,
     );
+
+    this.senderRegistry.dispatch(e, m);
+
     this.add(m);
     this.addToSyncQueue(m.hash);
 
     if (!this.domains.includes(e.domain)) this.domains.push(e.domain);
   }
+
+  
 
   homeUpdate(e: NomadEvent) {
     const ms = this.getMsgsByOriginAndRoot(e.domain, e.eventData.oldRoot!);
@@ -429,15 +569,40 @@ export class Processor extends Consumer {
     }
   }
 
+  
+
+  bridgeRouterSend(e: NomadEvent) {
+
+    const hash = this.senderRegistry.bridgeRouterSend(e);
+    if (hash) {
+      // console.log(`Setting bridgeRouterSend for `, this.getMsg(hash)?.sender)
+      this.addToSyncQueue(hash)
+    }
+
+  }
+
+  bridgeRouterReceive(e: NomadEvent) {
+    const m = this.getMsgsByOriginAndNonce(...e.originAndNonce())
+
+    if (m) {
+      if (m.state < MsgState.Received) {
+        m.state = MsgState.Received;
+        m.timings.received(e.ts);
+        this.addToSyncQueue(m.hash);
+      }
+    }
+  }
+
   add(m: NomadMessage) {
     const index = this.messages.length;
     this.msgToIndex.set(m.hash, index);
-    const x = this.msgByOriginAndRoot.get(m.originAndRoot);
-    if (x) {
-      x.push(index);
+    const msgByOriginAndRoot = this.msgByOriginAndRoot.get(m.originAndRoot);
+    if (msgByOriginAndRoot) {
+      msgByOriginAndRoot.push(index);
     } else {
       this.msgByOriginAndRoot.set(m.originAndRoot, [index]);
     }
+
     this.messages.push(m);
   }
 
@@ -456,6 +621,10 @@ export class Processor extends Consumer {
     const msgIndexs = this.msgByOriginAndRoot.get(originAndRoot);
     if (msgIndexs) return msgIndexs.map((msgIndex) => this.messages[msgIndex]);
     return [];
+  }
+
+  getMsgsByOriginAndNonce(origin: number, nonce: number): NomadMessage | undefined {
+    return this.messages.find((m) => m.nonce === nonce && m.origin === origin)
   }
 
   stats(): Statistics {
