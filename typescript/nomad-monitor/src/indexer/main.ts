@@ -25,11 +25,18 @@ const environment = process.env.ENVIRONMENT!;
   const logger = createLogger('indexer', environment);
 
   const db = new DBDriver();
-  
-  const c = new Processor(db);
+
+  const c = new Processor(db, logger);
   const m = new IndexerCollector(environment, logger);
 
-  const o = new Orchestrator(mainnet, c, mainnet.domainNumbers[0], m, logger, db);
+  const o = new Orchestrator(
+    mainnet,
+    c,
+    mainnet.domainNumbers[0],
+    m,
+    logger,
+    db,
+  );
   await o.init();
 
   await o.startConsuming();

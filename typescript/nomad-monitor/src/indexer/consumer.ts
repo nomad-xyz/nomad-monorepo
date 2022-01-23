@@ -4,7 +4,7 @@ import { EventType, NomadEvent } from './event';
 import { Statistics } from './types';
 import { parseBody } from '@nomad-xyz/sdk/src/nomad/messages/BridgeMessage';
 import { DBDriver } from './db';
-
+import Logger from 'bunyan';
 
 class StatisticsCollector {
   s: Statistics;
@@ -181,12 +181,13 @@ class Timings {
 }
 
 function bytes32ToAddress(s: string) {
-  return '0x'+s.slice(26)
+  return '0x' + s.slice(26);
 }
 
 export class NomadMessage {
   origin: number;
   destination: number;
+  nonce: number;
   root: string;
   hash: string;
   leafIndex: ethers.BigNumber;
@@ -207,6 +208,7 @@ export class NomadMessage {
   constructor(
     origin: number,
     destination: number,
+    nonce: number,
     root: string,
     hash: string,
     leafIndex: ethers.BigNumber,
@@ -216,6 +218,7 @@ export class NomadMessage {
   ) {
     this.origin = origin;
     this.destination = destination;
+    this.nonce = nonce;
     this.root = root;
     this.hash = hash;
     this.leafIndex = leafIndex;
@@ -233,10 +236,10 @@ export class NomadMessage {
       this.bridgeMsgDetailsHash = bridgeMessage.action.detailsHash;
       this.bridgeMsgTokenDomain = bridgeMessage.token.domain as number;
       this.bridgeMsgTokenId = bridgeMessage.token.id as string;
-    } catch(e) {
+    } catch (e) {
       // pass
     }
-    
+
     this.state = MsgState.Dispatched;
     this.timings = new Timings(createdAt);
   }
@@ -245,12 +248,32 @@ export class NomadMessage {
     return `${this.origin}${this.root}`;
   }
 
-  intoDB(): [string, number, number, string, string, string, number, number, number, number, number, string | undefined, string | undefined, string | undefined, boolean | undefined, string | undefined , number | undefined, string | undefined
+  intoDB(): [
+    string,
+    number,
+    number,
+    number,
+    string,
+    string,
+    string,
+    number,
+    number,
+    number,
+    number,
+    number,
+    string | undefined,
+    string | undefined,
+    string | undefined,
+    boolean | undefined,
+    string | undefined,
+    number | undefined,
+    string | undefined,
   ] {
     return [
       this.hash,
       this.origin,
       this.destination,
+      this.nonce,
       bytes32ToAddress(this.nomadSender),
       bytes32ToAddress(this.nomadRecipient),
       this.root,
@@ -260,19 +283,17 @@ export class NomadMessage {
       this.timings.relayedAt,
       this.timings.processedAt,
       this.bridgeMsgType,
-      this.bridgeMsgTo ? bytes32ToAddress(this.bridgeMsgTo): undefined,
+      this.bridgeMsgTo ? bytes32ToAddress(this.bridgeMsgTo) : undefined,
       this.bridgeMsgAmount?.toString(),
       this.bridgeMsgAllowFast,
       this.bridgeMsgDetailsHash,
       this.bridgeMsgTokenDomain,
-      this.bridgeMsgTokenId ? bytes32ToAddress(this.bridgeMsgTokenId): undefined,
-    ]
+      this.bridgeMsgTokenId
+        ? bytes32ToAddress(this.bridgeMsgTokenId)
+        : undefined,
+    ];
   }
 }
-
-
-
-
 
 export class Processor extends Consumer {
   messages: NomadMessage[];
@@ -282,8 +303,9 @@ export class Processor extends Consumer {
   domains: number[];
   syncQueue: string[];
   db: DBDriver;
+  logger: Logger;
 
-  constructor(db: DBDriver) {
+  constructor(db: DBDriver, logger: Logger) {
     super();
     this.messages = [];
     this.msgToIndex = new Map();
@@ -293,6 +315,7 @@ export class Processor extends Consumer {
     this.syncQueue = [];
 
     this.db = db;
+    this.logger = logger;
   }
 
   async consume(...events: NomadEvent[]): Promise<void> {
@@ -310,16 +333,22 @@ export class Processor extends Consumer {
       this.consumed += 1;
     }
 
-    await this.sync()
+    await this.sync();
   }
 
   async sync() {
     const [inserts, updates] = await this.getMsgForSync();
-    await Promise.all([this.db.insertMessage(inserts), this.db.updateMessage(updates)])
+
+    this.logger.info(`Inserting ${inserts.length} messages and updating ${updates.length}`);
+
+    await Promise.all([
+      this.db.insertMessage(inserts),
+      this.db.updateMessage(updates),
+    ]);
   }
 
   addToSyncQueue(hash: string) {
-    if (this.syncQueue.indexOf(hash) < 0 ) this.syncQueue.push(hash)
+    if (this.syncQueue.indexOf(hash) < 0) this.syncQueue.push(hash);
   }
 
   async getMsgForSync(): Promise<[NomadMessage[], NomadMessage[]]> {
@@ -328,7 +357,7 @@ export class Processor extends Consumer {
     const insert: string[] = [];
     const update: string[] = [];
 
-    this.syncQueue.forEach(hash => {
+    this.syncQueue.forEach((hash) => {
       if (existingHashes.indexOf(hash) < 0) {
         insert.push(hash);
       } else {
@@ -338,20 +367,17 @@ export class Processor extends Consumer {
 
     this.syncQueue = [];
 
-    return [
-      this.mapHashesToMessages(insert),
-      this.mapHashesToMessages(update),
-    ];
+    return [this.mapHashesToMessages(insert), this.mapHashesToMessages(update)];
   }
 
   mapHashesToMessages(hashes: string[]): NomadMessage[] {
-    return hashes.map(hash => this.getMsg(hash)!).filter(m=>!!m);
+    return hashes.map((hash) => this.getMsg(hash)!).filter((m) => !!m);
   }
 
   dispatched(e: NomadEvent) {
     const m = new NomadMessage(
       e.domain,
-      e.destination(),
+      ...e.destinationAndNonce(),
       e.eventData.committedRoot!,
       e.eventData.messageHash!,
       e.eventData.leafIndex!,

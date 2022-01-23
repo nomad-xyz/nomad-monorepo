@@ -19,11 +19,11 @@ export class Indexer {
     this.sdk = sdk;
     this.orchestrator = orchestrator;
     this.persistance = new RamPersistance(
-      `/tmp/persistance_${this.domain}.json`
+      `/tmp/persistance_${this.domain}.json`,
     );
     this.block2timeCache = new KVCache(
       String(this.domain),
-      this.orchestrator.db
+      this.orchestrator.db,
     );
   }
 
@@ -90,13 +90,13 @@ export class Indexer {
           await Promise.all(replicas.map((r) => this.fetchReplica(r, from, to)))
         ).flat();
 
-        return [...homeEvents, ...replicasEvents]
+        return [...homeEvents, ...replicasEvents];
       }, 5);
 
       if (error) throw error;
-      return fetchedEvents
-    }
-    
+      return fetchedEvents;
+    };
+
     const allEvents = [];
 
     const batchSize = 20000;
@@ -330,30 +330,6 @@ export abstract class Persistance {
   abstract persist(): void;
 }
 
-export class FilePersistance extends Persistance {
-  path: string;
-  constructor(path: string) {
-    super();
-    this.path = path;
-  }
-
-  store(...events: NomadEvent[]): void {}
-  async init(): Promise<void> {
-    if (fs.existsSync(this.path)) {
-      this.from = 13;
-      this.height = 14;
-      return ;
-    } else {
-      return ;
-    }
-  }
-  sortSorage() {}
-  allEvents(): NomadEvent[] {
-    return [];
-  }
-  persist(): void {}
-}
-
 export class RamPersistance extends Persistance {
   block2events: Map<number, NomadEvent[]>;
   blocks: number[];
@@ -418,21 +394,18 @@ export class RamPersistance extends Persistance {
     );
   }
 
-  persistToDB() {
-
-  }
+  persistToDB() {}
 
   persist() {
     this.persistToFile();
-    this.persistToDB()
+    this.persistToDB();
   }
 
   async load() {
-    this.loadFromFile()
+    this.loadFromFile();
   }
 
   loadFromFile() {
-
     const object = JSON.parse(
       fs.readFileSync(this.storePath, 'utf8'),
       reviver,
