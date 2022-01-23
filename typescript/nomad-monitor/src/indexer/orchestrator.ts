@@ -24,7 +24,7 @@ export class Orchestrator {
     gov: number,
     metrics: IndexerCollector,
     logger: Logger,
-    db: DBDriver
+    db: DBDriver,
   ) {
     this.sdk = sdk;
     this.consumer = c;

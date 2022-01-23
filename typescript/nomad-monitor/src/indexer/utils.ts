@@ -80,8 +80,7 @@ export class KVCache {
 
   async tryLoad() {
     try {
-      this.m = await this.db.getAllKeyPair(this.name)
-
+      this.m = await this.db.getAllKeyPair(this.name);
     } catch (_) {}
   }
 

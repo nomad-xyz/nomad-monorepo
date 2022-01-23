@@ -64,16 +64,16 @@ export class NomadEvent {
     this.source = source;
   }
 
-  destination(): number {
+  destinationAndNonce(): [number, number] {
     if (this.eventType !== EventType.HomeDispatch) {
       throw new Error(
         `Destination method is not availiable for non home-dispatch`,
       );
     }
-    const [destination] = parseDestinationAndNonce(
+    const [destination, nonce] = parseDestinationAndNonce(
       this.eventData.destinationAndNonce!,
     );
-    return destination;
+    return [destination, nonce];
   }
 
   toObject() {
@@ -113,12 +113,12 @@ export class NomadEvent {
 }
 
 function parseDestinationAndNonce(
-  h: ethers.BigNumber | { hex?: string, _hex?: string }
+  h: ethers.BigNumber | { hex?: string; _hex?: string },
 ): [number, number] {
   let hexString = '';
   if (h instanceof ethers.BigNumber) {
     hexString = h.toHexString();
-  } else{
+  } else {
     const hex = h.hex || h._hex;
     if (!hex) throw new Error(`Has no hex: ${JSON.stringify(h)}`);
     hexString = hex;
