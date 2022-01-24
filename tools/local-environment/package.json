@@ -25,7 +25,6 @@
   "dependencies": {
     "@nomad-xyz/contract-interfaces": "file:/../../typescript/typechain/dist",
     "@ethersproject/experimental": "^5.5.0",
-    "@nomad-xyz/contracts": "file:/../../solidity/nomad-core",
     "@nomad-xyz/deploy": "file:/../../typescript/nomad-deploy/dist",
     "@nomad-xyz/sdk": "file:/../../typescript/nomad-sdk/dist",
     "@nomad-xyz/test": "file:/../../typescript/nomad-tests",
