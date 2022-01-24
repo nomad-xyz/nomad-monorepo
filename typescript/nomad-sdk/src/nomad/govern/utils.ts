@@ -47,6 +47,11 @@ export function batchHash(batch: Call[]): string {
   return ethers.utils.keccak256(serializeCalls(batch));
 }
 
+export function formatBatch(batch: Call[]): string {
+  const BATCH_TYPE = 1;
+  return ethers.utils.hexConcat([[BATCH_TYPE], batchHash(batch)]);
+}
+
 export function associateRemotes(
   remoteCalls: Map<number, Call[]>,
 ): [number[], Call[][]] {
