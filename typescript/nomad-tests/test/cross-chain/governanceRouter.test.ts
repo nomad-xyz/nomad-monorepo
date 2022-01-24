@@ -73,9 +73,8 @@ describe('GovernanceRouter', async () => {
 
     governorHome = hub.contracts.home?.proxy!;
 
-    governorReplicaOnNonGovernorChain = spoke.contracts.replicas[
-      governorDomain
-    ].proxy! as contracts.TestReplica;
+    governorReplicaOnNonGovernorChain = spoke.contracts.replicas[governorDomain]
+      .proxy! as contracts.TestReplica;
     nonGovernorReplicaOnGovernorChain = hub.contracts.replicas[
       nonGovernorDomain
     ].proxy! as contracts.TestReplica;

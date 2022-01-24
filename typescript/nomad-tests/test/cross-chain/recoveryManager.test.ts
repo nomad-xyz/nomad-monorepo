@@ -7,8 +7,8 @@ import { increaseTimestampBy } from '../utils';
 import { getTestDeploy } from '../testChain';
 import { Updater } from 'lib/core';
 import { Signer } from 'lib/types';
-import {CoreDeploy} from '@nomad-xyz/deploy/dist/src/core/CoreDeploy';
-import {deployHubAndSpoke} from '@nomad-xyz/deploy/dist/src/core';
+import { CoreDeploy } from '@nomad-xyz/deploy/dist/src/core/CoreDeploy';
+import { deployHubAndSpoke } from '@nomad-xyz/deploy/dist/src/core';
 import * as contracts from '@nomad-xyz/contract-interfaces/core';
 
 async function expectNotInRecovery(
@@ -227,26 +227,25 @@ describe('RecoveryManager', async () => {
     [governor, recoveryManager, randomSigner] = await ethers.getSigners();
     const updater = await Updater.fromSigner(randomSigner, localDomain);
 
-
     const hub: CoreDeploy = await getTestDeploy(
-        localDomain,
-        updater.address,
-        [],
-        recoveryManager.address,
-      );
+      localDomain,
+      updater.address,
+      [],
+      recoveryManager.address,
+    );
 
     const spoke: CoreDeploy = await getTestDeploy(
-        remoteDomain,
-        updater.address,
-        [],
-        recoveryManager.address,
-      );
+      remoteDomain,
+      updater.address,
+      [],
+      recoveryManager.address,
+    );
 
     const extraSpoke: CoreDeploy = await getTestDeploy(
-        extraDomain,
-        updater.address,
-        [],
-        recoveryManager.address,
+      extraDomain,
+      updater.address,
+      [],
+      recoveryManager.address,
     );
 
     await deployHubAndSpoke(hub, [spoke, extraSpoke]);

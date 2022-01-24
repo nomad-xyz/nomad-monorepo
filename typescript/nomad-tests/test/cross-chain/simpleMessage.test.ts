@@ -6,7 +6,7 @@ import { getTestDeploy } from '../testChain';
 import { Updater } from 'lib/core';
 import { Update, Signer } from 'lib/types';
 import { CoreDeploy as Deploy } from '@nomad-xyz/deploy/dist/src/core/CoreDeploy';
-import {deployHubAndSpoke} from '@nomad-xyz/deploy/dist/src/core';
+import { deployHubAndSpoke } from '@nomad-xyz/deploy/dist/src/core';
 
 const localDomain = 1000;
 const remoteDomain = 2000;
