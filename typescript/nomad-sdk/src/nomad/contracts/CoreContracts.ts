@@ -2,7 +2,6 @@ import { ethers } from 'ethers';
 import { core } from '@nomad-xyz/contract-interfaces';
 import { Contracts } from '../../contracts';
 import { ReplicaInfo } from '../domains/domain';
-import { CallBatch } from '../govern';
 
 type Address = string;
 
@@ -117,10 +116,6 @@ export class CoreContracts extends Contracts {
       this._governor = { location: 'local', identifier };
     }
     return this._governor;
-  }
-
-  async newGovernanceBatch(): Promise<CallBatch> {
-    return CallBatch.fromCore(this);
   }
 
   connect(providerOrSigner: ethers.providers.Provider | ethers.Signer): void {

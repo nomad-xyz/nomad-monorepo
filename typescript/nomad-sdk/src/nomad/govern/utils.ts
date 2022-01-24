@@ -31,8 +31,8 @@ export function serializeCall(call: Call): string {
  * @param batch The function calls to serialize
  * @returns The serialized function calls, as a '0x'-prepended hex string
  */
-export function serializeCalls(batch: Call[]): string {
-  return ethers.utils.hexConcat([
+export function serializeCalls(batch: Call[]): Uint8Array {
+  return ethers.utils.concat([
     [batch.length % 256], // 1 byte length of Call array
     ...batch.map(serializeCall), // each serialized call in turn
   ]);
