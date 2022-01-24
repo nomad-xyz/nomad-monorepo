@@ -12,23 +12,23 @@ import {
 dotenv.config();
 
 // Chain-specific identifiers arbitrarily chosen by Nomad team (do not change)
+const RINKEBY_DOMAIN = 2000;
 const KOVAN_DOMAIN = 3000;
-const MOONBASEALPHA_DOMAIN = 5000;
 
 // Provider/signer info
 const KOVAN_URL = process.env.KOVAN_RPC!;
-const MOONBASEALPHA_URL = process.env.MOONBASEALPHA_RPC!;
+const RINKEBY_URL = process.env.RINKEBY_RPC!;
 const KOVAN_DEPLOYER_KEY = process.env.KOVAN_DEPLOYER_KEY!;
-const MOONBASEALPHA_DEPLOYER_KEY = process.env.MOONBASEALPHA_DEPLOYER_KEY!;
+const RINKEBY_DEPLOYER_KEY = process.env.RINKEBY_DEPLOYER_KEY!;
 
 interface XAppConnectionManagerDeploys {
   kovan: XAppConnectionManager;
-  moonbasealpha: XAppConnectionManager;
+  rinkeby: XAppConnectionManager;
 }
 
 interface RouterDeploys {
   kovanRouter: CounterRouter;
-  moonbasealphaRouter: CounterRouter;
+  rinkebyRouter: CounterRouter;
 }
 
 async function main() {
@@ -48,21 +48,19 @@ async function main() {
 function instantiateNomad() {
   console.log("\nInstantiating Nomad object...\n");
   dev.registerRpcProvider("kovan", KOVAN_URL);
-  dev.registerRpcProvider("moonbasealpha", MOONBASEALPHA_URL);
+  dev.registerRpcProvider("rinkeby", RINKEBY_URL);
 
   const kovanProvider = new ethers.providers.JsonRpcProvider(KOVAN_URL);
   const kovanSigner = new ethers.Wallet(KOVAN_DEPLOYER_KEY, kovanProvider);
 
-  const moonbaseProvider = new ethers.providers.JsonRpcProvider(
-    MOONBASEALPHA_URL
-  );
-  const moonbasealphaSigner = new ethers.Wallet(
-    MOONBASEALPHA_DEPLOYER_KEY,
+  const moonbaseProvider = new ethers.providers.JsonRpcProvider(RINKEBY_URL);
+  const rinkebySigner = new ethers.Wallet(
+    RINKEBY_DEPLOYER_KEY,
     moonbaseProvider
   );
 
   dev.registerSigner("kovan", kovanSigner);
-  dev.registerSigner("moonbasealpha", moonbasealphaSigner);
+  dev.registerSigner("rinkeby", rinkebySigner);
 }
 
 // A XAppConnectionManager is a contract that keeps track of which replicas your
@@ -75,11 +73,10 @@ async function deployXAppConnectionManagers(): Promise<XAppConnectionManagerDepl
   let kovanFactory = new XAppConnectionManager__factory(dev.getSigner("kovan"));
   const kovanXAppConnectionManager = await kovanFactory.deploy();
 
-  let moonbasealphaFactory = new XAppConnectionManager__factory(
-    dev.getSigner("moonbasealpha")
+  let rinkebyFactory = new XAppConnectionManager__factory(
+    dev.getSigner("rinkeby")
   );
-  const moonbasealphaXAppConnectionManager =
-    await moonbasealphaFactory.deploy();
+  const rinkebyXAppConnectionManager = await rinkebyFactory.deploy();
 
   // Wait for XAppConnectionManager deployments to finish
   console.log("Deploying Kovan XAppConnectionManager...");
@@ -88,47 +85,47 @@ async function deployXAppConnectionManagers(): Promise<XAppConnectionManagerDepl
     `Kovan XAppConnectionManager deployed to address: ${kovanXAppConnectionManager.address}`
   );
 
-  console.log("Deploying Moonbasealpha XAppConnectionManager...");
-  await moonbasealphaXAppConnectionManager.deployed();
+  console.log("Deploying Rinkeby XAppConnectionManager...");
+  await rinkebyXAppConnectionManager.deployed();
   console.log(
-    `Moonbasealpha router deployed to address: ${moonbasealphaXAppConnectionManager.address}`
+    `Rinkeby router deployed to address: ${rinkebyXAppConnectionManager.address}`
   );
 
   console.log(
-    "Enrolling moonbasealpha --> kovan replica on the kovan  XAppConnectionManager"
+    "Enrolling rinkeby --> kovan replica on the kovan  XAppConnectionManager"
   );
-  const moonbasealphaReplicaOnKovan = dev
+  const rinkebyReplicaOnKovan = dev
     .mustGetCore("kovan")
-    .getReplica(MOONBASEALPHA_DOMAIN)!;
+    .getReplica(RINKEBY_DOMAIN)!;
   await kovanXAppConnectionManager.ownerEnrollReplica(
-    moonbasealphaReplicaOnKovan.address,
-    MOONBASEALPHA_DOMAIN
+    rinkebyReplicaOnKovan.address,
+    RINKEBY_DOMAIN
   );
 
   console.log(
-    "Enrolling kovan --> moonbasealpha replica on the moonbasealpha  XAppConnectionManager"
+    "Enrolling kovan --> rinkeby replica on the rinkeby  XAppConnectionManager"
   );
   const kovanReplicaOnMoonbaseAlpha = dev
-    .mustGetCore("moonbasealpha")
+    .mustGetCore("rinkeby")
     .getReplica(KOVAN_DOMAIN)!;
-  await moonbasealphaXAppConnectionManager.ownerEnrollReplica(
+  await rinkebyXAppConnectionManager.ownerEnrollReplica(
     kovanReplicaOnMoonbaseAlpha.address,
     KOVAN_DOMAIN
   );
 
   return {
     kovan: kovanXAppConnectionManager,
-    moonbasealpha: moonbasealphaXAppConnectionManager,
+    rinkeby: rinkebyXAppConnectionManager,
   };
 }
 
-// Deploy Counter routers on both Kovan and Moonbasealpha.
+// Deploy Counter routers on both Kovan and Rinkeby.
 async function deployRouters(
   xAppConnectionManagers: XAppConnectionManagerDeploys
 ): Promise<RouterDeploys> {
-  const { kovan, moonbasealpha } = xAppConnectionManagers;
+  const { kovan, rinkeby } = xAppConnectionManagers;
   const kovanXAppConnectionManagerAddress = kovan.address;
-  const moonbasealphaXAppConnectionManagerAddress = moonbasealpha.address;
+  const rinkebyXAppConnectionManagerAddress = rinkeby.address;
 
   // Deploy routers to each chain
   const KovanCounterRouter = await ethers.getContractFactory(
@@ -139,12 +136,12 @@ async function deployRouters(
     kovanXAppConnectionManagerAddress
   );
 
-  const MoonbasealphaCounterRouter = await ethers.getContractFactory(
+  const RinkebyCounterRouter = await ethers.getContractFactory(
     "CounterRouter",
-    dev.getSigner("moonbasealpha")
+    dev.getSigner("rinkeby")
   );
-  let moonbasealphaRouter = await MoonbasealphaCounterRouter.deploy(
-    moonbasealphaXAppConnectionManagerAddress
+  let rinkebyRouter = await RinkebyCounterRouter.deploy(
+    rinkebyXAppConnectionManagerAddress
   );
 
   // Wait for deployments to finish
@@ -152,66 +149,60 @@ async function deployRouters(
   kovanRouter = await kovanRouter.deployed();
   console.log(`Kovan router deployed to address: ${kovanRouter.address}`);
 
-  console.log("Deploying Moonbasealpha router...");
-  moonbasealphaRouter = await moonbasealphaRouter.deployed();
-  console.log(
-    `Moonbasealpha router deployed to address: ${moonbasealphaRouter.address}`
-  );
+  console.log("Deploying Rinkeby router...");
+  rinkebyRouter = await rinkebyRouter.deployed();
+  console.log(`Rinkeby router deployed to address: ${rinkebyRouter.address}`);
 
   return {
     kovanRouter,
-    moonbasealphaRouter,
+    rinkebyRouter,
   };
 }
 
-// Enroll Moonbasealpha router on Kovan router and Kovan router on Moonbasealpha
+// Enroll Rinkeby router on Kovan router and Kovan router on Rinkeby
 // router. Enrolling a remote router on a local router allows the local router
 // to accept messages from the remote router. Note that addresses are formatted
 // as bytes 32 (prepend 0s to 20-byte Ethereum address).
 async function enrollRemoteRouters(deploys: RouterDeploys) {
-  const { kovanRouter, moonbasealphaRouter } = deploys;
+  const { kovanRouter, rinkebyRouter } = deploys;
 
-  console.log("\nEnrolling Moonbasealpha router on Kovan router...");
+  console.log("\nEnrolling Rinkeby router on Kovan router...");
   const kovanEnrollTx = await kovanRouter.enrollRemoteRouter(
-    MOONBASEALPHA_DOMAIN,
-    toBytes32(moonbasealphaRouter.address)
+    RINKEBY_DOMAIN,
+    toBytes32(rinkebyRouter.address)
   );
   await kovanEnrollTx.wait(2);
-  console.log(
-    "Kovan router can now accept messages from Moonbasealpha router."
-  );
+  console.log("Kovan router can now accept messages from Rinkeby router.");
 
-  console.log("\nEnrolling Kovan router on Moonbasealpha router...");
-  const moonbasealphaEnrollTx = await moonbasealphaRouter.enrollRemoteRouter(
+  console.log("\nEnrolling Kovan router on Rinkeby router...");
+  const rinkebyEnrollTx = await rinkebyRouter.enrollRemoteRouter(
     KOVAN_DOMAIN,
     toBytes32(kovanRouter.address)
   );
-  await moonbasealphaEnrollTx.wait(2);
-  console.log(
-    "Moonbasealpha router can now accept messages from Kovan router."
-  );
+  await rinkebyEnrollTx.wait(2);
+  console.log("Rinkeby router can now accept messages from Kovan router.");
 }
 
-// Send increment message from Kovan to Moonbasealpha (~5 min)
+// Send increment message from Kovan to Rinkeby (~5 min)
 async function sendMessage(deploys: RouterDeploys): Promise<string> {
   const { kovanRouter } = deploys;
   const incrementAmount = 100;
 
-  // Send an increment message from Kovan to Moonbasealpha. Should increment the
-  // Moonbasealpha router's count by 100. Will take approximately 5 min for the
-  // message to process on Moonbasealpha.
+  // Send an increment message from Kovan to Rinkeby. Should increment the
+  // Rinkeby router's count by 100. Will take approximately 5 min for the
+  // message to process on Rinkeby.
   console.log(
-    `\nDispatching Increment(${incrementAmount}) message from Kovan --> Moonbasealpha. This will increment the Moonbasealpha router's count by ${incrementAmount}.`
+    `\nDispatching Increment(${incrementAmount}) message from Kovan --> Rinkeby. This will increment the Rinkeby router's count by ${incrementAmount}.`
   );
-  const kovanDispatchToMoonbasealphaTx = await kovanRouter.dispatchIncrement(
-    MOONBASEALPHA_DOMAIN,
+  const kovanDispatchToRinkebyTx = await kovanRouter.dispatchIncrement(
+    RINKEBY_DOMAIN,
     incrementAmount
   );
   console.log(
-    `Kovan --> Moonbasealpha Dispatch tx hash: ${kovanDispatchToMoonbasealphaTx.hash}`
+    `Kovan --> Rinkeby Dispatch tx hash: ${kovanDispatchToRinkebyTx.hash}`
   );
 
-  return kovanDispatchToMoonbasealphaTx.hash;
+  return kovanDispatchToRinkebyTx.hash;
 }
 
 // Track the status of your message from kovan to moonbeam
