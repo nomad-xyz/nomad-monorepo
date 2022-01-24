@@ -1,7 +1,7 @@
-import { TypedEvent } from '@nomad-xyz/contract-interfaces/core/commons';
 import { ethers } from 'ethers';
 import { NomadContext } from '..';
 import { CoreContracts } from '../contracts';
+import { BatchReceivedEvent } from '../events';
 
 import * as utils from './utils';
 
@@ -94,9 +94,7 @@ export class CallBatch {
   }
 
   // Build a governance transaction from this callbatch
-  async build(
-    overrides?: ethers.Overrides,
-  ): Promise<ethers.PopulatedTransaction> {
+  async build(): Promise<ethers.PopulatedTransaction> {
     if (this.built) return this.built;
     const [domains, remoteCalls] = utils.associateRemotes(this.remote);
     this.built =
@@ -117,18 +115,16 @@ export class CallBatch {
 
   // Sign the governance batch and return a serialized transaction
   // Used by individual governors
-  async sign(overrides?: ethers.Overrides): Promise<string> {
-    await this.build(overrides);
+  async sign(): Promise<string> {
+    await this.build();
     const signer = this.governorCore.governanceRouter.signer;
     return signer.signTransaction(this.built as ethers.PopulatedTransaction);
   }
 
   // Execute the local governance calls immediately,
   // dispatch the remote governance calls to their respective domains
-  async execute(
-    overrides?: ethers.Overrides,
-  ): Promise<ethers.providers.TransactionResponse> {
-    await this.build(overrides);
+  async execute(): Promise<ethers.providers.TransactionResponse> {
+    await this.build();
     const signer = this.governorCore.governanceRouter.signer;
     return signer.sendTransaction(this.built as ethers.PopulatedTransaction);
   }
@@ -145,6 +141,18 @@ export class CallBatch {
     return governanceRouter.executeCallBatch(calls, overrides);
   }
 
+  // Check if the Batch
+  private async pollReceipt(
+    domain: number,
+  ): Promise<BatchReceivedEvent | undefined> {
+    const router = this.context.mustGetCore(domain).governanceRouter;
+    const hash = this.domainHash(domain);
+    const filter = router.filters.BatchReceived(hash);
+    const events = await router.queryFilter(filter);
+    if (events.length >= 1) return events[0];
+    return undefined;
+  }
+
   // Waits for a specified domain to receive its batch
   // Note that this does not call execute
   async waitDomain(
@@ -152,11 +160,17 @@ export class CallBatch {
   ): Promise<ethers.providers.TransactionReceipt> {
     const router = this.context.mustGetCore(domain).governanceRouter;
     const hash = this.domainHash(domain);
-    const event: TypedEvent<[] & { batchHash: string }> = await new Promise(
-      (resolve) => {
-        router.once(router.filters.BatchReceived(hash), resolve);
-      },
-    );
+
+    const poll = this.pollReceipt(domain);
+    const once: Promise<ethers.Event> = new Promise((resolve) => {
+      router.once(router.filters.BatchReceived(hash), resolve);
+    });
+
+    let event: ethers.Event | undefined = await poll;
+    if (!event) {
+      event = await once;
+    }
+
     return event.getTransactionReceipt();
   }
 
