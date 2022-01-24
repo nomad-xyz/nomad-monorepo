@@ -42,7 +42,7 @@ async function main() {
   const txHash = await sendMessage(routerDeploys);
   await trackMessageStatus(txHash);
 
-  console.log("\n FINISHED!");
+  console.log("\n Finished!");
 }
 
 function instantiateNomad() {
@@ -92,26 +92,28 @@ async function deployXAppConnectionManagers(): Promise<XAppConnectionManagerDepl
   );
 
   console.log(
-    "Enrolling rinkeby --> kovan replica on the kovan  XAppConnectionManager"
+    "Enrolling rinkeby --> kovan replica on the kovan XAppConnectionManager"
   );
   const rinkebyReplicaOnKovan = dev
     .mustGetCore("kovan")
     .getReplica(RINKEBY_DOMAIN)!;
-  await kovanXAppConnectionManager.ownerEnrollReplica(
+  const kovanEnrollTx = await kovanXAppConnectionManager.ownerEnrollReplica(
     rinkebyReplicaOnKovan.address,
     RINKEBY_DOMAIN
   );
+  await kovanEnrollTx.wait(2);
 
   console.log(
-    "Enrolling kovan --> rinkeby replica on the rinkeby  XAppConnectionManager"
+    "Enrolling kovan --> rinkeby replica on the rinkeby XAppConnectionManager"
   );
   const kovanReplicaOnMoonbaseAlpha = dev
     .mustGetCore("rinkeby")
     .getReplica(KOVAN_DOMAIN)!;
-  await rinkebyXAppConnectionManager.ownerEnrollReplica(
+  const rinkebyEnrollTx = await rinkebyXAppConnectionManager.ownerEnrollReplica(
     kovanReplicaOnMoonbaseAlpha.address,
     KOVAN_DOMAIN
   );
+  await rinkebyEnrollTx.wait(2);
 
   return {
     kovan: kovanXAppConnectionManager,
@@ -146,11 +148,11 @@ async function deployRouters(
 
   // Wait for deployments to finish
   console.log("Deploying Kovan router...");
-  kovanRouter = await kovanRouter.deployed();
+  await kovanRouter.deployed();
   console.log(`Kovan router deployed to address: ${kovanRouter.address}`);
 
   console.log("Deploying Rinkeby router...");
-  rinkebyRouter = await rinkebyRouter.deployed();
+  await rinkebyRouter.deployed();
   console.log(`Rinkeby router deployed to address: ${rinkebyRouter.address}`);
 
   return {
@@ -198,6 +200,7 @@ async function sendMessage(deploys: RouterDeploys): Promise<string> {
     RINKEBY_DOMAIN,
     incrementAmount
   );
+  await kovanDispatchToRinkebyTx.wait(2);
   console.log(
     `Kovan --> Rinkeby Dispatch tx hash: ${kovanDispatchToRinkebyTx.hash}`
   );
@@ -221,13 +224,13 @@ async function trackMessageStatus(txHash: string) {
     status = (await message.events()).status; // update status
 
     const statusAsString = MessageStatus[status];
-    console.log(`Current status of transfer: ${statusAsString}`);
+    console.log(`Current status: ${statusAsString}`);
   }
 
   // Print tx hash of transaction that processed transfer on ethereum
   const processTxHash = (await message.getProcess())!.transactionHash;
   console.log(
-    `Success! Transfer processed on Ethereum with tx hash ${processTxHash}.`
+    `Success! Message processed on Rinkeby with tx hash ${processTxHash}.`
   );
 }
 
