@@ -13,7 +13,7 @@ export interface Call {
 }
 
 export interface RemoteContents {
-  [domain: string]: Call[]
+  [domain: string]: Call[];
 }
 
 export interface CallBatchContents {
@@ -28,7 +28,11 @@ export class CallBatch {
   private context: NomadContext;
   private built?: ethers.PopulatedTransaction;
 
-  constructor(context: NomadContext, governorDomain: number, callerKnowsWhatTheyAreDoing: boolean) {
+  constructor(
+    context: NomadContext,
+    governorDomain: number,
+    callerKnowsWhatTheyAreDoing: boolean,
+  ) {
     if (!callerKnowsWhatTheyAreDoing) {
       throw new Error(
         'Please instantiate this class using the fromContext method',
@@ -45,14 +49,17 @@ export class CallBatch {
     return new CallBatch(context, governorDomain, true);
   }
 
-  static async fromJSON(context: NomadContext, batchContents: CallBatchContents): Promise<CallBatch> {
+  static async fromJSON(
+    context: NomadContext,
+    batchContents: CallBatchContents,
+  ): Promise<CallBatch> {
     const batch = await CallBatch.fromContext(context);
     // push the local calls
     for (const local of batchContents.local) {
       batch.pushLocal(local);
     }
     // push the remote calls
-    for(const domain of Object.keys(batchContents.remote)) {
+    for (const domain of Object.keys(batchContents.remote)) {
       const calls = batchContents.remote[domain];
       for (const call of calls) {
         batch.pushRemote(parseInt(domain), call);
@@ -113,9 +120,7 @@ export class CallBatch {
   async sign(overrides?: ethers.Overrides): Promise<string> {
     await this.build(overrides);
     const signer = this.governorCore.governanceRouter.signer;
-    return signer.signTransaction(
-      this.built as ethers.PopulatedTransaction,
-    );
+    return signer.signTransaction(this.built as ethers.PopulatedTransaction);
   }
 
   // Execute the local governance calls immediately,
@@ -125,16 +130,14 @@ export class CallBatch {
   ): Promise<ethers.providers.TransactionResponse> {
     await this.build(overrides);
     const signer = this.governorCore.governanceRouter.signer;
-    return signer.sendTransaction(
-      this.built as ethers.PopulatedTransaction,
-    );
+    return signer.sendTransaction(this.built as ethers.PopulatedTransaction);
   }
 
   // Execute the remote governance calls for a domain
   // @dev ensure waitDomain returns before attempting to executeDomain
   async executeDomain(
-      domain: number,
-      overrides?: ethers.Overrides,
+    domain: number,
+    overrides?: ethers.Overrides,
   ): Promise<ethers.providers.TransactionResponse> {
     const calls = this.remote.get(domain);
     if (!calls) throw new Error(`Not found calls for remote ${domain}`);
@@ -160,8 +163,6 @@ export class CallBatch {
   // Waits for all participating domains to receive their batches
   // Note that this does not call execute
   async waitAll(): Promise<ethers.providers.TransactionReceipt[]> {
-    return Promise.all(
-      this.domains.map((domain) => this.waitDomain(domain)),
-    );
+    return Promise.all(this.domains.map((domain) => this.waitDomain(domain)));
   }
 }
