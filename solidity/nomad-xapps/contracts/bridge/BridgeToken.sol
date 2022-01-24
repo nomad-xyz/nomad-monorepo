@@ -6,8 +6,8 @@ import {IBridgeToken} from "../../interfaces/bridge/IBridgeToken.sol";
 import {ERC20} from "./vendored/OZERC20.sol";
 import {BridgeMessage} from "./BridgeMessage.sol";
 // ============ External Imports ============
-import {Version0} from "@nomad-xyz/nomad-core-sol/contracts/Version0.sol";
-import {TypeCasts} from "@nomad-xyz/nomad-core-sol/contracts/XAppConnectionManager.sol";
+import {Version0} from "@nomad-xyz/core-contracts/contracts/Version0.sol";
+import {TypeCasts} from "@nomad-xyz/core-contracts/contracts/XAppConnectionManager.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 contract BridgeToken is Version0, IBridgeToken, OwnableUpgradeable, ERC20 {

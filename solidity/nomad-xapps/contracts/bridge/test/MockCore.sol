@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 pragma solidity >=0.6.11;
 
-import {MerkleTreeManager} from "@nomad-xyz/nomad-core-sol/contracts/Merkle.sol";
-import {QueueManager} from "@nomad-xyz/nomad-core-sol/contracts/Queue.sol";
+import {MerkleTreeManager} from "@nomad-xyz/core-contracts/contracts/Merkle.sol";
+import {QueueManager} from "@nomad-xyz/core-contracts/contracts/Queue.sol";
 
-import {Message} from "@nomad-xyz/nomad-core-sol/libs/Message.sol";
-import {MerkleLib} from "@nomad-xyz/nomad-core-sol/libs/Merkle.sol";
-import {QueueLib} from "@nomad-xyz/nomad-core-sol/libs/Queue.sol";
+import {Message} from "@nomad-xyz/core-contracts/libs/Message.sol";
+import {MerkleLib} from "@nomad-xyz/core-contracts/libs/Merkle.sol";
+import {QueueLib} from "@nomad-xyz/core-contracts/libs/Queue.sol";
 
 // We reproduce a significant amount of logic from `Home` to ensure that
 // calling dispatch here is AT LEAST AS EXPENSIVE as calling it on home

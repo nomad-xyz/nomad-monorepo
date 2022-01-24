@@ -8,8 +8,8 @@ import {XAppConnectionClient} from "../XAppConnectionClient.sol";
 import {BridgeMessage} from "./BridgeMessage.sol";
 import {IBridgeToken} from "../../interfaces/bridge/IBridgeToken.sol";
 // ============ External Imports ============
-import {Home} from "@nomad-xyz/nomad-core-sol/contracts/Home.sol";
-import {Version0} from "@nomad-xyz/nomad-core-sol/contracts/Version0.sol";
+import {Home} from "@nomad-xyz/core-contracts/contracts/Home.sol";
+import {Version0} from "@nomad-xyz/core-contracts/contracts/Version0.sol";
 import {TypedMemView} from "@summa-tx/memview-sol/contracts/TypedMemView.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";

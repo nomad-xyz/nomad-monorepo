@@ -5,8 +5,8 @@ pragma solidity >=0.6.11;
 import {BridgeMessage} from "./BridgeMessage.sol";
 import {XAppConnectionClient} from "../XAppConnectionClient.sol";
 import {Encoding} from "./Encoding.sol";
-import {TypeCasts} from "@nomad-xyz/nomad-core-sol/contracts/XAppConnectionManager.sol";
-import {UpgradeBeaconProxy} from "@nomad-xyz/nomad-core-sol/contracts/upgrade/UpgradeBeaconProxy.sol";
+import {TypeCasts} from "@nomad-xyz/core-contracts/contracts/XAppConnectionManager.sol";
+import {UpgradeBeaconProxy} from "@nomad-xyz/core-contracts/contracts/upgrade/UpgradeBeaconProxy.sol";
 // ============ Interfaces ============
 import {ITokenRegistry} from "../../interfaces/bridge/ITokenRegistry.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";

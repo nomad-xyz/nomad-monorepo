@@ -1,5 +1,5 @@
 {
-  "name": "@nomad-xyz/nomad-core-sol",
+  "name": "@nomad-xyz/core-contracts",
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.1",
     "@nomiclabs/hardhat-etherscan": "^2.1.2",
@@ -20,7 +20,7 @@
     "ts-node": "^10.1.0",
     "typechain": "^5.0.0"
   },
-  "version": "1.1.0",
+  "version": "1.0.0",
   "description": "Nomad contracts",
   "main": "",
   "directories": {
