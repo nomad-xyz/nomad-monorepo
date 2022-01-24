@@ -141,7 +141,7 @@ export class CallBatch {
   }
 
   // Check if the Batch
-  private async pollReceipt(
+  private async queryReceipt(
     domain: number,
   ): Promise<BatchReceivedEvent | undefined> {
     const router = this.context.mustGetCore(domain).governanceRouter;
@@ -160,7 +160,7 @@ export class CallBatch {
     const router = this.context.mustGetCore(domain).governanceRouter;
     const hash = this.domainHash(domain);
 
-    const poll = this.pollReceipt(domain);
+    const poll = this.queryReceipt(domain);
     const once: Promise<ethers.Event> = new Promise((resolve) => {
       router.once(router.filters.BatchReceived(hash), resolve);
     });
