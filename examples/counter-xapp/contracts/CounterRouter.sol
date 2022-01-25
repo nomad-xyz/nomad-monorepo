@@ -2,11 +2,12 @@
 pragma solidity >=0.6.11;
 
 // ============ External Imports ============
-import { TypedMemView } from "@summa-tx/memview-sol/contracts/TypedMemView.sol";
+import {TypedMemView} from "@summa-tx/memview-sol/contracts/TypedMemView.sol";
 // ============ Internal Imports ============
-import { CounterMessage } from "./CounterMessage.sol";
-import { Router } from "./Router.sol";
-import { XAppConnectionClient } from "./XAppConnectionClient.sol";
+import {CounterMessage} from "./CounterMessage.sol";
+import {XAppConnectionManager} from "@nomad-xyz/nomad-core-sol/contracts/XAppConnectionManager.sol";
+import {XAppConnectionClient} from "@nomad-xyz/nomad-xapps-sol/contracts/XAppConnectionClient.sol";
+import {Router} from "@nomad-xyz/nomad-xapps-sol/contracts/Router.sol";
 
 /*
 ============ Overview: Building a xApp ============
@@ -33,124 +34,128 @@ the counter app on chain B. Below, we define how to receive and act on the
 messages defined in CounterMessage.sol for this cross-chain Counter app.
 */
 contract CounterRouter is Router {
-  // ============ Libraries ============
+    // ============ Libraries ============
 
-  using TypedMemView for bytes;
-  using TypedMemView for bytes29;
-  using CounterMessage for bytes29;
+    using TypedMemView for bytes;
+    using TypedMemView for bytes29;
+    using CounterMessage for bytes29;
 
-  // ============ Public Storage ============
+    // ============ Public Storage ============
 
-  int256 public count = 0;
+    int256 public count = 0;
 
-  // ============ Events ============
+    // ============ Events ============
 
-  event Incremented(int256 indexed newValue);
-  event Decremented(int256 indexed newValue);
+    event Incremented(int256 indexed newValue);
+    event Decremented(int256 indexed newValue);
 
-  // ============ Constructor ============
+    // ============ Constructor ============
 
-  constructor(address _xAppConnectionManager) {
-    __XAppConnectionClient_initialize(_xAppConnectionManager);
-  }
-
-  // ============ Handle message functions ============
-
-  /**
-   * @notice Receive messages sent via Nomad from other remote xApp Routers;
-   * parse the contents of the message and enact the message's effects on the local chain
-   * @dev Called by an Nomad Replica contract while processing a message sent via Nomad
-   * @param _origin The domain the message is coming from
-   * @param _nonce The unique identifier for the message from origin to destination
-   * @param _sender The address the message is coming from
-   * @param _message The message in the form of raw bytes
-   */
-  function handle(
-    uint32 _origin,
-    uint32 _nonce,
-    bytes32 _sender,
-    bytes memory _message
-  ) external override onlyReplica onlyRemoteRouter(_origin, _sender) {
-    bytes29 _msg = _message.ref(0);
-    // route message to appropriate _handle function
-    // based on what type of message is encoded
-    if (_msg.isIncrement()) {
-      _handleIncrement(_msg);
-    } else if (_msg.isDecrement()) {
-      _handleDecrement(_msg);
-    } else {
-      // if _message doesn't match any valid actions, revert
-      require(false, "!valid action");
+    constructor(address _xAppConnectionManager) {
+        __XAppConnectionClient_initialize(_xAppConnectionManager);
     }
-  }
 
-  /**
-   * @notice Once the Router has parsed a message in the handle function and
-   * determined it is type Increment, call this internal function to parse
-   * the `amount` from the message and increment count.
-   * @param _message The message in the form of raw bytes
-   */
-  function _handleIncrement(bytes29 _message) internal {
-    uint256 _amount = _message.getAmount();
-    count += int256(_amount);
-    emit Incremented(count);
-  }
+    // ============ Handle message functions ============
 
-  /**
-   * @notice Once the Router has parsed a message in the handle function and
-   * determined it is type Decrement, call this internal function to parse
-   * the `amount` from the message and decrement count.
-   * @param _message The message in the form of raw bytes
-   */
-  function _handleDecrement(bytes29 _message) internal {
-    uint256 _amount = _message.getAmount();
-    count -= int256(_amount);
-    emit Decremented(count);
-  }
+    /**
+     * @notice Receive messages sent via Nomad from other remote xApp Routers;
+     * parse the contents of the message and enact the message's effects on the local chain
+     * @dev Called by an Nomad Replica contract while processing a message sent via Nomad
+     * @param _origin The domain the message is coming from
+     * @param _nonce The unique identifier for the message from origin to destination
+     * @param _sender The address the message is coming from
+     * @param _message The message in the form of raw bytes
+     */
+    function handle(
+        uint32 _origin,
+        uint32 _nonce,
+        bytes32 _sender,
+        bytes memory _message
+    ) external override onlyReplica onlyRemoteRouter(_origin, _sender) {
+        bytes29 _msg = _message.ref(0);
+        // route message to appropriate _handle function
+        // based on what type of message is encoded
+        if (_msg.isIncrement()) {
+            _handleIncrement(_msg);
+        } else if (_msg.isDecrement()) {
+            _handleDecrement(_msg);
+        } else {
+            // if _message doesn't match any valid actions, revert
+            require(false, "!valid action");
+        }
+    }
 
-  // ============ Dispatch message functions ============
+    /**
+     * @notice Once the Router has parsed a message in the handle function and
+     * determined it is type Increment, call this internal function to parse
+     * the `amount` from the message and increment count.
+     * @param _message The message in the form of raw bytes
+     */
+    function _handleIncrement(bytes29 _message) internal {
+        uint256 _amount = _message.getAmount();
+        count += int256(_amount);
+        emit Incremented(count);
+    }
 
-  /**
-   * @notice Send a message of type Increment to a remote xApp Router via Nomad;
-   * processing this message on the destination chain will cause the remote
-   * router on the destination chain to increment its count by `amount`.
-   * @param _destinationDomain The domain to send the message to
-   * @param _amount Amount to increment the remote router's count
-   */
-  function dispatchIncrement(uint32 _destinationDomain, uint256 _amount)
-    external
-  {
-    // get the xApp Router address at the destinationDomain
-    bytes32 _remoteRouterAddress = _mustHaveRemote(_destinationDomain);
-    // encode a message to send to Increment to remote xApp Router
-    bytes memory _incrementMessage = CounterMessage.formatIncrement(_amount);
-    // send the message to the xApp Router
-    _home().dispatch(
-      _destinationDomain,
-      _remoteRouterAddress,
-      _incrementMessage
-    );
-  }
+    /**
+     * @notice Once the Router has parsed a message in the handle function and
+     * determined it is type Decrement, call this internal function to parse
+     * the `amount` from the message and decrement count.
+     * @param _message The message in the form of raw bytes
+     */
+    function _handleDecrement(bytes29 _message) internal {
+        uint256 _amount = _message.getAmount();
+        count -= int256(_amount);
+        emit Decremented(count);
+    }
 
-  /**
-   * @notice Send a message of type Decrement to a remote xApp Router via Nomad;
-   * processing this message on the destination chain will cause the remote
-   * router on the destination chain to decrement its count by `amount`.
-   * @param _destinationDomain The domain to send the message to
-   * @param _amount Amount to increment the remote router's count
-   */
-  function dispatchDecrement(uint32 _destinationDomain, uint256 _amount)
-    external
-  {
-    // get the xApp Router address at the destinationDomain
-    bytes32 _remoteRouterAddress = _mustHaveRemote(_destinationDomain);
-    // encode a message to send to Decrement to remote xApp Router
-    bytes memory _decrementMessage = CounterMessage.formatDecrement(_amount);
-    // send the message to the xApp Router
-    _home().dispatch(
-      _destinationDomain,
-      _remoteRouterAddress,
-      _decrementMessage
-    );
-  }
+    // ============ Dispatch message functions ============
+
+    /**
+     * @notice Send a message of type Increment to a remote xApp Router via Nomad;
+     * processing this message on the destination chain will cause the remote
+     * router on the destination chain to increment its count by `amount`.
+     * @param _destinationDomain The domain to send the message to
+     * @param _amount Amount to increment the remote router's count
+     */
+    function dispatchIncrement(uint32 _destinationDomain, uint256 _amount)
+        external
+    {
+        // get the xApp Router address at the destinationDomain
+        bytes32 _remoteRouterAddress = _mustHaveRemote(_destinationDomain);
+        // encode a message to send to Increment to remote xApp Router
+        bytes memory _incrementMessage = CounterMessage.formatIncrement(
+            _amount
+        );
+        // send the message to the xApp Router
+        _home().dispatch(
+            _destinationDomain,
+            _remoteRouterAddress,
+            _incrementMessage
+        );
+    }
+
+    /**
+     * @notice Send a message of type Decrement to a remote xApp Router via Nomad;
+     * processing this message on the destination chain will cause the remote
+     * router on the destination chain to decrement its count by `amount`.
+     * @param _destinationDomain The domain to send the message to
+     * @param _amount Amount to increment the remote router's count
+     */
+    function dispatchDecrement(uint32 _destinationDomain, uint256 _amount)
+        external
+    {
+        // get the xApp Router address at the destinationDomain
+        bytes32 _remoteRouterAddress = _mustHaveRemote(_destinationDomain);
+        // encode a message to send to Decrement to remote xApp Router
+        bytes memory _decrementMessage = CounterMessage.formatDecrement(
+            _amount
+        );
+        // send the message to the xApp Router
+        _home().dispatch(
+            _destinationDomain,
+            _remoteRouterAddress,
+            _decrementMessage
+        );
+    }
 }
