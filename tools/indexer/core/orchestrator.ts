@@ -1,11 +1,11 @@
-import { NomadContext } from '@nomad-xyz/sdk/src';
-import Logger from 'bunyan';
-import { Consumer } from './consumer';
-import { DB } from './db';
-import { Indexer } from './indexer';
-import { IndexerCollector } from './metrics';
-import { Statistics } from './types';
-import { replacer, sleep } from './utils';
+import { NomadContext } from "@nomad-xyz/sdk/dist";
+import Logger from "bunyan";
+import { Consumer } from "./consumer";
+import { DB } from "./db";
+import { Indexer } from "./indexer";
+import { IndexerCollector } from "./metrics";
+import { Statistics } from "./types";
+import { replacer, sleep } from "./utils";
 
 export class Orchestrator {
   sdk: NomadContext;
@@ -24,7 +24,7 @@ export class Orchestrator {
     gov: number,
     metrics: IndexerCollector,
     logger: Logger,
-    db: DB,
+    db: DB
   ) {
     this.sdk = sdk;
     this.consumer = c;
@@ -45,7 +45,7 @@ export class Orchestrator {
   async indexAll() {
     const events = (
       await Promise.all(
-        this.sdk.domainNumbers.map((domain: number) => this.index(domain)),
+        this.sdk.domainNumbers.map((domain: number) => this.index(domain))
       )
     ).flat();
     events.sort((a, b) => a.ts - b.ts);
@@ -90,7 +90,7 @@ export class Orchestrator {
       this.logger.info(
         `Finished reindexing after ${
           (new Date().valueOf() - start) / 1000
-        } seconds`,
+        } seconds`
       );
 
       const stats = this.consumer.stats();
@@ -122,7 +122,7 @@ export class Orchestrator {
       meanUpdate,
       meanRelay,
       meanProcess,
-      meanE2E,
+      meanE2E
     );
   }
 
