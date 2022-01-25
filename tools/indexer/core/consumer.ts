@@ -1,12 +1,11 @@
-import { parseMessage } from '@nomad-xyz/sdk/src/nomad/messages/NomadMessage';
-import { ethers } from 'ethers';
-import { EventType, NomadEvent } from './event';
-import { Statistics } from './types';
-import { parseBody } from '@nomad-xyz/sdk/src/nomad/messages/BridgeMessage';
-import { parseAction } from '@nomad-xyz/sdk/src/nomad/messages/GovernanceMessage';
-import { DB } from './db';
-import Logger from 'bunyan';
-
+import { parseMessage } from "@nomad-xyz/sdk/dist/nomad/messages/NomadMessage";
+import { ethers } from "ethers";
+import { EventType, NomadEvent } from "./event";
+import { Statistics } from "./types";
+import { parseBody } from "@nomad-xyz/sdk/dist/nomad/messages/BridgeMessage";
+import { parseAction } from "@nomad-xyz/sdk/dist/nomad/messages/GovernanceMessage";
+import { DB } from "./db";
+import Logger from "bunyan";
 
 class StatisticsCollector {
   s: Statistics;
@@ -63,7 +62,9 @@ class StatisticsCollector {
     const inReceiveStat = m.timings.inReceived();
     if (inReceiveStat) {
       this.s.timings.total.meanReceive.add(inReceiveStat);
-      this.s.timings.domainStatistics.get(m.origin)!.meanReceive.add(inReceiveStat);
+      this.s.timings.domainStatistics
+        .get(m.origin)!
+        .meanReceive.add(inReceiveStat);
     }
   }
 
@@ -202,7 +203,10 @@ class Timings {
     if (this.processedAt) {
       return (
         this.processedAt -
-        (this.receivedAt || this.relayedAt || this.updatedAt || this.dispatchedAt)
+        (this.receivedAt ||
+          this.relayedAt ||
+          this.updatedAt ||
+          this.dispatchedAt)
       ); // because of the problem with time that it is not ideal from RPC we could have skipped some stages. we take the last available
     }
     return undefined;
@@ -212,7 +216,10 @@ class Timings {
     if (this.processedAt) {
       return (
         this.processedAt -
-        (this.dispatchedAt || this.updatedAt || this.relayedAt || this.receivedAt)
+        (this.dispatchedAt ||
+          this.updatedAt ||
+          this.relayedAt ||
+          this.receivedAt)
       ); // same as for .inRelayed() and .inProcessed() but opposit order
     }
     return undefined;
@@ -220,15 +227,14 @@ class Timings {
 }
 
 function bytes32ToAddress(s: string) {
-  return '0x' + s.slice(26);
+  return "0x" + s.slice(26);
 }
-
 
 enum MessageType {
   NoMessage,
   TransferMessage,
   GovernanceMessage,
-};
+}
 
 export class NomadMessage {
   origin: number;
@@ -253,7 +259,6 @@ export class NomadMessage {
   timings: Timings;
   block: number;
   evm?: string;
-  
 
   constructor(
     origin: number,
@@ -265,13 +270,13 @@ export class NomadMessage {
     // destinationAndNonce: ethers.BigNumber,
     message: string,
     createdAt: number,
-    block: number,
+    block: number
   ) {
     this.origin = origin;
     this.destination = destination;
     this.nonce = nonce;
-    this.root = root;
-    this.hash = hash;
+    this.root = root.toLowerCase();
+    this.hash = hash.toLowerCase();
     this.leafIndex = leafIndex;
     // this.destinationAndNonce = destinationAndNonce;
     this.raw = message;
@@ -309,7 +314,7 @@ export class NomadMessage {
       state: this.state,
       timings: this.timings,
       tx: this.evm,
-    }
+    };
   }
 
   static fromDB(
@@ -327,9 +332,19 @@ export class NomadMessage {
     processedAt: number,
     block: number,
     sender: string,
-    evm: string,
+    evm: string
   ): NomadMessage {
-    const m = new NomadMessage(origin, destination, nonce, root, hash, leafIndex, message, createdAt, block);
+    const m = new NomadMessage(
+      origin,
+      destination,
+      nonce,
+      root,
+      hash,
+      leafIndex,
+      message,
+      createdAt,
+      block
+    );
     m.timings.updated(updatedAt);
     m.timings.relayed(relayedAt);
     m.timings.received(receivedAt);
@@ -340,22 +355,26 @@ export class NomadMessage {
   }
 
   tryParseMessage(body: string) {
-    this.tryParseTransferMessage(body) || this.tryParseGovernanceMessage(body)
+    this.tryParseTransferMessage(body) || this.tryParseGovernanceMessage(body);
   }
 
   tryParseTransferMessage(body: string): boolean {
     try {
       const bridgeMessage = parseBody(body);
       this.bridgeMsgType = bridgeMessage.action.type as string;
-      this.bridgeMsgTo = bytes32ToAddress(bridgeMessage.action.to);
+      this.bridgeMsgTo = bytes32ToAddress(
+        bridgeMessage.action.to
+      ).toLowerCase();
       this.bridgeMsgAmount = bridgeMessage.action.amount;
       this.bridgeMsgAllowFast = bridgeMessage.action.allowFast;
       this.bridgeMsgDetailsHash = bridgeMessage.action.detailsHash;
       this.bridgeMsgTokenDomain = bridgeMessage.token.domain as number;
-      this.bridgeMsgTokenId = bytes32ToAddress(bridgeMessage.token.id as string);
+      this.bridgeMsgTokenId = bytes32ToAddress(
+        bridgeMessage.token.id as string
+      ).toLowerCase();
       this.hasMessage = MessageType.TransferMessage;
       return true;
-    } catch(e) {
+    } catch (e) {
       return false;
     }
   }
@@ -364,7 +383,7 @@ export class NomadMessage {
     try {
       const message = parseAction(body);
       if (message.type == "batch") {
-        message.batchHash
+        message.batchHash;
       } else {
         message.address;
         message.domain;
@@ -372,7 +391,7 @@ export class NomadMessage {
       this.bridgeMsgType = message.type;
       this.hasMessage = MessageType.GovernanceMessage;
       return true;
-    } catch(e) {
+    } catch (e) {
       return false;
     }
   }
@@ -410,34 +429,34 @@ export class NomadMessage {
     string,
     string,
     number,
-    string|undefined,
+    string | undefined
   ] {
     return [
-      this.hash,
+      this.hash.toLowerCase(),
       this.origin,
       this.destination,
       this.nonce,
-      this.nomadSender,
-      this.nomadRecipient,
-      this.root,
+      this.nomadSender.toLowerCase(),
+      this.nomadRecipient.toLowerCase(),
+      this.root.toLowerCase(),
       this.state,
       this.timings.dispatchedAt,
       this.timings.updatedAt,
       this.timings.relayedAt,
       this.timings.receivedAt,
       this.timings.processedAt,
-      this.bridgeMsgType,
-      this.bridgeMsgTo,
+      this.bridgeMsgType?.toLowerCase(),
+      this.bridgeMsgTo?.toLowerCase(),
       this.bridgeMsgAmount?.toString(),
       this.bridgeMsgAllowFast,
-      this.bridgeMsgDetailsHash,
+      this.bridgeMsgDetailsHash?.toLowerCase(),
       this.bridgeMsgTokenDomain,
-      this.bridgeMsgTokenId,
-      this.sender,
+      this.bridgeMsgTokenId?.toLowerCase(),
+      this.sender?.toLowerCase(),
       this.raw,
       this.leafIndex.toString(),
       this.block,
-      this.evm,
+      this.evm?.toLowerCase(),
     ];
   }
 }
@@ -448,27 +467,28 @@ class SenderLostAndFound {
   bridgeRouterSendEvents: NomadEvent[];
   constructor(p: Processor) {
     this.p = p;
-    this.dispatchEventsWithMessages = []
-    this.bridgeRouterSendEvents = []
+    this.dispatchEventsWithMessages = [];
+    this.bridgeRouterSendEvents = [];
   }
 
   bridgeRouterSend(e: NomadEvent): string | undefined {
     // check if we have dispatch events with block >= current && block <= current + 4;
     const hash = this.findMatchingDispatchAndUpdateAndRemove(e);
     if (hash) {
-      return hash
+      return hash;
     } else {
       //add event for further fixing from dispatch side
       this.bridgeRouterSendEvents.push(e);
       return undefined;
     }
-
   }
-  findMatchingDispatchAndUpdateAndRemove(brSend: NomadEvent): string|undefined {
-    const index = this.dispatchEventsWithMessages.findIndex(
-      ([dispatch, m]) => this.match(dispatch, brSend, m)
+  findMatchingDispatchAndUpdateAndRemove(
+    brSend: NomadEvent
+  ): string | undefined {
+    const index = this.dispatchEventsWithMessages.findIndex(([dispatch, m]) =>
+      this.match(dispatch, brSend, m)
     );
-    
+
     if (index >= 0) {
       const some = this.dispatchEventsWithMessages.at(index);
       if (some) {
@@ -479,23 +499,26 @@ class SenderLostAndFound {
         this.dispatchEventsWithMessages.splice(index, 1);
         return msg.hash;
       }
-      
     }
     return undefined;
   }
 
   match(dispatch: NomadEvent, brSend: NomadEvent, m: NomadMessage): boolean {
-    return brSend.eventData.toDomain! === m.destination && //brSend.eventData.token?.toLowerCase() === m.bridgeMsgTokenId?.toLowerCase() &&
-    bytes32ToAddress(brSend.eventData.toId!).toLowerCase() === m.bridgeMsgTo?.toLowerCase() && 
-    brSend.eventData.amount!.eq(m.bridgeMsgAmount!) && 
-    (
+    return (
+      brSend.eventData.toDomain! === m.destination && //brSend.eventData.token?.toLowerCase() === m.bridgeMsgTokenId?.toLowerCase() &&
+      bytes32ToAddress(brSend.eventData.toId!).toLowerCase() ===
+        m.bridgeMsgTo?.toLowerCase() &&
+      brSend.eventData.amount!.eq(m.bridgeMsgAmount!) &&
       brSend.block === dispatch.block //&&  // (dispatch.block - brSend.block <= 2 || brSend.block - dispatch.block <= 30)
-    )
+    );
   }
 
-  findMatchingBRSendUpdateAndRemove(dispatch: NomadEvent, m: NomadMessage): boolean {
-    const index = this.bridgeRouterSendEvents.findIndex(
-      (brSend) => this.match(dispatch, brSend, m)
+  findMatchingBRSendUpdateAndRemove(
+    dispatch: NomadEvent,
+    m: NomadMessage
+  ): boolean {
+    const index = this.bridgeRouterSendEvents.findIndex((brSend) =>
+      this.match(dispatch, brSend, m)
     );
     if (index >= 0) {
       const brSend = this.bridgeRouterSendEvents.at(index);
@@ -515,10 +538,9 @@ class SenderLostAndFound {
     if (this.findMatchingBRSendUpdateAndRemove(e, m)) {
       return true;
     } else {
-      this.dispatchEventsWithMessages.push([e,m]);
+      this.dispatchEventsWithMessages.push([e, m]);
       return false;
     }
-
   }
 }
 
@@ -572,7 +594,9 @@ export class Processor extends Consumer {
   async sync() {
     const [inserts, updates] = await this.getMsgForSync();
 
-    this.logger.info(`Inserting ${inserts.length} messages and updating ${updates.length}`);
+    this.logger.info(
+      `Inserting ${inserts.length} messages and updating ${updates.length}`
+    );
 
     await Promise.all([
       this.db.insertMessage(inserts),
@@ -607,9 +631,7 @@ export class Processor extends Consumer {
     return hashes.map((hash) => this.getMsg(hash)!).filter((m) => !!m);
   }
 
-
   dispatched(e: NomadEvent) {
-
     const m = new NomadMessage(
       e.domain,
       ...e.destinationAndNonce(),
@@ -619,7 +641,7 @@ export class Processor extends Consumer {
       // e.eventData.destinationAndNonce!,
       e.eventData.message!,
       e.ts,
-      e.block,
+      e.block
     );
 
     this.senderRegistry.dispatch(e, m);
@@ -629,8 +651,6 @@ export class Processor extends Consumer {
 
     if (!this.domains.includes(e.domain)) this.domains.push(e.domain);
   }
-
-  
 
   homeUpdate(e: NomadEvent) {
     const ms = this.getMsgsByOriginAndRoot(e.domain, e.eventData.oldRoot!);
@@ -647,7 +667,7 @@ export class Processor extends Consumer {
   replicaUpdate(e: NomadEvent) {
     const ms = this.getMsgsByOriginAndRoot(
       e.replicaOrigin,
-      e.eventData.oldRoot!,
+      e.eventData.oldRoot!
     );
     if (ms.length)
       ms.forEach((m) => {
@@ -670,20 +690,16 @@ export class Processor extends Consumer {
     }
   }
 
-  
-
   bridgeRouterSend(e: NomadEvent) {
-
     const hash = this.senderRegistry.bridgeRouterSend(e);
     if (hash) {
       // console.log(`Setting bridgeRouterSend for `, this.getMsg(hash)?.sender)
-      this.addToSyncQueue(hash)
+      this.addToSyncQueue(hash);
     }
-
   }
 
   bridgeRouterReceive(e: NomadEvent) {
-    const m = this.getMsgsByOriginAndNonce(...e.originAndNonce())
+    const m = this.getMsgsByOriginAndNonce(...e.originAndNonce());
 
     if (m) {
       if (m.state < MsgState.Received) {
@@ -708,7 +724,7 @@ export class Processor extends Consumer {
   }
 
   getMsg(id: string | number): NomadMessage | undefined {
-    if (typeof id === 'string') {
+    if (typeof id === "string") {
       const msgIndex = this.msgToIndex.get(id);
       if (msgIndex) return this.messages[msgIndex];
     } else {
@@ -724,8 +740,11 @@ export class Processor extends Consumer {
     return [];
   }
 
-  getMsgsByOriginAndNonce(origin: number, nonce: number): NomadMessage | undefined {
-    return this.messages.find((m) => m.nonce === nonce && m.origin === origin)
+  getMsgsByOriginAndNonce(
+    origin: number,
+    nonce: number
+  ): NomadMessage | undefined {
+    return this.messages.find((m) => m.nonce === nonce && m.origin === origin);
   }
 
   stats(): Statistics {

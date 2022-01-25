@@ -1,11 +1,11 @@
-import { Orchestrator } from './orchestrator';
-import { NomadContext } from '@nomad-xyz/sdk/src';
-import fs from 'fs';
-import { ContractType, EventType, NomadEvent, EventSource } from './event';
-import { Home, Replica } from '@nomad-xyz/contract-interfaces/core';
-import { ethers } from 'ethers';
-import { KVCache, replacer, retry, reviver } from './utils';
-import { BridgeRouter } from '@nomad-xyz/contract-interfaces/bridge';
+import { Orchestrator } from "./orchestrator";
+import { NomadContext } from "@nomad-xyz/sdk/dist";
+import fs from "fs";
+import { ContractType, EventType, NomadEvent, EventSource } from "./event";
+import { Home, Replica } from "@nomad-xyz/contract-interfaces/core";
+import { ethers } from "ethers";
+import { KVCache, replacer, retry, reviver } from "./utils";
+import { BridgeRouter } from "@nomad-xyz/contract-interfaces/bridge";
 
 export class Indexer {
   domain: number;
@@ -20,44 +20,51 @@ export class Indexer {
     this.sdk = sdk;
     this.orchestrator = orchestrator;
     this.persistance = new RamPersistance(
-      `/tmp/persistance_${this.domain}.json`,
+      `/tmp/persistance_${this.domain}.json`
     );
-    this.blockCache = new KVCache(
-      String(this.domain),
-      this.orchestrator.db,
-    );
-    
+    this.blockCache = new KVCache(String(this.domain), this.orchestrator.db);
   }
 
   get provider(): ethers.providers.Provider {
     return this.sdk.getProvider(this.domain)!;
   }
 
-  async getBlockInfo(blockNumber: number): Promise<[number, Map<string, string>]> {
+  async getBlockInfo(
+    blockNumber: number
+  ): Promise<[number, Map<string, string>]> {
     const possibleBlock = this.blockCache.get(String(blockNumber));
     if (possibleBlock) {
-      const [ts, txs] = possibleBlock.split('.');
-      const x: string[] = txs.split(',');
-      const senders2hashes: Map<string, string> = new Map(x.map(tx => tx.split(':') as [string, string]));
+      const [ts, txs] = possibleBlock.split(".");
+      const x: string[] = txs.split(",");
+      const senders2hashes: Map<string, string> = new Map(
+        x.map((tx) => tx.split(":") as [string, string])
+      );
       return [parseInt(ts), senders2hashes];
     }
 
     const [block, error] = await retry(
       async () => await this.provider.getBlockWithTransactions(blockNumber),
-      6,
+      6
     );
     if (!block) {
       throw (
         error ||
         new Error(
-          `Some error happened at retrying getting the block ${blockNumber} for ${this.domain}`,
+          `Some error happened at retrying getting the block ${blockNumber} for ${this.domain}`
         )
       );
     }
     const time = block.timestamp * 1000;
-    const senders2hashes: Map<string, string> = new Map(block.transactions.map(tx => [tx.from, tx.hash]));
-    const senders2hashesStr = Array.from(senders2hashes.entries()).map(([from, hash]) => `${from}:${hash}`).join(',')
-    await this.blockCache.set(String(blockNumber), `${time}.${senders2hashesStr}`);
+    const senders2hashes: Map<string, string> = new Map(
+      block.transactions.map((tx) => [tx.from, tx.hash])
+    );
+    const senders2hashesStr = Array.from(senders2hashes.entries())
+      .map(([from, hash]) => `${from}:${hash}`)
+      .join(",");
+    await this.blockCache.set(
+      String(blockNumber),
+      `${time}.${senders2hashesStr}`
+    );
     // await this.block2timeCache.set(String(blockNumber), String(block.transactions.map(tx => tx.from).join(',')));
     return [time, senders2hashes];
   }
@@ -90,12 +97,12 @@ export class Indexer {
   async updateAll(replicas: number[]) {
     let from = Math.max(
       this.persistance.height + 1,
-      this.sdk.getDomain(this.domain)?.paginate?.from || 0,
+      this.sdk.getDomain(this.domain)?.paginate?.from || 0
     );
     const to = await this.provider.getBlockNumber();
 
     this.orchestrator.logger.info(
-      `Fetching events for domain ${this.domain} from: ${from}, to: ${to}`,
+      `Fetching events for domain ${this.domain} from: ${from}, to: ${to}`
     );
 
     const fetchEvents = async (from: number, to: number) => {
@@ -128,7 +135,7 @@ export class Indexer {
       batchTo = Math.min(to, batchFrom + batchSize);
     }
 
-    if (!allEvents) throw new Error('kek');
+    if (!allEvents) throw new Error("kek");
 
     allEvents.sort((a, b) => a.ts - b.ts);
     this.persistance.store(...allEvents);
@@ -144,9 +151,9 @@ export class Indexer {
     const h = new Map<string, string>();
     const r = new Map<string, string>();
 
-    let h1 = '';
+    let h1 = "";
     let ht = Number.MAX_VALUE;
-    let r1 = '';
+    let r1 = "";
     let rt = Number.MAX_VALUE;
     let rtotal = 0;
     let htotal = 0;
@@ -213,32 +220,31 @@ export class Indexer {
     {
       const events = await br.queryFilter(br.filters.Send(), from, to);
       const parsedEvents = await Promise.all(
-        events.map(
-          async (event) =>
+        events.map(async (event) => {
+          const [ts, senders2hashes] = await this.getBlockInfo(
+            event.blockNumber
+          );
+          return new NomadEvent(
+            this.domain,
+            EventType.BridgeRouterSend,
+            ContractType.BridgeRouter,
+            0,
+            ts,
             {
-              const [ts, senders2hashes] = await this.getBlockInfo(event.blockNumber);
-              return new NomadEvent(
-                this.domain,
-                EventType.BridgeRouterSend,
-                ContractType.BridgeRouter,
-                0,
-                ts,
-                {
-                  token: event.args[0],
-                  from: event.args[1],
-                  toDomain: event.args[2],
-                  toId: event.args[3],
-                  amount: event.args[4],
-                  fastLiquidityEnabled: event.args[5],
-                  evmHash: senders2hashes.get(event.args[1])!,
-                },
-                event.blockNumber,
-                EventSource.Fetch,
-            )
-          }
-        ),
+              token: event.args[0],
+              from: event.args[1],
+              toDomain: event.args[2],
+              toId: event.args[3],
+              amount: event.args[4],
+              fastLiquidityEnabled: event.args[5],
+              evmHash: senders2hashes.get(event.args[1])!,
+            },
+            event.blockNumber,
+            EventSource.Fetch
+          );
+        })
       );
-      allEvents.push(...parsedEvents)
+      allEvents.push(...parsedEvents);
     }
 
     {
@@ -251,7 +257,9 @@ export class Indexer {
               EventType.BridgeRouterReceive,
               ContractType.BridgeRouter,
               0,
-              (await this.getBlockInfo(event.blockNumber))[0],
+              (
+                await this.getBlockInfo(event.blockNumber)
+              )[0],
               {
                 originAndNonce: event.args[0],
                 token: event.args[1],
@@ -260,15 +268,14 @@ export class Indexer {
                 amount: event.args[4],
               },
               event.blockNumber,
-              EventSource.Fetch,
-            ),
-        ),
+              EventSource.Fetch
+            )
+        )
       );
-      allEvents.push(...parsedEvents)
+      allEvents.push(...parsedEvents);
     }
 
-    return allEvents
-
+    return allEvents;
   }
 
   async fetchHome(from: number, to: number) {
@@ -285,7 +292,9 @@ export class Indexer {
               EventType.HomeDispatch,
               ContractType.Home,
               0,
-              (await this.getBlockInfo(event.blockNumber))[0],
+              (
+                await this.getBlockInfo(event.blockNumber)
+              )[0],
               {
                 messageHash: event.args[0],
                 leafIndex: event.args[1],
@@ -294,9 +303,9 @@ export class Indexer {
                 message: event.args[4],
               },
               event.blockNumber,
-              EventSource.Fetch,
-            ),
-        ),
+              EventSource.Fetch
+            )
+        )
       );
       fetchedEvents.push(...parsedEvents);
     }
@@ -311,7 +320,9 @@ export class Indexer {
               EventType.HomeUpdate,
               ContractType.Home,
               0,
-              (await this.getBlockInfo(event.blockNumber))[0],
+              (
+                await this.getBlockInfo(event.blockNumber)
+              )[0],
               {
                 homeDomain: event.args[0],
                 oldRoot: event.args[1],
@@ -319,9 +330,9 @@ export class Indexer {
                 signature: event.args[3],
               },
               event.blockNumber,
-              EventSource.Fetch,
-            ),
-        ),
+              EventSource.Fetch
+            )
+        )
       );
       fetchedEvents.push(...parsedEvents);
     }
@@ -337,7 +348,7 @@ export class Indexer {
       const events = await replica.queryFilter(
         replica.filters.Update(),
         from,
-        to,
+        to
       );
       const parsedEvents = await Promise.all(
         events.map(
@@ -347,7 +358,9 @@ export class Indexer {
               EventType.ReplicaUpdate,
               ContractType.Replica,
               domain,
-              (await this.getBlockInfo(event.blockNumber))[0],
+              (
+                await this.getBlockInfo(event.blockNumber)
+              )[0],
               {
                 homeDomain: event.args[0],
                 oldRoot: event.args[1],
@@ -355,9 +368,9 @@ export class Indexer {
                 signature: event.args[3],
               },
               event.blockNumber,
-              EventSource.Fetch,
-            ),
-        ),
+              EventSource.Fetch
+            )
+        )
       );
       fetchedEvents.push(...parsedEvents);
     }
@@ -366,7 +379,7 @@ export class Indexer {
       const events = await replica.queryFilter(
         replica.filters.Process(),
         from,
-        to,
+        to
       );
       const parsedEvents = await Promise.all(
         events.map(
@@ -376,16 +389,18 @@ export class Indexer {
               EventType.ReplicaProcess,
               ContractType.Replica,
               domain,
-              (await this.getBlockInfo(event.blockNumber))[0],
+              (
+                await this.getBlockInfo(event.blockNumber)
+              )[0],
               {
                 messageHash: event.args[0],
                 success: event.args[1],
                 returnData: event.args[2],
               },
               event.blockNumber,
-              EventSource.Fetch,
-            ),
-        ),
+              EventSource.Fetch
+            )
+        )
       );
       fetchedEvents.push(...parsedEvents);
     }
@@ -469,8 +484,8 @@ export class RamPersistance extends Persistance {
           height: this.height,
           storePath: this.storePath,
         },
-        replacer,
-      ),
+        replacer
+      )
     );
   }
 
@@ -487,8 +502,8 @@ export class RamPersistance extends Persistance {
 
   loadFromFile() {
     const object = JSON.parse(
-      fs.readFileSync(this.storePath, 'utf8'),
-      reviver,
+      fs.readFileSync(this.storePath, "utf8"),
+      reviver
     ) as {
       block2events: Map<number, NomadEvent[]>;
       blocks: number[];

@@ -1,5 +1,5 @@
-import { NomadMessage } from './consumer';
-import { Pool } from 'pg';
+import { NomadMessage } from "./consumer";
+import { Pool } from "pg";
 
 // expand(3, 2) returns "($1, $2), ($3, $4), ($5, $6)"
 function expand(rowCount: number, columnCount: number, startAt = 1) {
@@ -11,13 +11,18 @@ function expand(rowCount: number, columnCount: number, startAt = 1) {
         `(${Array(columnCount)
           .fill(0)
           .map((v) => `$${index++}`)
-          .join(', ')})`,
+          .join(", ")})`
     )
-    .join(', ');
+    .join(", ");
 }
 
 export interface MsgRequest {
-  size?: number, page?: number, destination?: number, origin?: number, recipient?: string, sender?: string
+  size?: number;
+  page?: number;
+  destination?: number;
+  origin?: number;
+  recipient?: string;
+  sender?: string;
 }
 
 class Contr {
@@ -29,20 +34,26 @@ class Contr {
   }
 
   add(arg: string) {
+    if (!arg.match(/[a-z]+/)) throw new Error(`Can add only a-z characters`);
     this.args.push(arg);
   }
-  
-  static fromReq(r: MsgRequest, offset=0): string {
+
+  static fromReq(r: MsgRequest, offset = 0): string {
     const c = new Contr(offset);
-    if (r.sender) c.add('sender');
-    if (r.recipient) c.add('recipient');
-    if (r.origin) c.add('origin');
-    if (r.destination) c.add('destination');
+    if (r.sender) c.add("sender");
+    if (r.recipient) c.add("recipient");
+    if (r.origin) c.add("origin");
+    if (r.destination) c.add("destination");
     return c.construct();
   }
 
   construct(): string {
-    return this.args.length ? 'where ' + this.args.map((a, i) => `${a} = $${i+1 + this.offset}`).join(' and ') : ''
+    return this.args.length
+      ? "where " +
+          this.args
+            .map((a, i) => `${a} = $${i + 1 + this.offset}`)
+            .join(" and ")
+      : "";
   }
 }
 
@@ -69,7 +80,8 @@ export class DB {
     const query = `SELECT origin, destination, nonce, root, leaf_index, raw, block, sender, dispatched_at, updated_at, relayed_at, received_at, processed_at, hash FROM messages where evm = $1 order by dispatched_at desc;`;
     const result = await this.pool.query(query, [tx.toLowerCase()]);
     const entry = result.rows[0];
-    return NomadMessage.fromDB(entry.origin, 
+    return NomadMessage.fromDB(
+      entry.origin,
       entry.destination,
       entry.nonce,
       entry.root,
@@ -83,15 +95,16 @@ export class DB {
       entry.received_at,
       entry.processed_at,
       entry.sender,
-      tx,
-    )
+      tx
+    );
   }
 
   async getMessageByHash(hash: string): Promise<NomadMessage> {
     const query = `SELECT origin, destination, nonce, root, leaf_index, raw, block, sender, evm, dispatched_at, updated_at, relayed_at, received_at, processed_at FROM messages where hash = $1 order by dispatched_at desc;`;
     const result = await this.pool.query(query, [hash.toLowerCase()]);
     const entry = result.rows[0];
-    return NomadMessage.fromDB(entry.origin, 
+    return NomadMessage.fromDB(
+      entry.origin,
       entry.destination,
       entry.nonce,
       entry.root,
@@ -105,8 +118,8 @@ export class DB {
       entry.received_at,
       entry.processed_at,
       entry.sender,
-      entry.evm,
-    )
+      entry.evm
+    );
   }
 
   async getMessages(req: MsgRequest): Promise<NomadMessage[]> {
@@ -115,19 +128,31 @@ export class DB {
     const offset = (page || -1) * limit;
     const args: any[] = [limit, offset];
 
-    const c = new Contr(args.length)
+    const c = new Contr(args.length);
 
-    if (req.sender) {c.add('sender'); args.push(req.sender)};
-    if (req.recipient) {c.add('recipient'); args.push(req.recipient)};
-    if (req.origin) {c.add('origin'); args.push(req.origin)};
-    if (req.destination) {c.add('destination'); args.push(req.destination)};
+    if (req.sender) {
+      c.add("sender");
+      args.push(req.sender.toLowerCase());
+    }
+    if (req.recipient) {
+      c.add("recipient");
+      args.push(req.recipient.toLowerCase());
+    }
+    if (req.origin) {
+      c.add("origin");
+      args.push(req.origin);
+    }
+    if (req.destination) {
+      c.add("destination");
+      args.push(req.destination);
+    }
 
     const query = `SELECT origin, destination, nonce, root, leaf_index, raw, block, sender, hash, evm, dispatched_at, updated_at, relayed_at, received_at, processed_at FROM messages ${c.construct()} order by dispatched_at desc limit $1 offset $2;`;
-    console.log(`Query`, query)
     const result = await this.pool.query(query, args);
 
-    return result.rows.map(entry => {
-      return NomadMessage.fromDB(entry.origin, 
+    return result.rows.map((entry) => {
+      return NomadMessage.fromDB(
+        entry.origin,
         entry.destination,
         entry.nonce,
         entry.root,
@@ -141,9 +166,9 @@ export class DB {
         entry.received_at,
         entry.processed_at,
         entry.sender,
-        entry.evm,
-      )
-    })
+        entry.evm
+      );
+    });
   }
 
   async insertMessage(messages: NomadMessage[]) {
@@ -152,7 +177,7 @@ export class DB {
     const columns = 25;
     const query = `INSERT INTO messages (hash, origin, destination, nonce, nomad_sender, nomad_recipient, root, state, dispatched_at, updated_at, relayed_at, received_at, processed_at, bridge_msg_type, recipient, bridge_msg_amount, bridge_msg_allow_fast, bridge_msg_details_hash, bridge_msg_token_domain, bridge_msg_token_id, sender, raw, leaf_index, block, evm) VALUES ${expand(
       rows,
-      columns,
+      columns
     )};`;
     const values = messages.map((m) => m.intoDB()).flat();
     return await this.pool.query(query, values);
@@ -203,7 +228,7 @@ export class DB {
   async getAllKeyPair(namespace: string): Promise<Map<string, string>> {
     const res = await this.pool.query(
       `select key, value from kv_storage where namespace = $1;`,
-      [namespace],
+      [namespace]
     );
     return new Map(res.rows.map((r) => [r.key, r.value]));
   }
@@ -215,7 +240,7 @@ export class DB {
         ON CONFLICT (namespace, key) 
         DO 
            UPDATE SET value = $3;`,
-      [namespace, k, v],
+      [namespace, k, v]
     );
   }
 }

@@ -1,8 +1,9 @@
-import { ethers } from 'ethers';
-import { NomadEvent } from './event';
-import fs from 'fs';
-import { Mean } from './types';
-import { DB } from './db';
+import { ethers } from "ethers";
+import { NomadEvent } from "./event";
+import fs from "fs";
+import { Mean } from "./types";
+import { DB } from "./db";
+import Logger from "bunyan";
 
 export function sleep(ms: number) {
   return new Promise((resolve) => {
@@ -12,7 +13,7 @@ export function sleep(ms: number) {
 
 export async function retry<T>(
   callback: () => Promise<T>,
-  tries: number,
+  tries: number
 ): Promise<[T | undefined, any]> {
   let timeout = 5000;
   let lastError: any = undefined;
@@ -30,17 +31,17 @@ export async function retry<T>(
 export function replacer(key: any, value: any): any {
   if (value instanceof Map) {
     return {
-      dataType: 'Map',
+      dataType: "Map",
       value: Array.from(value.entries()), // or with spread: value: [...value]
     };
   } else if (value instanceof NomadEvent) {
     return {
-      dataType: 'NomadEvent',
+      dataType: "NomadEvent",
       value: value.toObject(), // or with spread: value: [...value]
     };
   } else if (value instanceof ethers.BigNumber) {
     return {
-      dataType: 'BigNumber',
+      dataType: "BigNumber",
       value: value.toHexString(), // or with spread: value: [...value]
     };
   } else if (value instanceof Mean) {
@@ -51,14 +52,14 @@ export function replacer(key: any, value: any): any {
 }
 
 export function reviver(key: any, value: any): any {
-  if (typeof value === 'object' && value !== null) {
-    if (value.dataType === 'Map') {
+  if (typeof value === "object" && value !== null) {
+    if (value.dataType === "Map") {
       return new Map(value.value);
-    } else if (value.dataType === 'NomadEvent') {
+    } else if (value.dataType === "NomadEvent") {
       return NomadEvent.fromObject(value.value);
-    } else if (value.dataType === 'BigNumber') {
+    } else if (value.dataType === "BigNumber") {
       return ethers.BigNumber.from(value.value);
-    } else if (value.type === 'BigNumber') {
+    } else if (value.type === "BigNumber") {
       return ethers.BigNumber.from(value.hex);
     }
   }
@@ -97,14 +98,22 @@ export class KVCache {
 }
 
 export function logToFile(s: string) {
-  fs.appendFileSync('/tmp/log.log', s + '\n');
+  fs.appendFileSync("/tmp/log.log", s + "\n");
 }
 
-import crypto from 'crypto';
+import crypto from "crypto";
 
 export function hash(...vals: string[]): string {
-  const hash = crypto.createHash('md5');
-  vals.forEach(v => hash.update(v))
-  return hash.digest('hex')
-  
+  const hash = crypto.createHash("md5");
+  vals.forEach((v) => hash.update(v));
+  return hash.digest("hex");
+}
+
+export function createLogger(name: string, environment: string) {
+  return Logger.createLogger({
+    name,
+    serializers: Logger.stdSerializers,
+    level: "debug",
+    environment: environment,
+  });
 }
