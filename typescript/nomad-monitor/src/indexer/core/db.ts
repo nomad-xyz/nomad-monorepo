@@ -16,6 +16,36 @@ function expand(rowCount: number, columnCount: number, startAt = 1) {
     .join(', ');
 }
 
+export interface MsgRequest {
+  size?: number, page?: number, destination?: number, origin?: number, recipient?: string, sender?: string
+}
+
+class Contr {
+  args: string[];
+  offset: number;
+  constructor(offset: number) {
+    this.args = [];
+    this.offset = offset;
+  }
+
+  add(arg: string) {
+    this.args.push(arg);
+  }
+  
+  static fromReq(r: MsgRequest, offset=0): string {
+    const c = new Contr(offset);
+    if (r.sender) c.add('sender');
+    if (r.recipient) c.add('recipient');
+    if (r.origin) c.add('origin');
+    if (r.destination) c.add('destination');
+    return c.construct();
+  }
+
+  construct(): string {
+    return this.args.length ? 'where ' + this.args.map((a, i) => `${a} = $${i+1 + this.offset}`).join(' and ') : ''
+  }
+}
+
 export class DB {
   pool: Pool;
   syncedOnce: boolean;
@@ -36,7 +66,7 @@ export class DB {
   }
 
   async getMessageByEvm(tx: string): Promise<NomadMessage> {
-    const query = `SELECT origin, destination, nonce, root, leaf_index, raw, block, sender, dispatched_at, updated_at, relayed_at, received_at, processed_at, hash FROM messages where evm = $1;`;
+    const query = `SELECT origin, destination, nonce, root, leaf_index, raw, block, sender, dispatched_at, updated_at, relayed_at, received_at, processed_at, hash FROM messages where evm = $1 order by dispatched_at desc;`;
     const result = await this.pool.query(query, [tx.toLowerCase()]);
     const entry = result.rows[0];
     return NomadMessage.fromDB(entry.origin, 
@@ -58,7 +88,7 @@ export class DB {
   }
 
   async getMessageByHash(hash: string): Promise<NomadMessage> {
-    const query = `SELECT origin, destination, nonce, root, leaf_index, raw, block, sender, evm, dispatched_at, updated_at, relayed_at, received_at, processed_at FROM messages where hash = $1;`;
+    const query = `SELECT origin, destination, nonce, root, leaf_index, raw, block, sender, evm, dispatched_at, updated_at, relayed_at, received_at, processed_at FROM messages where hash = $1 order by dispatched_at desc;`;
     const result = await this.pool.query(query, [hash.toLowerCase()]);
     const entry = result.rows[0];
     return NomadMessage.fromDB(entry.origin, 
@@ -77,6 +107,43 @@ export class DB {
       entry.sender,
       entry.evm,
     )
+  }
+
+  async getMessages(req: MsgRequest): Promise<NomadMessage[]> {
+    const limit = req.size || 15;
+    const page = req.page || 1;
+    const offset = (page || -1) * limit;
+    const args: any[] = [limit, offset];
+
+    const c = new Contr(args.length)
+
+    if (req.sender) {c.add('sender'); args.push(req.sender)};
+    if (req.recipient) {c.add('recipient'); args.push(req.recipient)};
+    if (req.origin) {c.add('origin'); args.push(req.origin)};
+    if (req.destination) {c.add('destination'); args.push(req.destination)};
+
+    const query = `SELECT origin, destination, nonce, root, leaf_index, raw, block, sender, hash, evm, dispatched_at, updated_at, relayed_at, received_at, processed_at FROM messages ${c.construct()} order by dispatched_at desc limit $1 offset $2;`;
+    console.log(`Query`, query)
+    const result = await this.pool.query(query, args);
+
+    return result.rows.map(entry => {
+      return NomadMessage.fromDB(entry.origin, 
+        entry.destination,
+        entry.nonce,
+        entry.root,
+        entry.hash,
+        entry.leaf_index,
+        entry.raw,
+        entry.block,
+        entry.dispatched_at,
+        entry.updated_at,
+        entry.relayed_at,
+        entry.received_at,
+        entry.processed_at,
+        entry.sender,
+        entry.evm,
+      )
+    })
   }
 
   async insertMessage(messages: NomadMessage[]) {

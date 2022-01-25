@@ -500,7 +500,7 @@ class SenderLostAndFound {
     if (index >= 0) {
       const brSend = this.bridgeRouterSendEvents.at(index);
       if (brSend) {
-        m.sender = brSend.eventData.from!;
+        m.updateSender(brSend.eventData.from!);
         m.evm = brSend.eventData.evmHash!;
       }
       this.bridgeRouterSendEvents.splice(index, 1);
