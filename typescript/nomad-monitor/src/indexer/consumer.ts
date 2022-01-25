@@ -3,8 +3,10 @@ import { ethers } from 'ethers';
 import { EventType, NomadEvent } from './event';
 import { Statistics } from './types';
 import { parseBody } from '@nomad-xyz/sdk/src/nomad/messages/BridgeMessage';
+import { parseAction } from '@nomad-xyz/sdk/src/nomad/messages/GovernanceMessage';
 import { DBDriver } from './db';
 import Logger from 'bunyan';
+
 
 class StatisticsCollector {
   s: Statistics;
@@ -222,6 +224,11 @@ function bytes32ToAddress(s: string) {
 }
 
 
+enum MessageType {
+  NoMessage,
+  TransferMessage,
+  GovernanceMessage,
+};
 
 export class NomadMessage {
   origin: number;
@@ -235,7 +242,7 @@ export class NomadMessage {
   sender?: string;
   nomadSender: string;
   nomadRecipient: string;
-  hasBridgeMessage: boolean;
+  hasMessage: MessageType;
   bridgeMsgType?: string;
   bridgeMsgTo?: string;
   bridgeMsgAmount?: ethers.BigNumber;
@@ -268,8 +275,21 @@ export class NomadMessage {
     const parsed = parseMessage(message);
     this.nomadSender = bytes32ToAddress(parsed.sender);
     this.nomadRecipient = bytes32ToAddress(parsed.recipient);
+    this.hasMessage = MessageType.NoMessage;
+
+    this.tryParseMessage(parsed.body);
+
+    this.state = MsgState.Dispatched;
+    this.timings = new Timings(createdAt);
+  }
+
+  tryParseMessage(body: string) {
+    this.tryParseTransferMessage(body) || this.tryParseGovernanceMessage(body)
+  }
+
+  tryParseTransferMessage(body: string): boolean {
     try {
-      const bridgeMessage = parseBody(parsed.body);
+      const bridgeMessage = parseBody(body);
       this.bridgeMsgType = bridgeMessage.action.type as string;
       this.bridgeMsgTo = bytes32ToAddress(bridgeMessage.action.to);
       this.bridgeMsgAmount = bridgeMessage.action.amount;
@@ -277,14 +297,27 @@ export class NomadMessage {
       this.bridgeMsgDetailsHash = bridgeMessage.action.detailsHash;
       this.bridgeMsgTokenDomain = bridgeMessage.token.domain as number;
       this.bridgeMsgTokenId = bytes32ToAddress(bridgeMessage.token.id as string);
-      this.hasBridgeMessage = true;
-    } catch (e) {
-      this.hasBridgeMessage = false;
-      // pass
+      this.hasMessage = MessageType.TransferMessage;
+      return true;
+    } catch(e) {
+      return false;
     }
+  }
 
-    this.state = MsgState.Dispatched;
-    this.timings = new Timings(createdAt);
+  tryParseGovernanceMessage(body: string): boolean {
+    try {
+      const message = parseAction(body);
+      if (message.type == "batch") {
+        message.batchHash
+      } else {
+        message.address;
+        message.domain;
+      }
+      this.hasMessage = MessageType.GovernanceMessage;
+      return true;
+    } catch(e) {
+      return false;
+    }
   }
 
   updateSender(sender: string) {
@@ -408,7 +441,7 @@ class SenderLostAndFound {
   }
 
   dispatch(e: NomadEvent, m: NomadMessage): boolean {
-    if (!m.hasBridgeMessage) return false;
+    if (m.hasMessage !== MessageType.TransferMessage) return false;
 
     if (this.findMatchingBRSendUpdateAndRemove(e, m)) {
       return true;
@@ -471,8 +504,6 @@ export class Processor extends Consumer {
     const [inserts, updates] = await this.getMsgForSync();
 
     this.logger.info(`Inserting ${inserts.length} messages and updating ${updates.length}`);
-
-    console.log(`Updating:`, updates.length, updates[0]?.sender)
 
     await Promise.all([
       this.db.insertMessage(inserts),
