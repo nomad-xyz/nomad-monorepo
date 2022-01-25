@@ -12,7 +12,7 @@ export class Indexer {
   sdk: NomadContext;
   orchestrator: Orchestrator;
   persistance: Persistance;
-  block2timeCache: KVCache;
+  blockCache: KVCache;
   eventCallback: undefined | ((event: NomadEvent) => void);
 
   constructor(domain: number, sdk: NomadContext, orchestrator: Orchestrator) {
@@ -22,21 +22,28 @@ export class Indexer {
     this.persistance = new RamPersistance(
       `/tmp/persistance_${this.domain}.json`,
     );
-    this.block2timeCache = new KVCache(
+    this.blockCache = new KVCache(
       String(this.domain),
       this.orchestrator.db,
     );
+    
   }
 
   get provider(): ethers.providers.Provider {
     return this.sdk.getProvider(this.domain)!;
   }
 
-  async getBlockTimestamp(blockNumber: number): Promise<number> {
-    const possibleTime = this.block2timeCache.get(String(blockNumber));
-    if (possibleTime) return parseInt(possibleTime);
+  async getBlockInfo(blockNumber: number): Promise<[number, Map<string, string>]> {
+    const possibleBlock = this.blockCache.get(String(blockNumber));
+    if (possibleBlock) {
+      const [ts, txs] = possibleBlock.split('.');
+      const x: string[] = txs.split(',');
+      const senders2hashes: Map<string, string> = new Map(x.map(tx => tx.split(':') as [string, string]));
+      return [parseInt(ts), senders2hashes];
+    }
+
     const [block, error] = await retry(
-      async () => await this.provider.getBlock(blockNumber),
+      async () => await this.provider.getBlockWithTransactions(blockNumber),
       6,
     );
     if (!block) {
@@ -48,12 +55,15 @@ export class Indexer {
       );
     }
     const time = block.timestamp * 1000;
-    await this.block2timeCache.set(String(blockNumber), String(time));
-    return time;
+    const senders2hashes: Map<string, string> = new Map(block.transactions.map(tx => [tx.from, tx.hash]));
+    const senders2hashesStr = Array.from(senders2hashes.entries()).map(([from, hash]) => `${from}:${hash}`).join(',')
+    await this.blockCache.set(String(blockNumber), `${time}.${senders2hashesStr}`);
+    // await this.block2timeCache.set(String(blockNumber), String(block.transactions.map(tx => tx.from).join(',')));
+    return [time, senders2hashes];
   }
 
   async init() {
-    await this.block2timeCache.init();
+    await this.blockCache.init();
     await this.persistance.init();
   }
 
@@ -205,23 +215,27 @@ export class Indexer {
       const parsedEvents = await Promise.all(
         events.map(
           async (event) =>
-            new NomadEvent(
-              this.domain,
-              EventType.BridgeRouterSend,
-              ContractType.BridgeRouter,
-              0,
-              await this.getBlockTimestamp(event.blockNumber),
-              {
-                token: event.args[0],
-                from: event.args[1],
-                toDomain: event.args[2],
-                toId: event.args[3],
-                amount: event.args[4],
-                fastLiquidityEnabled: event.args[5],
-              },
-              event.blockNumber,
-              EventSource.Fetch,
-            ),
+            {
+              const [ts, senders2hashes] = await this.getBlockInfo(event.blockNumber);
+              return new NomadEvent(
+                this.domain,
+                EventType.BridgeRouterSend,
+                ContractType.BridgeRouter,
+                0,
+                ts,
+                {
+                  token: event.args[0],
+                  from: event.args[1],
+                  toDomain: event.args[2],
+                  toId: event.args[3],
+                  amount: event.args[4],
+                  fastLiquidityEnabled: event.args[5],
+                  evmHash: senders2hashes.get(event.args[1])!,
+                },
+                event.blockNumber,
+                EventSource.Fetch,
+            )
+          }
         ),
       );
       allEvents.push(...parsedEvents)
@@ -237,7 +251,7 @@ export class Indexer {
               EventType.BridgeRouterReceive,
               ContractType.BridgeRouter,
               0,
-              await this.getBlockTimestamp(event.blockNumber),
+              (await this.getBlockInfo(event.blockNumber))[0],
               {
                 originAndNonce: event.args[0],
                 token: event.args[1],
@@ -271,7 +285,7 @@ export class Indexer {
               EventType.HomeDispatch,
               ContractType.Home,
               0,
-              await this.getBlockTimestamp(event.blockNumber),
+              (await this.getBlockInfo(event.blockNumber))[0],
               {
                 messageHash: event.args[0],
                 leafIndex: event.args[1],
@@ -297,7 +311,7 @@ export class Indexer {
               EventType.HomeUpdate,
               ContractType.Home,
               0,
-              await this.getBlockTimestamp(event.blockNumber),
+              (await this.getBlockInfo(event.blockNumber))[0],
               {
                 homeDomain: event.args[0],
                 oldRoot: event.args[1],
@@ -333,7 +347,7 @@ export class Indexer {
               EventType.ReplicaUpdate,
               ContractType.Replica,
               domain,
-              await this.getBlockTimestamp(event.blockNumber),
+              (await this.getBlockInfo(event.blockNumber))[0],
               {
                 homeDomain: event.args[0],
                 oldRoot: event.args[1],
@@ -362,7 +376,7 @@ export class Indexer {
               EventType.ReplicaProcess,
               ContractType.Replica,
               domain,
-              await this.getBlockTimestamp(event.blockNumber),
+              (await this.getBlockInfo(event.blockNumber))[0],
               {
                 messageHash: event.args[0],
                 success: event.args[1],

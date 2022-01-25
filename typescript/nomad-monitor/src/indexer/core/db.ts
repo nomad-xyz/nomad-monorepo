@@ -16,7 +16,7 @@ function expand(rowCount: number, columnCount: number, startAt = 1) {
     .join(', ');
 }
 
-export class DBDriver {
+export class DB {
   pool: Pool;
   syncedOnce: boolean;
 
@@ -35,11 +35,55 @@ export class DBDriver {
     return !value;
   }
 
+  async getMessageByEvm(tx: string): Promise<NomadMessage> {
+    const query = `SELECT origin, destination, nonce, root, leaf_index, raw, block, sender, dispatched_at, updated_at, relayed_at, received_at, processed_at, hash FROM messages where evm = $1;`;
+    const result = await this.pool.query(query, [tx.toLowerCase()]);
+    const entry = result.rows[0];
+    return NomadMessage.fromDB(entry.origin, 
+      entry.destination,
+      entry.nonce,
+      entry.root,
+      entry.hash,
+      entry.leaf_index,
+      entry.raw,
+      entry.block,
+      entry.dispatched_at,
+      entry.updated_at,
+      entry.relayed_at,
+      entry.received_at,
+      entry.processed_at,
+      entry.sender,
+      tx,
+    )
+  }
+
+  async getMessageByHash(hash: string): Promise<NomadMessage> {
+    const query = `SELECT origin, destination, nonce, root, leaf_index, raw, block, sender, evm, dispatched_at, updated_at, relayed_at, received_at, processed_at FROM messages where hash = $1;`;
+    const result = await this.pool.query(query, [hash.toLowerCase()]);
+    const entry = result.rows[0];
+    return NomadMessage.fromDB(entry.origin, 
+      entry.destination,
+      entry.nonce,
+      entry.root,
+      hash,
+      entry.leaf_index,
+      entry.raw,
+      entry.block,
+      entry.dispatched_at,
+      entry.updated_at,
+      entry.relayed_at,
+      entry.received_at,
+      entry.processed_at,
+      entry.sender,
+      entry.evm,
+    )
+  }
+
   async insertMessage(messages: NomadMessage[]) {
     const rows = messages.length;
     if (!rows) return;
-    const columns = 20;
-    const query = `INSERT INTO messages (hash, origin, destination, nonce, nomad_sender, nomad_recipient, root, state, dispatched_at, updated_at, relayed_at, processed_at, bridge_msg_type, recipient, bridge_msg_amount, bridge_msg_allow_fast, bridge_msg_details_hash, bridge_msg_token_domain, bridge_msg_token_id, sender) VALUES ${expand(
+    const columns = 25;
+    const query = `INSERT INTO messages (hash, origin, destination, nonce, nomad_sender, nomad_recipient, root, state, dispatched_at, updated_at, relayed_at, received_at, processed_at, bridge_msg_type, recipient, bridge_msg_amount, bridge_msg_allow_fast, bridge_msg_details_hash, bridge_msg_token_domain, bridge_msg_token_id, sender, raw, leaf_index, block, evm) VALUES ${expand(
       rows,
       columns,
     )};`;
@@ -62,15 +106,20 @@ export class DBDriver {
         dispatched_at = $9,
         updated_at = $10,
         relayed_at = $11,
-        processed_at = $12,
-        bridge_msg_type = $13,
-        recipient = $14,
-        bridge_msg_amount = $15,
-        bridge_msg_allow_fast = $16,
-        bridge_msg_details_hash = $17,
-        bridge_msg_token_domain = $18,
-        bridge_msg_token_id = $19,
-        sender = $20
+        received_at = $12,
+        processed_at = $13,
+        bridge_msg_type = $14,
+        recipient = $15,
+        bridge_msg_amount = $16,
+        bridge_msg_allow_fast = $17,
+        bridge_msg_details_hash = $18,
+        bridge_msg_token_domain = $19,
+        bridge_msg_token_id = $20,
+        sender = $21,
+        raw = $22,
+        leaf_index = $23,
+        block = $24,
+        evm = $25
         WHERE hash = $1
         `;
       return this.pool.query(query, m.intoDB());

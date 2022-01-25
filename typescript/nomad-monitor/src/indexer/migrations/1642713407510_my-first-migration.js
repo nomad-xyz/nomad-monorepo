@@ -13,9 +13,11 @@ exports.up = pgm => {
         nomad_recipient: {type: 'varchar(42)', notNull: true}, // Nomad recipient (bridge router) 
         root: {type: 'varchar(66)', notNull: true},
         state: {type: 'integer', notNull: true}, // one of several states: Dispatched(0), Updated(1), Relayed(2), Processed(3)
+        block: {type: 'integer', notNull: true}, // one of several states: Dispatched(0), Updated(1), Relayed(2), Processed(3)
         dispatched_at: {type: 'bigint', notNull: true}, // TS at which the transaction got to state dispatched
         updated_at: {type: 'bigint', notNull: true}, // TS at which the transaction got to state updated
         relayed_at: {type: 'bigint', notNull: true}, // TS at which the transaction got to state relayed
+        received_at: {type: 'bigint', notNull: true}, // TS at which the transaction got to state received
         processed_at: {type: 'bigint', notNull: true}, // TS at which the transaction got to state processed
         // Bridge message internals
         sender: {type: 'varchar(42)', notNull: false}, // sender
@@ -26,6 +28,9 @@ exports.up = pgm => {
         bridge_msg_details_hash: {type: 'varchar(66)', notNull: false}, // Details hash - don't know what it is (need to do homework)
         bridge_msg_token_domain: {type: 'integer', notNull: false}, // Token domain
         bridge_msg_token_id: {type: 'varchar(42)', notNull: false}, // Token id (address)
+        raw: {type: 'varchar', notNull: true},
+        leaf_index: {type: 'varchar(256)', notNull: true},
+        evm: {type: 'varchar(66)', notNull: false},
         createdAt: {
           type: 'timestamp',
           notNull: true,

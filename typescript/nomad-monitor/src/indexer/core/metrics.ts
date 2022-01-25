@@ -1,4 +1,4 @@
-import { MetricsCollector } from '../metrics';
+import { MetricsCollector } from '../../metrics';
 import { Gauge } from 'prom-client';
 import Logger from 'bunyan';
 

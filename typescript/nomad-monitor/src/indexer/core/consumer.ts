@@ -4,7 +4,7 @@ import { EventType, NomadEvent } from './event';
 import { Statistics } from './types';
 import { parseBody } from '@nomad-xyz/sdk/src/nomad/messages/BridgeMessage';
 import { parseAction } from '@nomad-xyz/sdk/src/nomad/messages/GovernanceMessage';
-import { DBDriver } from './db';
+import { DB } from './db';
 import Logger from 'bunyan';
 
 
@@ -237,7 +237,6 @@ export class NomadMessage {
   root: string;
   hash: string;
   leafIndex: ethers.BigNumber;
-  destinationAndNonce: ethers.BigNumber;
   raw: string;
   sender?: string;
   nomadSender: string;
@@ -252,6 +251,9 @@ export class NomadMessage {
   bridgeMsgTokenId?: string;
   state: MsgState;
   timings: Timings;
+  block: number;
+  evm?: string;
+  
 
   constructor(
     origin: number,
@@ -260,9 +262,10 @@ export class NomadMessage {
     root: string,
     hash: string,
     leafIndex: ethers.BigNumber,
-    destinationAndNonce: ethers.BigNumber,
+    // destinationAndNonce: ethers.BigNumber,
     message: string,
     createdAt: number,
+    block: number,
   ) {
     this.origin = origin;
     this.destination = destination;
@@ -270,7 +273,7 @@ export class NomadMessage {
     this.root = root;
     this.hash = hash;
     this.leafIndex = leafIndex;
-    this.destinationAndNonce = destinationAndNonce;
+    // this.destinationAndNonce = destinationAndNonce;
     this.raw = message;
     const parsed = parseMessage(message);
     this.nomadSender = bytes32ToAddress(parsed.sender);
@@ -281,6 +284,59 @@ export class NomadMessage {
 
     this.state = MsgState.Dispatched;
     this.timings = new Timings(createdAt);
+    this.block = block;
+  }
+
+  toObject() {
+    return {
+      origin: this.origin,
+      destination: this.destination,
+      nonce: this.nonce,
+      root: this.root,
+      hash: this.hash,
+      leafIndex: this.leafIndex,
+      sender: this.sender,
+      nomadSender: this.nomadSender,
+      nomadRecipient: this.nomadRecipient,
+      hasMessage: this.hasMessage,
+      bridgeMsgType: this.bridgeMsgType,
+      bridgeMsgTo: this.bridgeMsgTo,
+      bridgeMsgAmount: this.bridgeMsgAmount,
+      bridgeMsgAllowFast: this.bridgeMsgAllowFast,
+      bridgeMsgDetailsHash: this.bridgeMsgDetailsHash,
+      bridgeMsgTokenDomain: this.bridgeMsgTokenDomain,
+      bridgeMsgTokenId: this.bridgeMsgTokenId,
+      state: this.state,
+      timings: this.timings,
+      tx: this.evm,
+    }
+  }
+
+  static fromDB(
+    origin: number,
+    destination: number,
+    nonce: number,
+    root: string,
+    hash: string,
+    leafIndex: ethers.BigNumber,
+    message: string,
+    createdAt: number,
+    updatedAt: number,
+    relayedAt: number,
+    receivedAt: number,
+    processedAt: number,
+    block: number,
+    sender: string,
+    evm: string,
+  ): NomadMessage {
+    const m = new NomadMessage(origin, destination, nonce, root, hash, leafIndex, message, createdAt, block);
+    m.timings.updated(updatedAt);
+    m.timings.relayed(relayedAt);
+    m.timings.received(receivedAt);
+    m.timings.processed(processedAt);
+    m.updateSender(sender);
+    m.evm = evm;
+    return m;
   }
 
   tryParseMessage(body: string) {
@@ -313,6 +369,7 @@ export class NomadMessage {
         message.address;
         message.domain;
       }
+      this.bridgeMsgType = message.type;
       this.hasMessage = MessageType.GovernanceMessage;
       return true;
     } catch(e) {
@@ -341,6 +398,7 @@ export class NomadMessage {
     number,
     number,
     number,
+    number,
     string | undefined,
     string | undefined,
     string | undefined,
@@ -349,6 +407,10 @@ export class NomadMessage {
     number | undefined,
     string | undefined,
     string | undefined,
+    string,
+    string,
+    number,
+    string|undefined,
   ] {
     return [
       this.hash,
@@ -362,6 +424,7 @@ export class NomadMessage {
       this.timings.dispatchedAt,
       this.timings.updatedAt,
       this.timings.relayedAt,
+      this.timings.receivedAt,
       this.timings.processedAt,
       this.bridgeMsgType,
       this.bridgeMsgTo,
@@ -371,6 +434,10 @@ export class NomadMessage {
       this.bridgeMsgTokenDomain,
       this.bridgeMsgTokenId,
       this.sender,
+      this.raw,
+      this.leafIndex.toString(),
+      this.block,
+      this.evm,
     ];
   }
 }
@@ -407,7 +474,8 @@ class SenderLostAndFound {
       if (some) {
         const [_, msg] = some;
         // console.log(`Set sender to ${brSend.eventData.from!} for message: ${msg.hash}`)
-        msg.sender = brSend.eventData.from!;
+        msg.updateSender(brSend.eventData.from!);
+        msg.evm = brSend.eventData.evmHash!;
         this.dispatchEventsWithMessages.splice(index, 1);
         return msg.hash;
       }
@@ -433,6 +501,7 @@ class SenderLostAndFound {
       const brSend = this.bridgeRouterSendEvents.at(index);
       if (brSend) {
         m.sender = brSend.eventData.from!;
+        m.evm = brSend.eventData.evmHash!;
       }
       this.bridgeRouterSendEvents.splice(index, 1);
       return true;
@@ -460,11 +529,11 @@ export class Processor extends Consumer {
   consumed: number; // for debug
   domains: number[];
   syncQueue: string[];
-  db: DBDriver;
+  db: DB;
   logger: Logger;
   senderRegistry: SenderLostAndFound;
 
-  constructor(db: DBDriver, logger: Logger) {
+  constructor(db: DB, logger: Logger) {
     super();
     this.messages = [];
     this.msgToIndex = new Map();
@@ -547,9 +616,10 @@ export class Processor extends Consumer {
       e.eventData.committedRoot!,
       e.eventData.messageHash!,
       e.eventData.leafIndex!,
-      e.eventData.destinationAndNonce!,
+      // e.eventData.destinationAndNonce!,
       e.eventData.message!,
       e.ts,
+      e.block,
     );
 
     this.senderRegistry.dispatch(e, m);
