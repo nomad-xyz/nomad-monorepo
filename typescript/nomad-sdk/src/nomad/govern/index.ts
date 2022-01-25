@@ -140,18 +140,6 @@ export class CallBatch {
     return governanceRouter.executeCallBatch(calls);
   }
 
-  // Check if the Batch
-  private async queryReceipt(
-    domain: number,
-  ): Promise<BatchReceivedEvent | undefined> {
-    const router = this.context.mustGetCore(domain).governanceRouter;
-    const hash = this.domainHash(domain);
-    const filter = router.filters.BatchReceived(hash);
-    const events = await router.queryFilter(filter);
-    if (events.length >= 1) return events[0];
-    return undefined;
-  }
-
   // Waits for a specified domain to receive its batch
   // Note that this does not call execute
   async waitDomain(
@@ -159,17 +147,22 @@ export class CallBatch {
   ): Promise<ethers.providers.TransactionReceipt> {
     const router = this.context.mustGetCore(domain).governanceRouter;
     const hash = this.domainHash(domain);
-
-    const poll = this.queryReceipt(domain);
-    const once: Promise<ethers.Event> = new Promise((resolve) => {
-      router.once(router.filters.BatchReceived(hash), resolve);
+    const filter = router.filters.BatchReceived(hash);
+    // construct a promise which will resolve
+    // if an event listener fires for this batch
+    const eventListener: Promise<ethers.Event> = new Promise((resolve) => {
+      router.once(filter, resolve);
     });
-
-    let event: ethers.Event | undefined = await poll;
-    if (!event) {
-      event = await once;
+    // check if the batch hash has already been received
+    const events = await router.queryFilter(filter);
+    // if not, await the event listener
+    let event: ethers.Event;
+    if (events.length == 0) {
+      event = await eventListener;
+    } else {
+      event = events[events.length - 1];
     }
-
+    // return the event transaction receipt
     return event.getTransactionReceipt();
   }
 
