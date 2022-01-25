@@ -9,7 +9,8 @@
     "api": "PROGRAMM=api ts-node main",
     "any": "ts-node main",
     "start": "npm run migrate && npm run any",
-    "migrate": "node-pg-migrate up"
+    "migrate": "node-pg-migrate up",
+    "get_sdk": "cd ../../typescript/nomad-sdk && npm i && npm run build && npm pack && popd && mv ../../typescript/nomad-sdk/nomad-xyz-sdk-1.2.4.tgz ."
   },
   "dependencies": {
     "@nomad-xyz/contract-interfaces": "1.1.1",
