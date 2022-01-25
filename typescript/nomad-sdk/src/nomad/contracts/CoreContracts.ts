@@ -2,7 +2,6 @@ import { ethers } from 'ethers';
 import { core } from '@nomad-xyz/contract-interfaces';
 import { Contracts } from '../../contracts';
 import { ReplicaInfo } from '../domains/domain';
-import { CallBatch } from '../govern';
 
 type Address = string;
 
@@ -119,10 +118,6 @@ export class CoreContracts extends Contracts {
     return this._governor;
   }
 
-  async newGovernanceBatch(): Promise<CallBatch> {
-    return CallBatch.fromCore(this);
-  }
-
   connect(providerOrSigner: ethers.providers.Provider | ethers.Signer): void {
     this.providerOrSigner = providerOrSigner;
   }
@@ -147,10 +142,18 @@ export class CoreContracts extends Contracts {
   }
 
   static fromObject(data: Core, signer?: ethers.Signer): CoreContracts {
-    const { id, home, replicas, governanceRouter, xAppConnectionManager } = data;
+    const { id, home, replicas, governanceRouter, xAppConnectionManager } =
+      data;
     if (!id || !home || !replicas) {
       throw new Error('Missing key');
     }
-    return new CoreContracts(id, home, replicas, governanceRouter, xAppConnectionManager, signer);
+    return new CoreContracts(
+      id,
+      home,
+      replicas,
+      governanceRouter,
+      xAppConnectionManager,
+      signer,
+    );
   }
 }

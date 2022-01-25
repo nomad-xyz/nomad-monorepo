@@ -3,7 +3,7 @@ export { CoreContracts } from './contracts/CoreContracts';
 
 export { TransferMessage } from './messages/BridgeMessage';
 
-export { CallBatch } from './govern';
+export { CallBatch, CallBatchContents, RemoteContents } from './govern';
 
 export {
   NomadMessage,

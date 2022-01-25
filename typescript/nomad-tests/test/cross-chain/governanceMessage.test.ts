@@ -3,30 +3,27 @@ import { ethers } from 'hardhat';
 import { Signer } from 'lib/types';
 import { expect } from 'chai';
 
-describe('GovernanceMessage', async () => {
+import { Call } from '@nomad-xyz/sdk/nomad/govern';
+import * as utils from '@nomad-xyz/sdk/nomad/govern/utils';
+import { randomBytes } from 'crypto';
+
+function randomCall(): Call {
+  const dataLen = Math.floor(Math.random() * 1000);
+  return {
+    to: ethers.utils.hexlify(randomBytes(32)),
+    data: ethers.utils.hexlify(randomBytes(dataLen)),
+  };
+}
+
+function randomBatch(): Call[] {
+  const numCalls = Math.floor(Math.random() * 9) + 1;
+  const testCalls = [...new Array(numCalls)].map(randomCall);
+  return testCalls;
+}
+
+describe.only('GovernanceMessage', async () => {
   let instance: contracts.TestGovernanceMessage;
   let signer: Signer;
-
-  const testCall = {
-    to: ethers.constants.HashZero,
-    data: '0x',
-  };
-
-  const serializedTestCall = '0x' + '00'.repeat(36);
-  const serializedTestCalls = ethers.utils.hexConcat([
-    '0x01',
-    serializedTestCall,
-  ]);
-  const testBatchHash = ethers.utils.keccak256(serializedTestCalls);
-  const testBatch = ethers.utils.hexConcat(['0x01', testBatchHash]);
-
-  const doubleTestCalls = ethers.utils.hexConcat([
-    '0x02',
-    serializedTestCall,
-    serializedTestCall,
-  ]);
-  const doubleTestBatchHash = ethers.utils.keccak256(doubleTestCalls);
-  const doubleTestBatch = ethers.utils.hexConcat(['0x01', doubleTestBatchHash]);
 
   before(async () => {
     [signer] = await ethers.getSigners();
@@ -35,20 +32,29 @@ describe('GovernanceMessage', async () => {
   });
 
   it('serializes calls', async () => {
-    let output = await instance.serializeCall(testCall);
-    expect(output).to.equal(serializedTestCall);
+    for (let i = 0; i < 50; i++) {
+      const testCall = randomCall();
+      const sol = await instance.serializeCall(testCall);
+      const ts = utils.serializeCall(testCall);
+      expect(sol).to.equal(ts);
+    }
   });
 
-  it('formats batches properly', async () => {
-    let output = await instance.formatBatch([testCall]);
-    expect(output).to.equal(testBatch);
-    output = await instance.formatBatch([testCall, testCall]);
-    expect(output).to.equal(doubleTestBatch);
+  it('Calculates batch hashes properly', async () => {
+    // variable number of calls
+    for (let i = 0; i < 50; i++) {
+      const testCalls = randomBatch();
+      const sol = await instance.formatBatch(testCalls);
+      const ts = utils.formatBatch(testCalls);
+      expect(sol).to.equal(ts);
+    }
   });
 
   it('succesfully performs validBatch tests', async () => {
-    expect(await instance.isValidBatch(testBatch)).to.be.true;
-    expect(await instance.isValidBatch(doubleTestBatch)).to.be.true;
     expect(await instance.isValidBatch('0x00')).to.be.false;
+    for (let i = 0; i < 25; i++) {
+      const testBatch = utils.formatBatch(randomBatch());
+      expect(await instance.isValidBatch(testBatch)).to.be.true;
+    }
   });
 });
