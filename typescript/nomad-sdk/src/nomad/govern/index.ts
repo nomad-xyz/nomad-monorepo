@@ -1,7 +1,6 @@
 import { ethers } from 'ethers';
 import { NomadContext } from '..';
 import { CoreContracts } from '../contracts';
-import { BatchReceivedEvent } from '../events';
 
 import * as utils from './utils';
 
@@ -107,7 +106,7 @@ export class CallBatch {
   }
 
   // Return the batch hash for the specified domain
-  domainHash(domain: number): string {
+  batchHash(domain: number): string {
     const calls = this.remote.get(domain);
     if (!calls) throw new Error(`Not found calls for remote ${domain}`);
     return utils.batchHash(calls);
@@ -146,7 +145,7 @@ export class CallBatch {
     domain: number,
   ): Promise<ethers.providers.TransactionReceipt> {
     const router = this.context.mustGetCore(domain).governanceRouter;
-    const hash = this.domainHash(domain);
+    const hash = this.batchHash(domain);
     const filter = router.filters.BatchReceived(hash);
     // construct a promise which will resolve
     // if an event listener fires for this batch
