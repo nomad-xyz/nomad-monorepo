@@ -42,6 +42,7 @@ export type EventData = {
   originAndNonce?: ethers.BigNumber;
   recipient?: string;
   liquidityProvider?: string;
+  evmHash?: string; 
 };
 
 export class NomadEvent {

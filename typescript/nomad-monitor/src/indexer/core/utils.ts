@@ -2,7 +2,7 @@ import { ethers } from 'ethers';
 import { NomadEvent } from './event';
 import fs from 'fs';
 import { Mean } from './types';
-import { DBDriver } from './db';
+import { DB } from './db';
 
 export function sleep(ms: number) {
   return new Promise((resolve) => {
@@ -68,9 +68,9 @@ export function reviver(key: any, value: any): any {
 export class KVCache {
   m: Map<string, string>;
   name: string;
-  db: DBDriver;
+  db: DB;
 
-  constructor(name: string, db: DBDriver) {
+  constructor(name: string, db: DB) {
     this.db = db;
     this.m = new Map();
     this.name = name;
