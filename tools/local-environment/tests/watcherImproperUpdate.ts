@@ -64,17 +64,10 @@ async function improperUpdateCase(homeOrReplica: string) {
 
     console.log(`Dispatched test transaction to home`);
 
-    const [committedRoot, newRoot] = await home.suggestUpdate();
+    const [committedRoot,] = await home.suggestUpdate();
 
     const updater = await n.getUpdater(tom);
 
-    const { signature } = await updater.signUpdate(committedRoot, newRoot);
-
-    await (await home.update(committedRoot, newRoot, signature)).wait();
-
-    console.log(`Submitted valid update to home`);
-
-    const [newCommittedRoot, _] = await home.suggestUpdate();
     const fraudRoot =
       "0x8bae0a4ab4517a16816ef67120f0e3350d595e014158ba72c3626d8c66b67e53";
 
