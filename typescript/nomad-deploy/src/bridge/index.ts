@@ -229,6 +229,23 @@ export async function deployTokenRegistry(deploy: AnyBridgeDeploy) {
   console.log(`deployed ${deploy.chain.name} TokenRegistry`);
 }
 
+export async function deployBridgeRouterImplementation(
+  deploy: AnyBridgeDeploy,
+): Promise<xAppContracts.BridgeRouter> {
+  console.log(`deploying ${deploy.chain.name} BridgeRouter Implementation`);
+
+  const bridgeFactory = new xAppContracts.BridgeRouter__factory(
+    deploy.chain.deployer,
+  );
+  const bridgeRouter = await bridgeFactory.deploy(deploy.overrides);
+  await bridgeRouter.deployTransaction.wait(deploy.chain.confirmations);
+
+  // TODO: update deploy (?) verification (?)
+
+  console.log(`deployed ${deploy.chain.name} BridgeRouter Implementation`);
+  return bridgeRouter;
+}
+
 /**
  * Deploys the BridgeRouter on the chain of the given deploy and updates
  * the deploy instance with the new contract.
