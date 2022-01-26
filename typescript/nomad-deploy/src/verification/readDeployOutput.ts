@@ -106,6 +106,7 @@ export function getVerificationInputFromDeploy(
  * @param fileSuffix target file suffix to parse ("config", "contracts", "verification")
  * */
 export function parseFileFromDeploy(
+
   path: string,
   network: string,
   fileSuffix: string,
@@ -121,10 +122,19 @@ export function parseFileFromDeploy(
       `No ${fileSuffix} files found for ${network} at ${path}/${targetFileName}`,
     );
   }
+  return parseFile(path, targetFileName);
+}
 
+/*
+ * @notice Return the JSON-parsed file
+ * from the given file name
+ * and directory path
+ * @param path relative path to the file
+ * @param fileName the file name
+ * */
+export function parseFile(path: string, fileName: string) {
   const fileString: string = fs
-    .readFileSync(`${path}/${targetFileName}`)
-    .toString();
-
+      .readFileSync(`${path}/${fileName}`)
+      .toString();
   return JSON.parse(fileString);
 }
