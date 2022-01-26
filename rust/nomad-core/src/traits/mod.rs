@@ -24,8 +24,10 @@ pub use xapp::*;
 /// Contract states
 #[derive(Debug, PartialEq, Eq)]
 pub enum State {
+    /// Contract uninitialized
+    Uninitialized,
     /// Contract is active
-    Waiting,
+    Active,
     /// Contract has failed
     Failed,
 }
