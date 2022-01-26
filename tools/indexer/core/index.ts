@@ -31,7 +31,7 @@ export async function run(db: DB, environment: string, logger: Logger) {
     logger,
     db
   );
+  await m.startServer(3000);
   await o.init();
-
   await o.startConsuming();
 }
