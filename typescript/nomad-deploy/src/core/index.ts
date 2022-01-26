@@ -887,9 +887,9 @@ export async function deployNewChain(
 
   // checks new chain deploy is correct
   await checkCoreDeploy(
-      newDeploy,
-      [hubDeploy.chain.domain],
-      hubDeploy.chain.domain,
+    newDeploy,
+    [hubDeploy.chain.domain],
+    hubDeploy.chain.domain,
   );
 
   // START TRANSACTION ON HUB CHAIN
@@ -898,12 +898,13 @@ export async function deployNewChain(
   await deployUnenrolledReplica(hubDeploy, newDeploy);
 
   // relinquish control of newly deployed replica on Hub
-  const newReplica = hubDeploy.contracts.replicas[newDeploy.chain.domain]!.proxy;
+  const newReplica =
+    hubDeploy.contracts.replicas[newDeploy.chain.domain]!.proxy;
   const govAddress = hubDeploy.contracts.governance?.proxy.address!;
   await newReplica.transferOwnership(govAddress, hubDeploy.overrides);
   log(
-      isTestDeploy,
-      `${hubDeploy.chain.name}: Dispatched relinquish Replica for ${newDeploy.chain.domain}`,
+    isTestDeploy,
+    `${hubDeploy.chain.name}: Dispatched relinquish Replica for ${newDeploy.chain.domain}`,
   );
   // END TRANSACTION ON HUB CHAIN
 
@@ -931,7 +932,12 @@ export function writePartials(dir: string) {
   }
 }
 
-function writeOutput(local: CoreDeploy, remotes: CoreDeploy[], dir: string, isFreshDeploy: boolean = false) {
+function writeOutput(
+  local: CoreDeploy,
+  remotes: CoreDeploy[],
+  dir: string,
+  isFreshDeploy: boolean = false,
+) {
   const config = CoreDeploy.buildConfig(local, remotes);
   const sdk = CoreDeploy.buildSDK(local, remotes);
   const name = local.chain.name;
@@ -948,8 +954,8 @@ function writeOutput(local: CoreDeploy, remotes: CoreDeploy[], dir: string, isFr
   );
   if (isFreshDeploy) {
     fs.writeFileSync(
-        `${dir}/${name}_verification.json`,
-        JSON.stringify(local.verificationInput, null, 2),
+      `${dir}/${name}_verification.json`,
+      JSON.stringify(local.verificationInput, null, 2),
     );
   }
 }
@@ -978,8 +984,15 @@ export function writeDeployOutput(deploys: CoreDeploy[]) {
  *
  * @param deploys - The array of chain deploys
  */
-export function writeHubAndSpokeOutput(hub: CoreDeploy, newSpokes: CoreDeploy[], oldSpokes: CoreDeploy[] = []) {
-  log(hub.test, `Have 1 Hub and ${newSpokes.length + oldSpokes.length} Spoke deploys`);
+export function writeHubAndSpokeOutput(
+  hub: CoreDeploy,
+  newSpokes: CoreDeploy[],
+  oldSpokes: CoreDeploy[] = [],
+) {
+  log(
+    hub.test,
+    `Have 1 Hub and ${newSpokes.length + oldSpokes.length} Spoke deploys`,
+  );
 
   const dir = getPathToDeployConfig(hub.config.environment);
 

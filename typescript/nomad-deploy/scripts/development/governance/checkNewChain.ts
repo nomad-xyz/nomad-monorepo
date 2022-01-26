@@ -11,27 +11,27 @@ const path = getPathToDeployConfig('dev');
 
 // Instantiate existing governor deploy on Rinkeby
 const rinkebyCoreDeploy = ExistingCoreDeploy.withPath(
-    rinkeby.chain,
-    rinkeby.devConfig,
-    path,
+  rinkeby.chain,
+  rinkeby.devConfig,
+  path,
 );
 const rinkebyBridgeDeploy = new ExistingBridgeDeploy(
-    rinkeby.chain,
-    rinkeby.bridgeConfig,
-    path,
+  rinkeby.chain,
+  rinkeby.bridgeConfig,
+  path,
 );
 const rinkebyDomain = deploysToSDK(rinkebyCoreDeploy, rinkebyBridgeDeploy);
 
 // Enroll Kovan as spoke to Rinkeby hub
 const kovanCoreDeploy = ExistingCoreDeploy.withPath(
-    kovan.chain,
-    kovan.devConfig,
-    path,
+  kovan.chain,
+  kovan.devConfig,
+  path,
 );
 const kovanBridgeDeploy = new ExistingBridgeDeploy(
-    kovan.chain,
-    kovan.bridgeConfig,
-    path,
+  kovan.chain,
+  kovan.bridgeConfig,
+  path,
 );
 const kovanDomain = deploysToSDK(kovanCoreDeploy, kovanBridgeDeploy);
 
@@ -40,12 +40,8 @@ const sdkDomains = [rinkebyDomain, kovanDomain];
 const sdk = NomadContext.fromDomains(sdkDomains);
 const sdkCores = [rinkebyCoreDeploy, kovanCoreDeploy];
 sdkCores.forEach((core) => {
-    sdk.registerProvider(core.chain.domain, core.provider);
-    sdk.registerSigner(core.chain.domain, core.deployer);
+  sdk.registerProvider(core.chain.domain, core.provider);
+  sdk.registerSigner(core.chain.domain, core.deployer);
 });
 
-checkHubAndSpokeConnections(
-    sdk,
-    kovanDomain.id,
-    kovan.devConfig.watchers,
-);
+checkHubAndSpokeConnections(sdk, kovanDomain.id, kovan.devConfig.watchers);
