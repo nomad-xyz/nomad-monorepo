@@ -216,10 +216,10 @@ impl Replica {
         };
 
         if proof.leaf != message.to_leaf() {
-            bail!(ProcessorError::ConflictingUpdateAttemptError {
+            bail!(ProcessorError::ProverConflictError {
                 index: message.leaf_index,
                 calculated_leaf: message.to_leaf(),
-                prover_leaf: proof.leaf,
+                proof_leaf: proof.leaf,
             });
         }
 

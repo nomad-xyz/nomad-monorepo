@@ -6,7 +6,8 @@ use ethers::core::types::H256;
 use futures_util::future::{join, join_all, select_all};
 use std::{collections::HashMap, fmt::Display, sync::Arc, time::Duration};
 use tokio::{
-    sync::{mpsc, oneshot, RwLock},
+    select,
+    sync::{mpsc, RwLock},
     task::JoinHandle,
     time::sleep,
 };
@@ -18,7 +19,7 @@ use nomad_base::{
 };
 use nomad_core::{
     ChainCommunicationError, Common, CommonEvents, ConnectionManager, DoubleUpdate,
-    FailureNotification, Home, SignedUpdate, Signers, TxOutcome,
+    FailureNotification, Home, SignedFailureNotification, SignedUpdate, Signers, State, TxOutcome,
 };
 
 use crate::settings::WatcherSettings as Settings;
@@ -278,7 +279,7 @@ pub struct Watcher {
     interval_seconds: u64,
     sync_tasks: TaskMap,
     watch_tasks: TaskMap,
-    connection_managers: Vec<ConnectionManagers>,
+    connection_managers: Vec<Arc<ConnectionManagers>>,
     core: AgentCore,
 }
 
@@ -294,7 +295,7 @@ impl Watcher {
     pub fn new(
         signer: Signers,
         interval_seconds: u64,
-        connection_managers: Vec<ConnectionManagers>,
+        connection_managers: Vec<Arc<ConnectionManagers>>,
         core: AgentCore,
     ) -> Self {
         Self {
@@ -307,60 +308,10 @@ impl Watcher {
         }
     }
 
-    async fn shutdown(&self) {
-        for (_, v) in self.watch_tasks.write().await.drain() {
-            cancel_task!(v);
-        }
-        for (_, v) in self.sync_tasks.write().await.drain() {
-            cancel_task!(v);
-        }
-    }
-
-    // Handle a double-update once it has been detected.
-    #[tracing::instrument]
-    async fn handle_failure(
-        &self,
-        double: &DoubleUpdate,
-    ) -> Vec<Result<TxOutcome, ChainCommunicationError>> {
-        // Create vector of double update futures
-        let mut double_update_futs: Vec<_> = self
-            .core
-            .replicas
-            .values()
-            .map(|replica| replica.double_update(double))
-            .collect();
-        double_update_futs.push(self.core.home.double_update(double));
-
-        // Created signed failure notification
-        let signed_failure = FailureNotification {
-            home_domain: self.home().local_domain(),
-            updater: self.home().updater().await.unwrap().into(),
-        }
-        .sign_with(self.signer.as_ref())
-        .await
-        .expect("!sign");
-
-        // Create vector of futures for unenrolling replicas (one per
-        // connection manager)
-        let mut unenroll_futs = Vec::new();
-        for connection_manager in self.connection_managers.iter() {
-            unenroll_futs.push(connection_manager.unenroll_replica(&signed_failure));
-        }
-
-        // Join both vectors of double update and unenroll futures and
-        // return vector containing all results
-        let (double_update_res, unenroll_res) =
-            join(join_all(double_update_futs), join_all(unenroll_futs)).await;
-        double_update_res
-            .into_iter()
-            .chain(unenroll_res.into_iter())
-            .collect()
-    }
-
-    fn run_watch_tasks(
-        &self,
-        double_update_tx: oneshot::Sender<DoubleUpdate>,
-    ) -> Instrumented<JoinHandle<Result<()>>> {
+    /// Spawn UpdateHandler and sync tasks. Have sync tasks send UpdateHandler
+    /// signed updates through mpsc. Return Some(double_update) if any
+    /// conflicting updates are found.
+    fn watch_double_update(&self) -> Instrumented<JoinHandle<Result<Option<DoubleUpdate>>>> {
         let home = self.home();
         let replicas = self.replicas().clone();
         let watcher_db_name = format!("{}_{}", home.name(), AGENT_NAME);
@@ -405,7 +356,7 @@ impl Watcher {
                 .spawn()
                 .in_current_span();
 
-            // Wait for update handler to finish (should only happen watcher is 
+            // Wait for update handler to finish (should only happen watcher is
             // manually shut down)
             let double_update_res = handler.await?;
 
@@ -414,18 +365,101 @@ impl Watcher {
             cancel_task!(home_watcher);
             cancel_task!(home_sync);
 
-            // If update receiver channel was closed we will error out. The only
-            // reason we pass this point is that we successfully found double 
-            // update.
-            let double_update = double_update_res?;
-            error!("Double update found! Sending through through double update tx! Double update: {:?}.", &double_update);
-            if let Err(e) = double_update_tx.send(double_update) {
-                bail!("Failed to send double update through oneshot: {:?}", e);
-            }
-
-            Ok(())
+            // Map Result<DoubleUpdate> into Option. If handler returned error
+            // no double update. If handler returned Ok(double_update), map into
+            // Some(double_update).
+            Ok(double_update_res.ok())
         })
         .in_current_span()
+    }
+
+    /// Periodically poll `home.state()` to check for failure due to improper
+    /// update. If failed state detected, return `State::Failed`.
+    fn watch_improper_update(&self) -> Instrumented<JoinHandle<Result<State>>> {
+        let home = self.home();
+        let interval = self.interval_seconds;
+
+        tokio::spawn(async move {
+            loop {
+                let state = home.state().await?;
+                if state == State::Failed {
+                    return Ok(state);
+                }
+
+                sleep(Duration::from_secs(interval)).await;
+            }
+        })
+        .in_current_span()
+    }
+
+    async fn create_signed_failure(&self) -> SignedFailureNotification {
+        FailureNotification {
+            home_domain: self.home().local_domain(),
+            updater: self.home().updater().await.unwrap().into(),
+        }
+        .sign_with(self.signer.as_ref())
+        .await
+        .expect("!sign")
+    }
+
+    /// Handle a double-update once it has been detected. Submit double updates
+    /// and failure notifications to all homes/replicas.
+    #[tracing::instrument]
+    async fn handle_double_update_failure(
+        &self,
+        double: &DoubleUpdate,
+    ) -> Vec<Result<TxOutcome, ChainCommunicationError>> {
+        // Create vector of double update futures
+        let mut double_update_futs: Vec<_> = self
+            .core
+            .replicas
+            .values()
+            .map(|replica| replica.double_update(double))
+            .collect();
+        double_update_futs.push(self.core.home.double_update(double));
+
+        // Created signed failure notification
+        let signed_failure = self.create_signed_failure().await;
+
+        // Create vector of futures for unenrolling replicas (one per
+        // connection manager)
+        let mut unenroll_futs = Vec::new();
+        for connection_manager in self.connection_managers.iter() {
+            unenroll_futs.push(connection_manager.unenroll_replica(&signed_failure));
+        }
+
+        // Join both vectors of double update and unenroll futures and
+        // return vector containing all results
+        let (double_update_res, unenroll_res) =
+            join(join_all(double_update_futs), join_all(unenroll_futs)).await;
+        double_update_res
+            .into_iter()
+            .chain(unenroll_res.into_iter())
+            .collect()
+    }
+
+    /// Handle a double-update once it has been detected. Submit double updates
+    /// and failure notifications to all homes/replicas.
+    #[tracing::instrument]
+    async fn handle_improper_update_failure(
+        &self,
+    ) -> Vec<Result<TxOutcome, ChainCommunicationError>> {
+        let signed_failure = self.create_signed_failure().await;
+        let mut unenroll_futs = Vec::new();
+        for connection_manager in self.connection_managers.iter() {
+            unenroll_futs.push(connection_manager.unenroll_replica(&signed_failure));
+        }
+
+        join_all(unenroll_futs).await
+    }
+
+    async fn shutdown(&self) {
+        for (_, v) in self.watch_tasks.write().await.drain() {
+            cancel_task!(v);
+        }
+        for (_, v) in self.sync_tasks.write().await.drain() {
+            cancel_task!(v);
+        }
     }
 }
 
@@ -468,6 +502,7 @@ impl NomadAgent for Watcher {
         let connection_managers: Vec<_> = connection_managers
             .into_iter()
             .map(Result::unwrap)
+            .map(Arc::new)
             .collect();
 
         let core = settings.as_ref().try_into_core("watcher").await?;
@@ -502,50 +537,77 @@ impl NomadAgent for Watcher {
             let home_sync_task = self
                 .home()
                 .sync(Self::AGENT_NAME.to_owned(), indexer.from(), indexer.chunk_size(), sync_metrics.clone(), IndexDataTypes::Updates);
+
             let replica_sync_tasks: Vec<Instrumented<JoinHandle<Result<()>>>> = self.replicas().values().map(|replica| {
                 replica.sync(Self::AGENT_NAME.to_owned(), indexer.from(), indexer.chunk_size(), sync_metrics.clone())
             }).collect();
 
-            // Watcher watch tasks setup
-            let (double_update_tx, mut double_update_rx) = oneshot::channel::<DoubleUpdate>();
-            let watch_tasks = self.run_watch_tasks(double_update_tx);
+            let mut sync_tasks = vec![home_sync_task];
+            sync_tasks.extend(replica_sync_tasks);
+            let sync_task_unified = select_all(sync_tasks);
+
+            let double_update_watch_task = self.watch_double_update();
+            let improper_update_watch_task = self.watch_improper_update();
 
             // Race index and run tasks
-            info!("selecting");
-            let mut tasks = vec![home_sync_task, watch_tasks];
-            tasks.extend(replica_sync_tasks);
-            let (_, _, remaining) = select_all(tasks).await;
+            info!("Selecting across tasks...");
+            select! {
+                _ = sync_task_unified => {
+                    info!("Syncing tasks finished early!");
+                    self.shutdown().await;
+                },
+                double_res = double_update_watch_task => {
+                    let opt_double = double_res??;
+                    if let Some(double) = opt_double {
+                        tracing::error!(
+                            double_update = ?double,
+                            "Double update detected! Notifying all contracts and unenrolling replicas! Double update: {:?}",
+                            double
+                        );
 
-            // Cancel lagging task and watcher polling/syncing tasks
-            for task in remaining.into_iter() {
-                cancel_task!(task);
-            }
-            self.shutdown().await;
+                        self.handle_double_update_failure(&double)
+                            .await
+                            .iter()
+                            .for_each(|res| tracing::info!("{:#?}", res));
 
-            // Check if double update was sent during run task
-            match double_update_rx.try_recv() {
-                Ok(double_update) => {
-                    tracing::error!(
-                        double_update = ?double_update,
-                        "Double update detected! Notifying all contracts and unenrolling replicas! Double update: {:?}",
-                        double_update
-                    );
-                    self.handle_failure(&double_update)
-                        .await
-                        .iter()
-                        .for_each(|res| tracing::info!("{:#?}", res));
+                        bail!(
+                            r#"
+                            Double update detected!
+                            All contracts notified!
+                            Replicas unenrolled!
+                            Watcher has been shut down!
+                        "#
+                        )
+                    }
 
-                    bail!(
-                        r#"
-                        Double update detected!
-                        All contracts notified!
-                        Replicas unenrolled!
-                        Watcher has been shut down!
-                    "#
-                    )
+                    self.shutdown().await;
+                },
+                improper_res = improper_update_watch_task => {
+                    let state = improper_res??;
+                    if state == State::Failed {
+                        tracing::error!(
+                            "Improper update detected! Notifying all contracts and unenrolling replicas!",
+                        );
+
+                        self.handle_improper_update_failure()
+                            .await
+                            .iter()
+                            .for_each(|res| tracing::info!("{:#?}", res));
+
+                        bail!(
+                            r#"
+                            Improper update detected!
+                            Replicas unenrolled!
+                            Watcher has been shut down!
+                        "#
+                        )
+                    }
+
+                    self.shutdown().await;
                 }
-                Err(_) => Ok(()),
             }
+
+            Ok(())
         })
         .instrument(info_span!("Watcher::run_all"))
     }
@@ -909,9 +971,9 @@ mod test {
             }
 
             // Watcher agent setup
-            let connection_managers: Vec<ConnectionManagers> = vec![
-                mock_connection_manager_1.into(),
-                mock_connection_manager_2.into(),
+            let mut connection_managers: Vec<Arc<ConnectionManagers>> = vec![
+                Arc::new(mock_connection_manager_1.into()),
+                Arc::new(mock_connection_manager_2.into()),
             ];
 
             let mock_indexer: Arc<CommonIndexers> = Arc::new(MockIndexer::new().into());
@@ -964,13 +1026,170 @@ mod test {
                     ),
                 };
 
-                let mut watcher = Watcher::new(updater.into(), 1, connection_managers, core);
-                watcher.handle_failure(&double).await;
+                {
+                    let watcher =
+                        Watcher::new(updater.into(), 1, connection_managers.clone(), core);
+                    watcher.handle_double_update_failure(&double).await;
+                }
 
                 // Checkpoint connection managers
-                for connection_manager in watcher.connection_managers.iter_mut() {
-                    connection_manager.checkpoint();
+                for connection_manager in connection_managers.iter_mut() {
+                    Arc::get_mut(connection_manager).unwrap().checkpoint();
                 }
+            }
+
+            // Checkpoint home and replicas
+            Arc::get_mut(&mut mock_home).unwrap().checkpoint();
+            Arc::get_mut(&mut mock_replica_1).unwrap().checkpoint();
+            Arc::get_mut(&mut mock_replica_2).unwrap().checkpoint();
+        })
+        .await
+    }
+
+    #[tokio::test]
+    async fn it_unenrolls_replicas_on_improper_update() {
+        test_utils::run_test_db(|db| async move {
+            let home_domain = 1;
+
+            let updater: LocalWallet =
+                "1111111111111111111111111111111111111111111111111111111111111111"
+                    .parse()
+                    .unwrap();
+
+            let signed_failure = FailureNotification {
+                home_domain,
+                updater: updater.address().into(),
+            }
+            .sign_with(&updater)
+            .await
+            .expect("!sign");
+
+            // Contract setup
+            let mut mock_connection_manager_1 = MockConnectionManagerContract::new();
+            let mut mock_connection_manager_2 = MockConnectionManagerContract::new();
+
+            let mut mock_home = MockHomeContract::new();
+            let mock_replica_1 = MockReplicaContract::new();
+            let mock_replica_2 = MockReplicaContract::new();
+
+            // Home and replica expectations
+            {
+                mock_home.expect__name().return_const("home_1".to_owned());
+
+                mock_home
+                    .expect__local_domain()
+                    .times(1)
+                    .return_once(move || home_domain);
+
+                let updater = updater.clone();
+                mock_home
+                    .expect__updater()
+                    .times(1)
+                    .return_once(move || Ok(updater.address().into()));
+
+                // Home returns failed state
+                mock_home
+                    .expect__state()
+                    .times(1)
+                    .return_once(move || Ok(State::Failed));
+            }
+
+            // Connection manager expectations
+            {
+                // connection_manager_1.unenroll_replica called once
+                let signed_failure = signed_failure.clone();
+                mock_connection_manager_1
+                    .expect__unenroll_replica()
+                    .withf(move |f: &SignedFailureNotification| *f == signed_failure)
+                    .times(1)
+                    .return_once(move |_| {
+                        Ok(TxOutcome {
+                            txid: H256::default(),
+                            executed: true,
+                        })
+                    });
+            }
+            {
+                // connection_manager_2.unenroll_replica called once
+                let signed_failure = signed_failure.clone();
+                mock_connection_manager_2
+                    .expect__unenroll_replica()
+                    .withf(move |f: &SignedFailureNotification| *f == signed_failure)
+                    .times(1)
+                    .return_once(move |_| {
+                        Ok(TxOutcome {
+                            txid: H256::default(),
+                            executed: true,
+                        })
+                    });
+            }
+
+            // Watcher agent setup
+            let mut connection_managers: Vec<Arc<ConnectionManagers>> = vec![
+                Arc::new(mock_connection_manager_1.into()),
+                Arc::new(mock_connection_manager_2.into()),
+            ];
+
+            let mock_indexer: Arc<CommonIndexers> = Arc::new(MockIndexer::new().into());
+            let mock_home_indexer: Arc<HomeIndexers> = Arc::new(MockIndexer::new().into());
+            let mut mock_home: Homes = mock_home.into();
+            let mut mock_replica_1: Replicas = mock_replica_1.into();
+            let mut mock_replica_2: Replicas = mock_replica_2.into();
+
+            let home_db = NomadDB::new("home_1", db.clone());
+            let replica_1_db = NomadDB::new("replica_1", db.clone());
+            let replica_2_db = NomadDB::new("replica_2", db.clone());
+
+            {
+                let home: Arc<CachingHome> = CachingHome::new(
+                    mock_home.clone(),
+                    home_db.clone(),
+                    mock_home_indexer.clone(),
+                )
+                .into();
+                let replica_1: Arc<CachingReplica> = CachingReplica::new(
+                    mock_replica_1.clone(),
+                    replica_1_db.clone(),
+                    mock_indexer.clone(),
+                )
+                .into();
+                let replica_2: Arc<CachingReplica> = CachingReplica::new(
+                    mock_replica_2.clone(),
+                    replica_2_db.clone(),
+                    mock_indexer.clone(),
+                )
+                .into();
+
+                let mut replica_map: HashMap<String, Arc<CachingReplica>> = HashMap::new();
+                replica_map.insert("replica_1".into(), replica_1);
+                replica_map.insert("replica_2".into(), replica_2);
+
+                let core = AgentCore {
+                    home: home.clone(),
+                    replicas: replica_map,
+                    db,
+                    indexer: IndexSettings::default(),
+                    settings: nomad_base::Settings::default(),
+                    metrics: Arc::new(
+                        nomad_base::CoreMetrics::new(
+                            "watcher_test",
+                            None,
+                            Arc::new(prometheus::Registry::new()),
+                        )
+                        .expect("could not make metrics"),
+                    ),
+                };
+
+                let watcher = Watcher::new(updater.into(), 1, connection_managers.clone(), core);
+                let state = watcher.watch_improper_update().await.unwrap().unwrap();
+                assert_eq!(state, State::Failed);
+
+                watcher.handle_improper_update_failure().await;
+            }
+
+            // Checkpoint connection managers
+            for connection_manager in connection_managers.iter_mut() {
+                Arc::get_mut(connection_manager).unwrap().checkpoint();
             }
 
             // Checkpoint home and replicas

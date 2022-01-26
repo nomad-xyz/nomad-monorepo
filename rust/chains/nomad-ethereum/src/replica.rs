@@ -180,8 +180,9 @@ where
     async fn state(&self) -> Result<State, ChainCommunicationError> {
         let state = self.contract.state().call().await?;
         match state {
-            0 => Ok(State::Waiting),
-            1 => Ok(State::Failed),
+            0 => Ok(State::Uninitialized),
+            1 => Ok(State::Active),
+            2 => Ok(State::Failed),
             _ => unreachable!(),
         }
     }

@@ -32,7 +32,7 @@ pub enum AgentError {
 /// Error that happened in Updater
 #[derive(Debug, thiserror::Error)]
 pub enum UpdaterError {
-    /// Error on conflict
+    /// Update producer attampted to store conflicting updates
     #[error("Updater attempted to store conflicting signed update. Existing: {existing:?}. New conflicting: {conflicting:?}.")]
     ProducerConflictError {
         /// Existing signed update
@@ -45,14 +45,14 @@ pub enum UpdaterError {
 /// Error that happened in Processor
 #[derive(Debug, thiserror::Error)]
 pub enum ProcessorError {
-    /// UpdaterConflictError
-    #[error("Updater attempted to store conflicting signed update.  Index: {index:?}. Calculated: {calculated_leaf:?}. Prover: {prover_leaf:?}.")]
-    ConflictingUpdateAttemptError {
+    /// Processor stored leaf conflicts with the message for the same index
+    #[error("Processor stored leaf and message hash are not equal for leaf index: {index:?}. Calculated: {calculated_leaf:?}. Prover: {proof_leaf:?}.")]
+    ProverConflictError {
         /// Leaf index
         index: u32,
         /// Conflicting message leaf
         calculated_leaf: H256,
         /// Prover leaf
-        prover_leaf: H256,
+        proof_leaf: H256,
     },
 }
