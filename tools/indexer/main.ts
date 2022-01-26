@@ -3,8 +3,11 @@ import * as api from "./api";
 import { DB } from "./core/db";
 import { createLogger } from "./core/utils";
 
-const environment = process.env.ENVIRONMENT!;
-const program = process.env.PROGRAM!;
+export type NomadEnvironment = 'dev' | 'staging' | 'prod';
+export type Program = 'api' | 'core';
+
+const environment = process.env.ENVIRONMENT! as NomadEnvironment;
+const program = process.env.PROGRAM! as Program;
 
 (async () => {
   const db = new DB();
