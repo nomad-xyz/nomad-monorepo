@@ -27,7 +27,7 @@
     "test": "test"
   },
   "scripts": {
-    "prettier": "prettier --write ./contracts",
+    "prettier": "prettier --write ./contracts ./libs ./interfaces",
     "compile": "hardhat compile && hardhat typechain && npm run prettier && ./update_abis.sh",
     "coverage": "npm run compile && hardhat coverage",
     "test": "cd ../../ && ./scripts/test-solidity.sh",
