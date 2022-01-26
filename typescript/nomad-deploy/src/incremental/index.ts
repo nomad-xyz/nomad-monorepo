@@ -1,4 +1,5 @@
 import { NomadContext } from '@nomad-xyz/sdk/';
+import { CallBatch } from '@nomad-xyz/sdk/nomad';
 import { canonizeId } from '@nomad-xyz/sdk/utils';
 import { CoreConfig } from '../core/CoreDeploy';
 import { writeBatchOutput } from './utils';
@@ -21,7 +22,7 @@ export async function enrollSpoke(
 
   let spokeCore = await sdk.mustGetCore(spokeDomain);
   let spokeBridge = await sdk.mustGetBridge(spokeDomain);
-  let batch = await hubCore.newGovernanceBatch();
+  let batch = await CallBatch.fromContext(sdk);
 
   // enroll watchers
   await Promise.all(

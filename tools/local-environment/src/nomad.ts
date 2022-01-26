@@ -59,7 +59,7 @@ import { ethers } from "ethers";
 import { Logger, LogLevel } from "./logger";
 import { checkCoreDeploy } from "@nomad-xyz/deploy/src/core/checks";
 import { checkHubAndSpokeBridgeConnections } from "@nomad-xyz/deploy/src/bridge/checks";
-import { checkHubToSpokeConnection } from "@nomad-xyz/deploy/src/incremental/checks";
+import { checkHubAndSpokeConnections } from "@nomad-xyz/deploy/src/incremental/checks";
 import { utils } from ".";
 
 export class Nomad {
@@ -791,8 +791,10 @@ export class Nomad {
     const nonce = await deployer.getTransactionCount();
     deployer.setTransactionCount(nonce);
 
+    const oldSpokes = this.getSpokes().filter(s => s.domain != newNetwork.domain).map(n => this.getExistingCoreDeploy(n)!);
+
     const newCoreDeploy = this.getCoreDeploy(newNetwork);
-    await deployNewChain(newCoreDeploy, govCoreDeploy);
+    await deployNewChain(newCoreDeploy, govCoreDeploy, oldSpokes);
     this.cacheDeploy(newCoreDeploy, govCoreDeploy);
 
     const newBridgeDeploy = this.getBridgeDeploy(newNetwork, newCoreDeploy);
@@ -808,9 +810,9 @@ export class Nomad {
 
     await this.updateMultiProvider();
 
-    await enrollSpoke(this.multiprovider!, newNetwork.domain, [
-      this.getWatcherKey(newNetwork)!.toAddress(),
-    ]);
+    await enrollSpoke(this.multiprovider!, newNetwork.domain, 
+      this.getCoreConfig(newNetwork)!,
+    );
 
     await checkCoreDeploy(
       newCoreDeploy,
@@ -819,7 +821,7 @@ export class Nomad {
     );
 
     await checkHubAndSpokeBridgeConnections(govBridgeDeploy, [newBridgeDeploy]);
-    await checkHubToSpokeConnection(this.multiprovider!, newNetwork.domain, [
+    await checkHubAndSpokeConnections(this.multiprovider!, newNetwork.domain, [
       this.getWatcherKey(newNetwork)!.toAddress(),
     ]);
   }
