@@ -1,43 +1,12 @@
-import { CoreContracts } from "@nomad-xyz/sdk/nomad";
 import { ethers } from "ethers";
-import { LocalNetwork, Nomad, Key, utils } from "../src";
+import { Key, utils } from "../src";
 
-import { sleep } from "../src/utils";
+import { setupTwo } from "./common";
 
 async function improperUpdateCase(homeOrReplica: string) {
-    let success = false;
+  let success = false;
 
-  const tom = new LocalNetwork("tom", 1000, "http://localhost:9545");
-  const jerry = new LocalNetwork("jerry", 2000, "http://localhost:9546");
-
-  const updaterKey = new Key();
-  const watcherKey = new Key();
-  const jerryDeployerKey = new Key();
-  const jerrySignerKey = new Key();
-  const tomDeployerKey = new Key();
-  const tomSignerKey = new Key();
-
-  tom.addKeys(updaterKey, watcherKey, tomDeployerKey, tomSignerKey);
-  jerry.addKeys(updaterKey, watcherKey, jerryDeployerKey, jerrySignerKey);
-
-  await Promise.all([tom.up(), jerry.up()]);
-
-  console.log(`Started both`);
-
-  const n = new Nomad(tom);
-  n.addNetwork(jerry);
-
-  n.setUpdater(tom, updaterKey);
-  n.setWatcher(tom, watcherKey);
-  n.setDeployer(tom, tomDeployerKey);
-  n.setSigner(tom, tomSignerKey);
-
-  n.setUpdater(jerry, updaterKey); // Need for an update like updater
-  n.setWatcher(jerry, watcherKey); // Need for the watcher
-  n.setDeployer(jerry, jerryDeployerKey); // Need to deploy all
-  n.setSigner(jerry, jerrySignerKey); // Need for home.dispatch
-
-  await n.deploy({ injectSigners: true });
+  const { tom, jerry, tomActor, jerryActor, n } = await setupTwo();
 
   const tomWatcher = await n.getAgent("watcher", tom);
   await tomWatcher.connect();
@@ -88,6 +57,9 @@ async function improperUpdateCase(homeOrReplica: string) {
         throw new Error("Must specify 'home' or 'replica' for improper update test case")
     }
 
+    console.log(`Submitted fraud update!`);
+
+    const start = new Date().valueOf();
     // Waiting for home to be failed and for connection managers to be disconnected from replicas
     const waiter = new utils.Waiter(
       async () => {
@@ -106,9 +78,11 @@ async function improperUpdateCase(homeOrReplica: string) {
           return true;
         }
       },
-      3 * 60_000,
+      6 * 60_000,
       2_000
     );
+
+    console.log(`Identified in ${(new Date().valueOf() - start) / 1000} seconds`);
 
     [, success] = await waiter.wait();
 
