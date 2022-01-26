@@ -585,6 +585,10 @@ impl NomadAgent for Watcher {
                 improper_res = improper_update_watch_task => {
                     let state = improper_res??;
                     if state == State::Failed {
+                        tracing::error!(
+                            "Improper update detected! Notifying all contracts and unenrolling replicas!",
+                        );
+
                         self.handle_improper_update_failure()
                             .await
                             .iter()
