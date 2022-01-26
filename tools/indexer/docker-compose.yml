@@ -1,0 +1,40 @@
+
+version: '3.7'
+services:
+  
+  indexer: 
+    build: .
+    restart: always
+    command: npm run start indexer
+    env_file: .env
+    environment: 
+      - PROGRAM=core
+    ports: 
+      - '9090:3000'
+    links:
+      - postgres
+  
+  api: 
+    build: .
+    restart: always
+    command: npm run start indexer
+    ports: 
+      - '8080:3000'
+    links:
+      - postgres
+    env_file: .env
+    environment: 
+      - PROGRAM=api
+    
+  postgres:
+    image: postgres:latest
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    logging:
+      options:
+        max-size: 10m
+        max-file: "3"
+    ports:
+      - '5438:5432'
