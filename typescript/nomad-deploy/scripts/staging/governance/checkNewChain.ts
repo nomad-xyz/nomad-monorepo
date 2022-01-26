@@ -3,8 +3,8 @@ import * as kovan from '../../../config/testnets/kovan';
 import { ExistingCoreDeploy } from '../../../src/core/CoreDeploy';
 import { ExistingBridgeDeploy } from '../../../src/bridge/BridgeDeploy';
 import { getPathToDeployConfig } from '../../../src/verification/readDeployOutput';
-import { deploysToSDK } from '../../../src/incremental/utils';
-import { checkHubAndSpokeConnections } from '../../../src/incremental/checks';
+import { deploysToSDK } from '../../../src/governance/utils';
+import { checkHubAndSpokeConnections } from '../../../src/governance/enrollChain/checks';
 import { NomadContext } from '@nomad-xyz/sdk';
 
 const path = getPathToDeployConfig('staging');

@@ -3,8 +3,8 @@ import * as kovan from '../../../config/testnets/kovan';
 import { ExistingCoreDeploy } from '../../../src/core/CoreDeploy';
 import { ExistingBridgeDeploy } from '../../../src/bridge/BridgeDeploy';
 import { getPathToDeployConfig } from '../../../src/verification/readDeployOutput';
-import { deploysToSDK } from '../../../src/incremental/utils';
-import { enrollSpoke } from '../../../src/incremental';
+import { deploysToSDK } from '../../../src/governance/utils';
+import { enrollSpoke } from '../../../src/governance/enrollChain';
 import { NomadContext } from '@nomad-xyz/sdk';
 
 const path = getPathToDeployConfig('staging');
@@ -46,4 +46,4 @@ sdkCores.map((core) => {
 });
 
 // enroll spoke
-enrollSpoke(sdk, kovanDomain.id, kovan.stagingConfig);
+enrollSpoke(sdk, kovanCoreDeploy);

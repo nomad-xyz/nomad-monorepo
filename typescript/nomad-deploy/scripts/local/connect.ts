@@ -1,12 +1,12 @@
 import * as tom from '../../config/local/tom';
 import * as daffy from '../../config/local/jerry';
-import { enrollSpoke } from '../../src/incremental';
-import { deploysToSDK } from '../../src/incremental/utils';
+import { enrollSpoke } from '../../src/governance/enrollChain';
+import { checkHubToSpokeConnectionWithWaiter } from '../../src/governance/enrollChain/checks';
+import { deploysToSDK } from '../../src/governance/utils';
 import { getPathToDeployConfig } from '../../src/verification/readDeployOutput';
 import { ExistingCoreDeploy } from '../../src/core/CoreDeploy';
 import { ExistingBridgeDeploy } from '../../src/bridge/BridgeDeploy';
 import { NomadContext } from '@nomad-xyz/sdk';
-import { checkHubToSpokeConnectionWithWaiter } from '../../src/incremental/checks';
 
 const path = getPathToDeployConfig('dev');
 
@@ -44,7 +44,7 @@ const sdk = NomadContext.fromDomains([tomDomain, daffyDomain]);
 });
 
 (async () => {
-  await enrollSpoke(sdk, daffyDomain.id, daffy.devConfig);
+  await enrollSpoke(sdk, daffyCoreDeploy);
   await checkHubToSpokeConnectionWithWaiter(
     sdk,
     daffyDomain.id,

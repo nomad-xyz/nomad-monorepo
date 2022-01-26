@@ -15,7 +15,6 @@
     "./src/core/*.ts",
     "./src/bridge/*.ts",
     "./src/verification/*.ts",
-    "./src/incremental/*.ts",
     "./src/governance/**/*.ts"
   ]
 }

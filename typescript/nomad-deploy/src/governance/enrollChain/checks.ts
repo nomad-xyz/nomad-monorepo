@@ -1,6 +1,6 @@
 import { NomadContext } from '@nomad-xyz/sdk/';
 import { expect, AssertionError } from 'chai';
-import { Waiter } from './utils';
+import { Waiter } from '../utils';
 
 export async function checkHubAndSpokeConnections(
   sdk: NomadContext,

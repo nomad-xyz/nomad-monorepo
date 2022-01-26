@@ -1,11 +1,11 @@
-import * as rinkeby from '../../../config/testnets/rinkeby';
-import * as kovan from '../../../config/testnets/kovan';
+import * as rinkeby from '../../../../config/testnets/rinkeby';
+import * as kovan from '../../../../config/testnets/kovan';
 import {
   BridgeDeploy,
   ExistingBridgeDeploy,
-} from '../../../src/bridge/BridgeDeploy';
-import { deployNewChainBridge } from '../../../src/bridge';
-import { getPathToDeployConfig } from '../../../src/verification/readDeployOutput';
+} from '../../../../src/bridge/BridgeDeploy';
+import { deployNewChainBridge } from '../../../../src/bridge';
+import { getPathToDeployConfig } from '../../../../src/verification/readDeployOutput';
 
 const path = getPathToDeployConfig('dev');
 
