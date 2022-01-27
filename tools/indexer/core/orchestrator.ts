@@ -15,8 +15,10 @@ class HomeHealth {
   logger: Logger;
 
   constructor(domain: number, ctx: NomadContext, logger: Logger) {
-    this.home = ctx.getCore(domain).home;
+    this.domain = domain;
+    this.home = ctx.mustGetCore(domain).home;
     this.healthy = true;
+    this.logger = logger;
   }
 
   async updateHealth(): Promise<void> {
@@ -25,7 +27,7 @@ class HomeHealth {
       if (state !== 1) {
         this.healthy = false;
       }
-    } catch(e) {
+    } catch(e: any) {
       this.logger.warn(`Couldn't collect home state for ${this.domain} domain. Error: ${e.message}`);
     }
   }
