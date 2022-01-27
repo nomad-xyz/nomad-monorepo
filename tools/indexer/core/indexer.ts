@@ -48,9 +48,8 @@ export class Indexer {
     );
     if (!block) {
       throw (
-        error ||
         new Error(
-          `Some error happened at retrying getting the block ${blockNumber} for ${this.domain}`
+          `Some error happened at retrying getting the block ${blockNumber} for ${this.domain}, error: ${error}`
         )
       );
     }
@@ -114,9 +113,11 @@ export class Indexer {
         const bridgeRouterEvents = await this.fetchBridgeRouter(from, to);
 
         return [...homeEvents, ...replicasEvents, ...bridgeRouterEvents];
-      }, 5);
+      }, 7);
 
-      if (error) throw error;
+      if (error) throw new Error(
+        `Some error happened at retrying getting logs between blocks ${from} and ${to} for ${this.domain} domain, error: ${error}`
+      );
       return fetchedEvents;
     };
 
