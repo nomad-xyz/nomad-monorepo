@@ -1,3 +1,4 @@
+import { Home } from "@nomad-xyz/contract-interfaces/core";
 import { NomadContext } from "@nomad-xyz/sdk/dist";
 import Logger from "bunyan";
 import { Consumer } from "./consumer";
@@ -7,10 +8,38 @@ import { IndexerCollector } from "./metrics";
 import { Statistics } from "./types";
 import { replacer, sleep } from "./utils";
 
+class HomeHealth {
+  home: Home;
+  domain: number;
+  healthy: boolean;
+  logger: Logger;
+
+  constructor(domain: number, ctx: NomadContext, logger: Logger) {
+    this.home = ctx.getCore(domain).home;
+    this.healthy = true;
+  }
+
+  async updateHealth(): Promise<void> {
+    try {
+      const state = await this.home.state();
+      if (state !== 1) {
+        this.healthy = false;
+      }
+    } catch(e) {
+      this.logger.warn(`Couldn't collect home state for ${this.domain} domain. Error: ${e.message}`);
+    }
+  }
+
+  get failed(): boolean {
+    return !this.healthy;
+  }
+}
+
 export class Orchestrator {
   sdk: NomadContext;
   consumer: Consumer;
   indexers: Map<number, Indexer>;
+  healthCheckers: Map<number, HomeHealth>;
   gov: number;
   done: boolean;
   freshStart: boolean;
@@ -29,6 +58,7 @@ export class Orchestrator {
     this.sdk = sdk;
     this.consumer = c;
     this.indexers = new Map();
+    this.healthCheckers = new Map();
     this.gov = gov;
     this.done = false;
     this.freshStart = true;
@@ -39,6 +69,7 @@ export class Orchestrator {
 
   async init() {
     await this.initIndexers();
+    await this.initHealthCheckers();
     await this.initalFeedConsumer();
   }
 
@@ -66,6 +97,16 @@ export class Orchestrator {
     return await indexer.updateAll(replicas);
   }
 
+  async checkAllHealth() {
+    await Promise.all(
+      this.sdk.domainNumbers.map((domain: number) => this.checkHealth(domain))
+    )
+  }
+
+  async checkHealth(domain: number) {
+    await this.healthCheckers.get(domain)!.updateHealth();
+  }
+
   async initalFeedConsumer() {
     const events = Array.from(this.indexers.values())
       .map((indexer) => indexer.persistance.allEvents())
@@ -82,11 +123,22 @@ export class Orchestrator {
     }
   }
 
+  async initHealthCheckers() {
+    for (const domain of this.sdk.domainNumbers) {
+      const checker = new HomeHealth(domain, this.sdk, this.logger);
+      await checker.updateHealth();
+      this.healthCheckers.set(domain, checker);
+    }
+  }
+
   async startConsuming() {
     while (!this.done) {
       this.logger.info(`Started to reindex`);
       const start = new Date().valueOf();
-      await this.indexAll();
+      await Promise.all([
+        this.indexAll(),
+        this.checkAllHealth()
+      ])
       this.logger.info(
         `Finished reindexing after ${
           (new Date().valueOf() - start) / 1000
@@ -113,6 +165,8 @@ export class Orchestrator {
       counts: { dispatched, updated, relayed, processed },
       timings: { meanUpdate, meanRelay, meanProcess, meanE2E },
     } = statistics.forDomain(domain);
+
+    const homeFailed = this.healthCheckers.get(domain)!.failed;
     this.metrics.setNetworkState(
       this.sdk.getDomain(domain)!.name,
       dispatched,
@@ -122,7 +176,8 @@ export class Orchestrator {
       meanUpdate,
       meanRelay,
       meanProcess,
-      meanE2E
+      meanE2E,
+      homeFailed
     );
   }
 
