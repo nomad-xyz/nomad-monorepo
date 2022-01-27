@@ -13,8 +13,10 @@ export async function run(db: DB, environment: string, logger: Logger) {
     ctx = mainnet
   } else if (environment === 'staging') {
     ctx = staging;
-  } else {
+  } else if (environment === 'development') {
     ctx = dev;
+  } else {
+    throw new Error(`Enviroment '${environment}' is not suppoerted`);
   }
 
   ctx.domainNumbers.forEach(domain => {
@@ -30,7 +32,6 @@ export async function run(db: DB, environment: string, logger: Logger) {
   const c = new Processor(db, logger);
   const m = new IndexerCollector(environment, logger);
 
-  console.log(ctx)
   const o = new Orchestrator(
     ctx,
     c,
