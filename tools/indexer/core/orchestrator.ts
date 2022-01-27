@@ -26,6 +26,8 @@ class HomeHealth {
       const state = await this.home.state();
       if (state !== 1) {
         this.healthy = false;
+      } else {
+        this.healthy = true;
       }
     } catch(e: any) {
       this.logger.warn(`Couldn't collect home state for ${this.domain} domain. Error: ${e.message}`);
