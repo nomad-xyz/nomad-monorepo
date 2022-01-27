@@ -74,6 +74,7 @@ async function monitor(
   const home = context.mustGetCore(origin).home;
   const dispatchFilter = home.filters.Dispatch();
   const dispatchLogs = await getEvents(context, origin, home, dispatchFilter);
+  const homeFailed = (await context.mustGetCore(origin).home.state()) === 2;
 
   const processedLogs = [];
   for (let remote of remotes) {
@@ -104,6 +105,7 @@ async function monitor(
     dispatchLogs,
     processedLogs,
     unprocessedDetails,
+    homeFailed,
   );
   config.baseLogger.info(summary);
 
@@ -112,6 +114,7 @@ async function monitor(
     dispatchLogs.length,
     processedLogs.length,
     unprocessedDetails.length,
+    homeFailed,
   );
   // write details to file
   await writeUnprocessedMessages(unprocessedDetails, origin);

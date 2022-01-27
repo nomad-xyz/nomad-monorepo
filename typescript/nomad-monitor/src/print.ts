@@ -78,6 +78,7 @@ export function getMonitorMetrics(
   dispatchLogs: any[],
   processedLogs: any[],
   unprocessedDetails: any[],
+  homeFailed: boolean,
 ) {
   const oldest =
     unprocessedDetails.length != 0
@@ -92,6 +93,7 @@ export function getMonitorMetrics(
       dispatched: dispatchLogs.length,
       processed: processedLogs.length,
       unprocessed: unprocessedDetails.length,
+      homeFailed,
       oldest,
     },
   };

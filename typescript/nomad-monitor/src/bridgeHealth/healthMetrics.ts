@@ -6,6 +6,7 @@ export class HealthMetricsCollector extends MetricsCollector {
   private numDispatchedGauge: Gauge<string>;
   private numProcessedGauge: Gauge<string>;
   private numUnprocessedGauge: Gauge<string>;
+  private homeFailedGauge: Gauge<string>;
 
   constructor(environment: string, logger: Logger) {
     super(environment, logger);
@@ -27,6 +28,12 @@ export class HealthMetricsCollector extends MetricsCollector {
       help: 'Gauge that indicates how many messages are unprocessed for a network.',
       labelNames: ['network', 'environment'],
     });
+
+    this.homeFailedGauge = new Gauge({
+      name: 'nomad_monitor_home_failed',
+      help: 'Gauge that indicates if home of a network is in failed state.',
+      labelNames: ['network', 'environment'],
+    });
   }
 
   /**
@@ -37,6 +44,7 @@ export class HealthMetricsCollector extends MetricsCollector {
     dispatched: number,
     processed: number,
     unprocessed: number,
+    failed: boolean,
   ) {
     this.numDispatchedGauge.set(
       { network, environment: this.environment },
@@ -51,6 +59,11 @@ export class HealthMetricsCollector extends MetricsCollector {
     this.numUnprocessedGauge.set(
       { network, environment: this.environment },
       unprocessed,
+    );
+
+    this.homeFailedGauge.set(
+      { network, environment: this.environment },
+      failed ? 1 : 0,
     );
   }
 }

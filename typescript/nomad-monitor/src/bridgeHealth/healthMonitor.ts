@@ -15,13 +15,22 @@ export class BridgeHealthMonitor extends MonitorSingle {
   async reportHealth() {
     super.logInfo(`Checking ${this.origin}`);
     super.logInfo(`Get Dispatch logs from ${this.origin}`);
-    let dispatchLogs, processLogs;
+    let dispatchLogs, processLogs, homeFailed;
     try {
       dispatchLogs = await super.query(
         this.origin,
         EventType.Dispatch,
         IndexType.FromZero,
       );
+    } catch (e) {
+      super.logError(
+        `Encountered error while fetching Dispatch logs for ${this.origin}, bailing: ${e}`,
+      );
+      return;
+    }
+
+    try {
+      homeFailed = await super.homeFailed();
     } catch (e) {
       super.logError(
         `Encountered error while fetching Dispatch logs for ${this.origin}, bailing: ${e}`,
@@ -63,6 +72,7 @@ export class BridgeHealthMonitor extends MonitorSingle {
       dispatchLogs,
       processedLogs,
       unprocessedDetails,
+      homeFailed,
     );
     super.logInfo(`${JSON.stringify(summary)}\n ${this.origin} Summary`);
 
@@ -71,6 +81,7 @@ export class BridgeHealthMonitor extends MonitorSingle {
       dispatchLogs.length,
       processedLogs.length,
       unprocessedDetails.length,
+      homeFailed,
     );
 
     // write details to file

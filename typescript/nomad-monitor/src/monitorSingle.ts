@@ -178,6 +178,10 @@ export abstract class MonitorSingle {
     }
   }
 
+  async homeFailed(): Promise<boolean> {
+    return (await this.home.state()) == 2
+  }
+
   filterDispatchesForReplica(remote: string, dispatches: TypedEvent<Result>[]) {
     const domain = this.networkToDomain(remote);
     return dispatches.filter((dispatch: any) => {
