@@ -29,8 +29,10 @@ class HomeHealth {
       } else {
         this.healthy = true;
       }
-    } catch(e: any) {
-      this.logger.warn(`Couldn't collect home state for ${this.domain} domain. Error: ${e.message}`);
+    } catch (e: any) {
+      this.logger.warn(
+        `Couldn't collect home state for ${this.domain} domain. Error: ${e.message}`
+      );
     }
   }
 
@@ -104,7 +106,7 @@ export class Orchestrator {
   async checkAllHealth() {
     await Promise.all(
       this.sdk.domainNumbers.map((domain: number) => this.checkHealth(domain))
-    )
+    );
   }
 
   async checkHealth(domain: number) {
@@ -139,10 +141,7 @@ export class Orchestrator {
     while (!this.done) {
       this.logger.info(`Started to reindex`);
       const start = new Date().valueOf();
-      await Promise.all([
-        this.indexAll(),
-        this.checkAllHealth()
-      ])
+      await Promise.all([this.indexAll(), this.checkAllHealth()]);
       this.logger.info(
         `Finished reindexing after ${
           (new Date().valueOf() - start) / 1000

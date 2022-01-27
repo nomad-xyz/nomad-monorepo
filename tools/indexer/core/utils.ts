@@ -14,7 +14,7 @@ export function sleep(ms: number) {
 export async function retry<T>(
   callback: () => Promise<T>,
   tries: number,
-  onError: ((e: any) => Promise<void> | void) | undefined,
+  onError: ((e: any) => Promise<void> | void) | undefined
 ): Promise<[T | undefined, any]> {
   let timeout = 5000;
   let lastError: any = undefined;

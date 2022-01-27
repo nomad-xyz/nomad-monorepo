@@ -9,37 +9,33 @@ dotenv.config({});
 
 export async function run(db: DB, environment: string, logger: Logger) {
   let ctx: NomadContext;
-  if (environment === 'production') {
-    ctx = mainnet
-  } else if (environment === 'staging') {
+  if (environment === "production") {
+    ctx = mainnet;
+  } else if (environment === "staging") {
     ctx = staging;
-  } else if (environment === 'development') {
+  } else if (environment === "development") {
     ctx = dev;
   } else {
     throw new Error(`Enviroment '${environment}' is not suppoerted`);
   }
 
-  ctx.domainNumbers.forEach(domain => {
+  ctx.domainNumbers.forEach((domain) => {
     const name = ctx.mustGetDomain(domain).name.toUpperCase();
     const rpcEnvKey = `${name}_RPC`;
     const rpc = process.env[rpcEnvKey];
 
-    if (!rpc) throw new Error(`RPC url for domain ${domain} is empty. Please provide as '${rpcEnvKey}=http://...' ENV variable`)
+    if (!rpc)
+      throw new Error(
+        `RPC url for domain ${domain} is empty. Please provide as '${rpcEnvKey}=http://...' ENV variable`
+      );
 
     ctx.registerRpcProvider(domain, rpc);
-  })
+  });
 
   const c = new Processor(db, logger);
   const m = new IndexerCollector(environment, logger);
 
-  const o = new Orchestrator(
-    ctx,
-    c,
-    ctx.domainNumbers[0],
-    m,
-    logger,
-    db
-  );
+  const o = new Orchestrator(ctx, c, ctx.domainNumbers[0], m, logger, db);
   m.startServer(3000);
   await o.init();
   await o.startConsuming();
