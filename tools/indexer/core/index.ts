@@ -9,7 +9,7 @@ dotenv.config({});
 
 export async function run(db: DB, environment: string, logger: Logger) {
   let ctx: NomadContext;
-  if (environment === 'prod') {
+  if (environment === 'production') {
     ctx = mainnet
   } else if (environment === 'staging') {
     ctx = staging;
@@ -21,6 +21,7 @@ export async function run(db: DB, environment: string, logger: Logger) {
     const name = ctx.mustGetDomain(domain).name.toUpperCase();
     const rpcEnvKey = `${name}_RPC`;
     const rpc = process.env[rpcEnvKey];
+
     if (!rpc) throw new Error(`RPC url for domain ${domain} is empty. Please provide as '${rpcEnvKey}=http://...' ENV variable`)
 
     ctx.registerRpcProvider(domain, rpc);
@@ -29,10 +30,11 @@ export async function run(db: DB, environment: string, logger: Logger) {
   const c = new Processor(db, logger);
   const m = new IndexerCollector(environment, logger);
 
+  console.log(ctx)
   const o = new Orchestrator(
-    mainnet,
+    ctx,
     c,
-    mainnet.domainNumbers[0],
+    ctx.domainNumbers[0],
     m,
     logger,
     db
