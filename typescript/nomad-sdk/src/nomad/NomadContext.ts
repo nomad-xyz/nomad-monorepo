@@ -33,8 +33,7 @@ const WATCH_INTERVAL_MS = 10 * 1000;
 export class NomadContext extends MultiProvider {
   private cores: Map<number, CoreContracts>;
   private bridges: Map<number, BridgeContracts>;
-  private blacklist: Set<number>;
-  private homeWatchTasks: Map<number, Promise<void>>;
+  private _blacklist: Set<number>;
   private _governorDomain?: number;
 
   constructor(
@@ -54,40 +53,7 @@ export class NomadContext extends MultiProvider {
       this.bridges.set(bridge.domain, bridge);
     });
 
-    this.homeWatchTasks = new Map();
-    this.blacklist = new Set();
-  }
-
-  /**
-   * Spawn tasks to watch homes for failed states and place on blacklist
-   * if failed.
-   *
-   * @param nameOrDomains Array of domains/names you want to watch. Not every GUI
-   * will list every network so they will want to only watch the ones they are
-   * interacting with.
-   * @dev The NomadContext object must have registered providers specified
-   * domains when calling this function.
-   */
-  spawnWatchTasks(nameOrDomains: (string | number)[]) {
-    nameOrDomains.forEach((nameOrDomain) => {
-      const domain = this.resolveDomain(nameOrDomain);
-      setInterval(
-        async () => await this.checkHome.bind(this, domain)(),
-        WATCH_INTERVAL_MS,
-      );
-    });
-  }
-
-  private async checkHome(domain: number): Promise<void> {
-    const home = this.mustGetCore(domain).home;
-    const state = await home.state();
-    if (state === 2) {
-      this.blacklist.add(domain);
-    } else {
-      this.blacklist.delete(domain);
-    }
-
-    console.log(`State for home at domain ${domain}: ${state}`);
+    this._blacklist = new Set();
   }
 
   /**
@@ -290,6 +256,42 @@ export class NomadContext extends MultiProvider {
     return this.mustGetCore(await this.governorDomain());
   }
 
+  blacklist(): Set<number> {
+    return this._blacklist;
+  }
+
+  /**
+   * Spawn tasks to watch homes for failed states and place on blacklist
+   * if failed.
+   *
+   * @param nameOrDomains Array of domains/names you want to watch. Not every GUI
+   * will list every network so they will want to only watch the ones they are
+   * interacting with.
+   * @dev The NomadContext object must have registered providers specified
+   * domains when calling this function.
+   */
+  spawnWatchTasks(nameOrDomains: (string | number)[]) {
+    nameOrDomains.forEach((nameOrDomain) => {
+      const domain = this.resolveDomain(nameOrDomain);
+      setInterval(
+        async () => await this.checkHome.bind(this, domain)(),
+        WATCH_INTERVAL_MS,
+      );
+    });
+  }
+
+  private async checkHome(domain: number): Promise<void> {
+    const home = this.mustGetCore(domain).home;
+    const state = await home.state();
+    if (state === 2) {
+      this._blacklist.add(domain);
+    } else {
+      this._blacklist.delete(domain);
+    }
+
+    console.log(`State for home at domain ${domain}: ${state}`);
+  }
+
   /**
    * Resolve the local representation of a token on some domain. E.g. find the
    * deployed Celo address of Ethereum's Sushi Token.
@@ -460,7 +462,7 @@ export class NomadContext extends MultiProvider {
     overrides: ethers.Overrides = {},
   ): Promise<TransferMessage> {
     const fromDomain = this.resolveDomain(from);
-    if (this.blacklist.has(fromDomain)) {
+    if (this.blacklist().has(fromDomain)) {
       throw new Error('Attempted to send token to failed home!');
     }
 
@@ -528,7 +530,7 @@ export class NomadContext extends MultiProvider {
     overrides: ethers.PayableOverrides = {},
   ): Promise<TransferMessage> {
     const fromDomain = this.resolveDomain(from);
-    if (this.blacklist.has(fromDomain)) {
+    if (this.blacklist().has(fromDomain)) {
       throw new Error('Attempted to send token to failed home!');
     }
 
