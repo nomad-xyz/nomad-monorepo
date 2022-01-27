@@ -49,6 +49,8 @@ export class IndexerCollector extends MetricsCollector {
   private meanProcessTimeGauge: Gauge<string>;
   private meanEndToEndTimeGauge: Gauge<string>;
 
+  private homeFailedGauge: Gauge<string>;
+
   constructor(environment: string, logger: Logger) {
     super(environment, logger);
 
@@ -103,6 +105,12 @@ export class IndexerCollector extends MetricsCollector {
       help: "Gauge that indicates how long does it take to move from dispatched to processed.",
       labelNames: ["network", "environment"],
     });
+
+    this.homeFailedGauge = new Gauge({
+      name: 'nomad_monitor_home_failed',
+      help: 'Gauge that indicates if home of a network is in failed state.',
+      labelNames: ['network', 'environment'],
+    });
   }
 
   /**
@@ -117,7 +125,8 @@ export class IndexerCollector extends MetricsCollector {
     updateTime: number,
     relayTime: number,
     processTime: number,
-    e2eTime: number
+    e2eTime: number,
+    homeFailed: boolean,
   ) {
     this.numDispatchedGauge.set(
       { network, environment: this.environment },
@@ -157,6 +166,11 @@ export class IndexerCollector extends MetricsCollector {
     this.meanEndToEndTimeGauge.set(
       { network, environment: this.environment },
       e2eTime
+    );
+
+    this.homeFailedGauge.set(
+      { network, environment: this.environment },
+      homeFailed ? 1 : 0,
     );
   }
 }
