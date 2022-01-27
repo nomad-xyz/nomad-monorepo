@@ -44,7 +44,8 @@ export class Indexer {
 
     const [block, error] = await retry(
       async () => await this.provider.getBlockWithTransactions(blockNumber),
-      6
+      7,
+      (error: any) => this.orchestrator.logger.warn(`Some error happened at retrying getting the block ${blockNumber} for ${this.domain}, error: ${error}`)
     );
     if (!block) {
       throw (
@@ -113,7 +114,7 @@ export class Indexer {
         const bridgeRouterEvents = await this.fetchBridgeRouter(from, to);
 
         return [...homeEvents, ...replicasEvents, ...bridgeRouterEvents];
-      }, 7);
+      }, 7, (error) => this.orchestrator.logger.warn(`Some error happened at retrying getting logs between blocks ${from} and ${to} for ${this.domain} domain, error: ${error.message}`));
 
       if (error) throw new Error(
         `Some error happened at retrying getting logs between blocks ${from} and ${to} for ${this.domain} domain, error: ${error}`
