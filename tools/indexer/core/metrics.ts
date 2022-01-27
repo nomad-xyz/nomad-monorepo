@@ -107,9 +107,9 @@ export class IndexerCollector extends MetricsCollector {
     });
 
     this.homeFailedGauge = new Gauge({
-      name: 'nomad_monitor_home_failed',
-      help: 'Gauge that indicates if home of a network is in failed state.',
-      labelNames: ['network', 'environment'],
+      name: "nomad_monitor_home_failed",
+      help: "Gauge that indicates if home of a network is in failed state.",
+      labelNames: ["network", "environment"],
     });
   }
 
@@ -126,7 +126,7 @@ export class IndexerCollector extends MetricsCollector {
     relayTime: number,
     processTime: number,
     e2eTime: number,
-    homeFailed: boolean,
+    homeFailed: boolean
   ) {
     this.numDispatchedGauge.set(
       { network, environment: this.environment },
@@ -170,7 +170,7 @@ export class IndexerCollector extends MetricsCollector {
 
     this.homeFailedGauge.set(
       { network, environment: this.environment },
-      homeFailed ? 1 : 0,
+      homeFailed ? 1 : 0
     );
   }
 }

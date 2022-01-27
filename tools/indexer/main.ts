@@ -3,8 +3,8 @@ import * as api from "./api";
 import { DB } from "./core/db";
 import { createLogger } from "./core/utils";
 
-export type NomadEnvironment = 'development' | 'staging' | 'production';
-export type Program = 'api' | 'core';
+export type NomadEnvironment = "development" | "staging" | "production";
+export type Program = "api" | "core";
 
 const environment = process.env.ENVIRONMENT! as NomadEnvironment;
 const program = process.env.PROGRAM! as Program;

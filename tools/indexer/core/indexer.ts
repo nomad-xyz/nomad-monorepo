@@ -45,13 +45,14 @@ export class Indexer {
     const [block, error] = await retry(
       async () => await this.provider.getBlockWithTransactions(blockNumber),
       7,
-      (error: any) => this.orchestrator.logger.warn(`Some error happened at retrying getting the block ${blockNumber} for ${this.domain}, error: ${error}`)
-    );
-    if (!block) {
-      throw (
-        new Error(
+      (error: any) =>
+        this.orchestrator.logger.warn(
           `Some error happened at retrying getting the block ${blockNumber} for ${this.domain}, error: ${error}`
         )
+    );
+    if (!block) {
+      throw new Error(
+        `Some error happened at retrying getting the block ${blockNumber} for ${this.domain}, error: ${error}`
       );
     }
     const time = block.timestamp * 1000;
@@ -106,19 +107,29 @@ export class Indexer {
     );
 
     const fetchEvents = async (from: number, to: number) => {
-      const [fetchedEvents, error] = await retry(async () => {
-        const homeEvents = await this.fetchHome(from, to);
-        const replicasEvents = (
-          await Promise.all(replicas.map((r) => this.fetchReplica(r, from, to)))
-        ).flat();
-        const bridgeRouterEvents = await this.fetchBridgeRouter(from, to);
+      const [fetchedEvents, error] = await retry(
+        async () => {
+          const homeEvents = await this.fetchHome(from, to);
+          const replicasEvents = (
+            await Promise.all(
+              replicas.map((r) => this.fetchReplica(r, from, to))
+            )
+          ).flat();
+          const bridgeRouterEvents = await this.fetchBridgeRouter(from, to);
 
-        return [...homeEvents, ...replicasEvents, ...bridgeRouterEvents];
-      }, 7, (error) => this.orchestrator.logger.warn(`Some error happened at retrying getting logs between blocks ${from} and ${to} for ${this.domain} domain, error: ${error.message}`));
-
-      if (error) throw new Error(
-        `Some error happened at retrying getting logs between blocks ${from} and ${to} for ${this.domain} domain, error: ${error}`
+          return [...homeEvents, ...replicasEvents, ...bridgeRouterEvents];
+        },
+        7,
+        (error) =>
+          this.orchestrator.logger.warn(
+            `Some error happened at retrying getting logs between blocks ${from} and ${to} for ${this.domain} domain, error: ${error.message}`
+          )
       );
+
+      if (error)
+        throw new Error(
+          `Some error happened at retrying getting logs between blocks ${from} and ${to} for ${this.domain} domain, error: ${error}`
+        );
       return fetchedEvents;
     };
 
