@@ -16,6 +16,8 @@ import { hexlify } from '@ethersproject/bytes';
 
 type Address = string;
 
+const WATCH_INTERVAL_MS = 10 * 1000;
+
 /**
  * The NomadContext managers connections to Nomad core and Bridge contracts.
  * It inherits from the {@link MultiProvider}, and ensures that its contracts
@@ -31,6 +33,8 @@ type Address = string;
 export class NomadContext extends MultiProvider {
   private cores: Map<number, CoreContracts>;
   private bridges: Map<number, BridgeContracts>;
+  private blacklist: Set<number>;
+  private homeWatchTasks: Map<number, Promise<void>>;
   private _governorDomain?: number;
 
   constructor(
@@ -49,6 +53,41 @@ export class NomadContext extends MultiProvider {
     bridges.forEach((bridge) => {
       this.bridges.set(bridge.domain, bridge);
     });
+
+    this.homeWatchTasks = new Map();
+    this.blacklist = new Set();
+  }
+
+  /**
+   * Spawn tasks to watch homes for failed states and place on blacklist
+   * if failed.
+   *
+   * @param nameOrDomains Array of domains/names you want to watch. Not every GUI
+   * will list every network so they will want to only watch the ones they are
+   * interacting with.
+   * @dev The NomadContext object must have registered providers specified
+   * domains when calling this function.
+   */
+  spawnWatchTasks(nameOrDomains: (string | number)[]) {
+    nameOrDomains.forEach((nameOrDomain) => {
+      const domain = this.resolveDomain(nameOrDomain);
+      setInterval(
+        async () => await this.checkHome.bind(this, domain)(),
+        WATCH_INTERVAL_MS,
+      );
+    });
+  }
+
+  private async checkHome(domain: number): Promise<void> {
+    const home = this.mustGetCore(domain).home;
+    const state = await home.state();
+    if (state === 2) {
+      this.blacklist.add(domain);
+    } else {
+      this.blacklist.delete(domain);
+    }
+
+    console.log(`State for home at domain ${domain}: ${state}`);
   }
 
   /**
@@ -420,6 +459,11 @@ export class NomadContext extends MultiProvider {
     enableFast = false,
     overrides: ethers.Overrides = {},
   ): Promise<TransferMessage> {
+    const fromDomain = this.resolveDomain(from);
+    if (this.blacklist.has(fromDomain)) {
+      throw new Error('Attempted to send token to failed home!');
+    }
+
     const fromBridge = this.mustGetBridge(from);
     const bridgeAddress = fromBridge.bridgeRouter.address;
 
@@ -483,6 +527,11 @@ export class NomadContext extends MultiProvider {
     enableFast = false,
     overrides: ethers.PayableOverrides = {},
   ): Promise<TransferMessage> {
+    const fromDomain = this.resolveDomain(from);
+    if (this.blacklist.has(fromDomain)) {
+      throw new Error('Attempted to send token to failed home!');
+    }
+
     const ethHelper = this.mustGetBridge(from).ethHelper;
     if (!ethHelper) {
       throw new Error(`No ethHelper for ${from}`);
