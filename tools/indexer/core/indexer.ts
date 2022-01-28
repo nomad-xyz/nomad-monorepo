@@ -7,6 +7,11 @@ import { Home, Replica } from "@nomad-xyz/contract-interfaces/core";
 import { ethers } from "ethers";
 import { KVCache, replacer, retry, reviver } from "./utils";
 import { BridgeRouter } from "@nomad-xyz/contract-interfaces/bridge";
+import pLimit from 'p-limit';
+
+
+const limit = pLimit(20);
+
 
 export class Indexer {
   domain: number;
@@ -242,7 +247,7 @@ export class Indexer {
       )
       //const events = await br.queryFilter(br.filters.Send(), from, to);
       const parsedEvents = await Promise.all(
-        events.map(async (event) => {
+        events.map(async (event) => limit(async () => {
           const [ts, senders2hashes] = await this.getBlockInfo(
             event.blockNumber
           );
@@ -264,7 +269,7 @@ export class Indexer {
             event.blockNumber,
             EventSource.Fetch
           );
-        })
+        }))
       );
       allEvents.push(...parsedEvents);
     }
@@ -281,7 +286,7 @@ export class Indexer {
       //const events = await br.queryFilter(br.filters.Receive(), from, to);
       const parsedEvents = await Promise.all(
         events.map(
-          async (event) =>
+          async (event) => limit(async () =>
             new NomadEvent(
               this.domain,
               EventType.BridgeRouterReceive,
@@ -299,7 +304,7 @@ export class Indexer {
               },
               event.blockNumber,
               EventSource.Fetch
-            )
+            ))
         )
       );
       allEvents.push(...parsedEvents);
@@ -324,7 +329,7 @@ export class Indexer {
       //const events = await home.queryFilter(home.filters.Dispatch(), from, to);
       const parsedEvents = await Promise.all(
         events.map(
-          async (event) =>
+          async (event) => limit(async () =>
             new NomadEvent(
               this.domain,
               EventType.HomeDispatch,
@@ -342,7 +347,7 @@ export class Indexer {
               },
               event.blockNumber,
               EventSource.Fetch
-            )
+            ))
         )
       );
       fetchedEvents.push(...parsedEvents);
@@ -360,7 +365,7 @@ export class Indexer {
       //const events = await home.queryFilter(home.filters.Update(), from, to);
       const parsedEvents = await Promise.all(
         events.map(
-          async (event) =>
+          async (event) => limit(async () => 
             new NomadEvent(
               this.domain,
               EventType.HomeUpdate,
@@ -377,7 +382,7 @@ export class Indexer {
               },
               event.blockNumber,
               EventSource.Fetch
-            )
+            ))
         )
       );
       fetchedEvents.push(...parsedEvents);
@@ -406,7 +411,7 @@ export class Indexer {
       )
       const parsedEvents = await Promise.all(
         events.map(
-          async (event) =>
+          async (event) => limit(async () => 
             new NomadEvent(
               this.domain,
               EventType.ReplicaUpdate,
@@ -423,7 +428,7 @@ export class Indexer {
               },
               event.blockNumber,
               EventSource.Fetch
-            )
+            ))
         )
       );
       fetchedEvents.push(...parsedEvents);
@@ -445,7 +450,7 @@ export class Indexer {
       // );
       const parsedEvents = await Promise.all(
         events.map(
-          async (event) =>
+          async (event) => limit(async () => 
             new NomadEvent(
               this.domain,
               EventType.ReplicaProcess,
@@ -461,7 +466,7 @@ export class Indexer {
               },
               event.blockNumber,
               EventSource.Fetch
-            )
+            ))
         )
       );
       fetchedEvents.push(...parsedEvents);
