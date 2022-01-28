@@ -35,7 +35,6 @@ export class NomadContext extends MultiProvider {
   private bridges: Map<number, BridgeContracts>;
   private _blacklist: Set<number>;
   private _governorDomain?: number;
-  private _watchTasks: NodeJS.Timer[];
 
   constructor(
     domains: NomadDomain[],
@@ -55,7 +54,6 @@ export class NomadContext extends MultiProvider {
     });
 
     this._blacklist = new Set();
-    this._watchTasks = [];
   }
 
   /**
@@ -262,46 +260,16 @@ export class NomadContext extends MultiProvider {
     return this._blacklist;
   }
 
-  /**
-   * Spawn tasks to watch homes for failed states and place on blacklist
-   * if failed.
-   *
-   * @param nameOrDomains Array of domains/names you want to watch. Not every GUI
-   * will list every network so they will want to only watch the ones they are
-   * interacting with.
-   * @dev The NomadContext object must have registered providers specified
-   * domains when calling this function.
-   */
-  spawnWatchTasks(nameOrDomains: (string | number)[]) {
-    nameOrDomains.forEach((nameOrDomain) => {
-      const domain = this.resolveDomain(nameOrDomain);
-      const interval = setInterval(
-        async () => await this.checkHome.bind(this, domain)(),
-        WATCH_INTERVAL_MS,
-      );
-      this._watchTasks.push(interval);
-    });
-  }
-
-  /**
-   * Kill all spawned watch tasks.
-   *
-   * @dev Kills tasks registered by 'spawnWatchTasks' method.
-   */
-  killWatchTasks() {
-    this._watchTasks.forEach((interval) => clearInterval(interval));
-  }
-
-  private async checkHome(domain: number): Promise<void> {
+  private async checkHome(nameOrDomain: string | number): Promise<void> {
+    const domain = this.resolveDomain(nameOrDomain);
     const home = this.mustGetCore(domain).home;
     const state = await home.state();
     if (state === 2) {
+      console.log(`Home for domain ${domain} is failed!`);
       this._blacklist.add(domain);
     } else {
       this._blacklist.delete(domain);
     }
-
-    console.log(`State for home at domain ${domain}: ${state}`);
   }
 
   /**
@@ -474,6 +442,8 @@ export class NomadContext extends MultiProvider {
     overrides: ethers.Overrides = {},
   ): Promise<TransferMessage> {
     const fromDomain = this.resolveDomain(from);
+
+    await this.checkHome(fromDomain);
     if (this.blacklist().has(fromDomain)) {
       throw new Error('Attempted to send token to failed home!');
     }
@@ -542,6 +512,8 @@ export class NomadContext extends MultiProvider {
     overrides: ethers.PayableOverrides = {},
   ): Promise<TransferMessage> {
     const fromDomain = this.resolveDomain(from);
+
+    await this.checkHome(fromDomain);
     if (this.blacklist().has(fromDomain)) {
       throw new Error('Attempted to send token to failed home!');
     }
