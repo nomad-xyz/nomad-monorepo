@@ -2,22 +2,19 @@ import { ethers } from "ethers";
 import { Key, utils } from "../src";
 
 import { setupTwo } from "./common";
+import { TokenIdentifier } from '@nomad-xyz/sdk/nomad'
 
-async function improperUpdateCase(homeOrReplica: string) {
+async function testSdkFailedHome() {
   let success = false;
 
   const { tom, jerry, tomActor, jerryActor, n } = await setupTwo();
-
-  // Spawn watch tasks on NomadContext
-  console.log("Spawning NomadContext watch intervals...");
   const nomadContext = n.multiprovider!;
-  nomadContext.spawnWatchTasks([tom.domain, jerry.domain]);
 
   try {
     const address = new Key().toAddress();
 
-    const home = n.getCore(tom).home;
-    if (!home) throw new Error(`no home`);
+    const tomHome = n.getCore(tom).home;
+    if (!tomHome) throw new Error(`no home`);
 
     const replica = n.getCore(jerry).getReplica(tom.domain)!;
     if (!replica) throw new Error(`no replica`);
@@ -25,16 +22,16 @@ async function improperUpdateCase(homeOrReplica: string) {
     const xapp = await n.getXAppConnectionManager(jerry);
 
     await (
-      await home.dispatch(
+      await tomHome.dispatch(
         jerry.domain,
         ethers.utils.hexZeroPad(address, 32),
         Buffer.from(`01234567890123456789012345678`, "utf8")
       )
     ).wait();
 
-    console.log(`Dispatched test transaction to home`);
+    console.log(`Dispatched test transaction to tomHome`);
 
-    const [committedRoot] = await home.suggestUpdate();
+    const [committedRoot] = await tomHome.suggestUpdate();
 
     const updater = await n.getUpdater(tom);
 
@@ -46,45 +43,46 @@ async function improperUpdateCase(homeOrReplica: string) {
       fraudRoot
     );
 
-    // Submit fraud to home
+    // Submit fraud to tom home
     await (
-      await home.update(committedRoot, fraudRoot, improperSignature)
+      await tomHome.update(committedRoot, fraudRoot, improperSignature)
     ).wait();
 
-    console.log(`Submitted fraud update!`);
+    const state = await tomHome.state();
+    if (state !== 2) {
+      throw new Error("Tom home not failed after improper update!")
+    }
 
-    const start = new Date().valueOf();
-    // Waiting for home to be failed and for connection managers to be disconnected from replicas
-    const waiter = new utils.Waiter(
-      async () => {
-        const [homeState, blacklist] = await Promise.all([
-          home.state(),
-          nomadContext.blacklist(),
-        ]);
+    console.log(`Submitted fraud update to tom home!`);
 
-        if (homeState === 2 && blacklist.has(tom.domain)) {
-          return true;
-        }
-      },
-      6 * 60_000,
-      2_000
+    
+    const token: TokenIdentifier = {
+      domain: tom.domain,
+      id: "0x111111",
+    };
+
+    // Try to send token through SDK to trigger tom home check
+    const res = await nomadContext.send(
+      tom.name,
+      jerry.name,
+      token,
+      100,
+      "0x222222222",
+      false,
+      {
+        gasLimit: 10000000,
+      }
     );
 
-    [, success] = await waiter.wait();
-
-    console.log(
-      `Identified in ${(new Date().valueOf() - start) / 1000} seconds`
-    );
-
-    nomadContext.killWatchTasks();
-
-    if (!success) throw new Error(`Fraud was not prevented in time!`);
+    // Expect blacklist to contain failed tom home
+    if (!nomadContext.blacklist().has(tom.domain)) {
+      throw new Error("SDK did not black list he failed tom home!")
+    }
   } catch (e) {
-    console.log(`Faced an error:`, e);
+    console.error(`Test failed:`, e);
   }
 
   // Teardown
-
   await n.end();
 
   await Promise.all([tom.down(), jerry.down()]);
@@ -93,7 +91,5 @@ async function improperUpdateCase(homeOrReplica: string) {
 }
 
 (async () => {
-  // Run sequentially in case of port conflicts
-  await improperUpdateCase("home");
-  await improperUpdateCase("replica");
+  await testSdkFailedHome();
 })();

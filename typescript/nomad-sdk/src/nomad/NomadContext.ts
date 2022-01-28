@@ -16,8 +16,6 @@ import { hexlify } from '@ethersproject/bytes';
 
 type Address = string;
 
-const WATCH_INTERVAL_MS = 10 * 1000;
-
 /**
  * The NomadContext managers connections to Nomad core and Bridge contracts.
  * It inherits from the {@link MultiProvider}, and ensures that its contracts
