@@ -51,7 +51,7 @@ export const moonbasealpha: NomadDomain = {
   id: 5000,
   paginate: {
     from: 1556676,
-    blocks: 2000,
+    blocks: 1000,
   },
   home: '0xeA5EE132A66c2cE09AEB8baDdabb26EcF33603AE',
   replicas: [
