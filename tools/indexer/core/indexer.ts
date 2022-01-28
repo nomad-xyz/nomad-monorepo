@@ -31,7 +31,7 @@ export class Indexer {
     );
     this.blockCache = new KVCache(String(this.domain), this.orchestrator.db);
     // 20 concurrent requests per indexer
-    this.limit = pLimit(20);
+    this.limit = pLimit(50);
   }
 
   get provider(): ethers.providers.Provider {
@@ -56,12 +56,13 @@ export class Indexer {
       7,
       (error: any) =>
         this.orchestrator.logger.warn(
-          `Some error happened at retrying getting the block ${blockNumber} for ${this.domain}, error: ${error}`
+          `Retrying after RPC Error... Block: ${blockNumber}, Domain: ${this.domain}, Error: ${error.code}`
+
         )
     );
     if (!block) {
       throw new Error(
-        `Some error happened at retrying getting the block ${blockNumber} for ${this.domain}, error: ${error}`
+        `An RPC foo error occured, retried exhausted. Block: ${blockNumber} Domain: ${this.domain}, Error: ${error}`
       );
     }
     const time = block.timestamp * 1000;
