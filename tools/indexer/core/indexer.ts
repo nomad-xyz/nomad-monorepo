@@ -1,5 +1,6 @@
 import { Orchestrator } from "./orchestrator";
 import { NomadContext } from "@nomad-xyz/sdk/dist";
+import { getEvents } from "@nomad-xyz/sdk/dist/nomad/events/fetch"
 import fs from "fs";
 import { ContractType, EventType, NomadEvent, EventSource } from "./event";
 import { Home, Replica } from "@nomad-xyz/contract-interfaces/core";
@@ -231,7 +232,15 @@ export class Indexer {
     const br = this.bridgeRouter();
     const allEvents = [];
     {
-      const events = await br.queryFilter(br.filters.Send(), from, to);
+      const events = await getEvents(
+        this.sdk, 
+        this.domain, 
+        br, 
+        br.filters.Send(), 
+        from, 
+        to
+      )
+      //const events = await br.queryFilter(br.filters.Send(), from, to);
       const parsedEvents = await Promise.all(
         events.map(async (event) => {
           const [ts, senders2hashes] = await this.getBlockInfo(
@@ -261,7 +270,15 @@ export class Indexer {
     }
 
     {
-      const events = await br.queryFilter(br.filters.Receive(), from, to);
+      const events = await getEvents(
+        this.sdk, 
+        this.domain, 
+        br, 
+        br.filters.Receive(), 
+        from, 
+        to
+      )
+      //const events = await br.queryFilter(br.filters.Receive(), from, to);
       const parsedEvents = await Promise.all(
         events.map(
           async (event) =>
@@ -296,7 +313,15 @@ export class Indexer {
 
     const home = this.home();
     {
-      const events = await home.queryFilter(home.filters.Dispatch(), from, to);
+      const events = await getEvents(
+        this.sdk, 
+        this.domain, 
+        home, 
+        home.filters.Dispatch(), 
+        from, 
+        to
+      )
+      //const events = await home.queryFilter(home.filters.Dispatch(), from, to);
       const parsedEvents = await Promise.all(
         events.map(
           async (event) =>
@@ -324,7 +349,15 @@ export class Indexer {
     }
 
     {
-      const events = await home.queryFilter(home.filters.Update(), from, to);
+      const events = await getEvents(
+        this.sdk, 
+        this.domain, 
+        home, 
+        home.filters.Update(), 
+        from, 
+        to
+      )
+      //const events = await home.queryFilter(home.filters.Update(), from, to);
       const parsedEvents = await Promise.all(
         events.map(
           async (event) =>
@@ -358,11 +391,19 @@ export class Indexer {
 
     const replica = this.replicaForDomain(domain);
     {
-      const events = await replica.queryFilter(
-        replica.filters.Update(),
-        from,
+      // const events = await replica.queryFilter(
+      //   replica.filters.Update(),
+      //   from,
+      //   to
+      // );
+      const events = await getEvents(
+        this.sdk, 
+        domain, 
+        replica, 
+        replica.filters.Update(), 
+        from, 
         to
-      );
+      )
       const parsedEvents = await Promise.all(
         events.map(
           async (event) =>
@@ -389,11 +430,19 @@ export class Indexer {
     }
 
     {
-      const events = await replica.queryFilter(
-        replica.filters.Process(),
-        from,
+      const events = await getEvents(
+        this.sdk, 
+        domain, 
+        replica, 
+        replica.filters.Process(), 
+        from, 
         to
-      );
+      )
+      // const events = await replica.queryFilter(
+      //   replica.filters.Process(),
+      //   from,
+      //   to
+      // );
       const parsedEvents = await Promise.all(
         events.map(
           async (event) =>
