@@ -10,6 +10,7 @@ import { BridgeRouter } from "@nomad-xyz/contract-interfaces/bridge";
 import pLimit from 'p-limit';
 
 
+const BATCH_SIZE = process.env.BATCH_SIZE ? parseInt(process.env.BATCH_SIZE) : 2000;
 
 
 export class Indexer {
@@ -53,7 +54,7 @@ export class Indexer {
 
     const [block, error] = await retry(
       async () => await this.provider.getBlockWithTransactions(blockNumber),
-      7,
+      50,
       (error: any) =>
         this.orchestrator.logger.warn(
           `Retrying after RPC Error... Block: ${blockNumber}, Domain: ${this.domain}, Error: ${error.code}`
@@ -129,7 +130,7 @@ export class Indexer {
 
           return [...homeEvents, ...replicasEvents, ...bridgeRouterEvents];
         },
-        7,
+        50,
         (error) =>
           this.orchestrator.logger.warn(
             `Some error happened at retrying getting logs between blocks ${from} and ${to} for ${this.domain} domain, error: ${error.message}`
@@ -145,13 +146,15 @@ export class Indexer {
 
     const allEvents = [];
 
-    const batchSize = 20000;
+    const batchSize = BATCH_SIZE;
     let batchFrom = from;
     let batchTo = from + batchSize;
 
     while (true) {
       const events = await fetchEvents(batchFrom, batchTo);
       if (!events) throw new Error(`KEk`);
+      events.sort((a, b) => a.ts - b.ts);
+      this.persistance.store(...events);
       allEvents.push(...events);
       if (batchTo >= to) break;
       batchFrom = batchTo + 1;
@@ -161,7 +164,6 @@ export class Indexer {
     if (!allEvents) throw new Error("kek");
 
     allEvents.sort((a, b) => a.ts - b.ts);
-    this.persistance.store(...allEvents);
 
     this.dummyTestEventsIntegrity();
     this.orchestrator.logger.info(`Fetched all for domain ${this.domain}`);
@@ -171,15 +173,15 @@ export class Indexer {
 
   dummyTestEventsIntegrity() {
     // TODO: either drop or make better
-    const h = new Map<string, string>();
+    const homeRoots = new Map<string, string>();
     const r = new Map<string, string>();
 
-    let h1 = "";
-    let ht = Number.MAX_VALUE;
-    let r1 = "";
-    let rt = Number.MAX_VALUE;
-    let rtotal = 0;
-    let htotal = 0;
+    let initialHomeRoot = "";
+    let initialHomeTimestamp = Number.MAX_VALUE;
+    let initialReplicaRoot = "";
+    let initialReplicaTimestamp = Number.MAX_VALUE;
+    let homeRootsTotal = 0;
+    let replicaRootsTotal = 0;
 
     let allEvents = this.persistance.allEvents();
     if (allEvents.length === 0) {
@@ -189,48 +191,48 @@ export class Indexer {
 
     for (const event of allEvents) {
       if (event.eventType == EventType.HomeUpdate) {
-        const e = event.eventData as { oldRoot: string; newRoot: string };
-        h.set(e.oldRoot, e.newRoot);
-        htotal += 1;
-        if (event.ts < ht) {
-          ht = event.ts;
-          h1 = e.oldRoot;
+        const { oldRoot, newRoot } = event.eventData as { oldRoot: string; newRoot: string };
+        homeRoots.set(oldRoot, newRoot);
+        homeRootsTotal += 1;
+        if (event.ts < initialHomeTimestamp) {
+          initialHomeTimestamp = event.ts;
+          initialHomeRoot = oldRoot;
         }
       } else if (event.eventType == EventType.ReplicaUpdate) {
-        const e = event.eventData as { oldRoot: string; newRoot: string };
-        r.set(e.oldRoot, e.newRoot);
-        rtotal += 1;
-        if (event.ts < rt) {
-          rt = event.ts;
-          r1 = e.oldRoot;
+        const { oldRoot, newRoot } = event.eventData as { oldRoot: string; newRoot: string };
+        r.set(oldRoot, newRoot);
+        replicaRootsTotal += 1;
+        if (event.ts < initialReplicaTimestamp) {
+          initialReplicaTimestamp = event.ts;
+          initialReplicaRoot = oldRoot;
         }
       }
     }
 
-    if (htotal <= 0) throw new Error(`THis is not supposed to be 0`);
-    if (rtotal <= 0) throw new Error(`THis is not supposed to be 0`);
+    if (homeRootsTotal <= 0) throw new Error(`This is not supposed to be 0, but is ${homeRootsTotal}`);
+    if (replicaRootsTotal <= 0) throw new Error(`This is not supposed to be 0, but is ${replicaRootsTotal}`);
 
     while (true) {
-      let newRoot = h.get(h1);
+      let newRoot = homeRoots.get(initialHomeRoot);
       if (newRoot) {
-        h1 = newRoot;
-        htotal -= 1;
+        initialHomeRoot = newRoot;
+        homeRootsTotal -= 1;
       } else {
         break;
       }
     }
     while (true) {
-      let newRoot = r.get(r1);
+      let newRoot = r.get(initialReplicaRoot);
       if (newRoot) {
-        r1 = newRoot;
-        rtotal -= 1;
+        initialReplicaRoot = newRoot;
+        replicaRootsTotal -= 1;
       } else {
         break;
       }
     }
 
-    if (htotal !== 0) throw new Error(`THis supposed to be 0`);
-    if (rtotal !== 0) throw new Error(`THis supposed to be 0`);
+    if (homeRootsTotal !== 0) throw new Error(`This supposed to be 0, but is ${homeRootsTotal}`);
+    if (replicaRootsTotal !== 0) throw new Error(`This supposed to be 0, but is ${replicaRootsTotal}`);
   }
 
   savePersistance() {
@@ -241,15 +243,15 @@ export class Indexer {
     const br = this.bridgeRouter();
     const allEvents = [];
     {
-      const events = await getEvents(
-        this.sdk, 
-        this.domain, 
-        br, 
-        br.filters.Send(), 
-        from, 
-        to
-      )
-      //const events = await br.queryFilter(br.filters.Send(), from, to);
+      // const events = await getEvents(
+      //   this.sdk, 
+      //   this.domain, 
+      //   br, 
+      //   br.filters.Send(), 
+      //   from, 
+      //   to
+      // )
+      const events = await br.queryFilter(br.filters.Send(), from, to);
       const parsedEvents = await Promise.all(
         events.map(async (event) => this.limit(async () => {
           const [ts, senders2hashes] = await this.getBlockInfo(
@@ -279,15 +281,15 @@ export class Indexer {
     }
 
     {
-      const events = await getEvents(
-        this.sdk, 
-        this.domain, 
-        br, 
-        br.filters.Receive(), 
-        from, 
-        to
-      )
-      //const events = await br.queryFilter(br.filters.Receive(), from, to);
+      // const events = await getEvents(
+      //   this.sdk, 
+      //   this.domain, 
+      //   br, 
+      //   br.filters.Receive(), 
+      //   from, 
+      //   to
+      // )
+      const events = await br.queryFilter(br.filters.Receive(), from, to);
       const parsedEvents = await Promise.all(
         events.map(
           async (event) => this.limit(async () =>
@@ -322,15 +324,15 @@ export class Indexer {
 
     const home = this.home();
     {
-      const events = await getEvents(
-        this.sdk, 
-        this.domain, 
-        home, 
-        home.filters.Dispatch(), 
-        from, 
-        to
-      )
-      //const events = await home.queryFilter(home.filters.Dispatch(), from, to);
+      // const events = await getEvents(
+      //   this.sdk, 
+      //   this.domain, 
+      //   home, 
+      //   home.filters.Dispatch(), 
+      //   from, 
+      //   to
+      // )
+      const events = await home.queryFilter(home.filters.Dispatch(), from, to);
       const parsedEvents = await Promise.all(
         events.map(
           async (event) => this.limit(async () =>
@@ -358,15 +360,15 @@ export class Indexer {
     }
 
     {
-      const events = await getEvents(
-        this.sdk, 
-        this.domain, 
-        home, 
-        home.filters.Update(), 
-        from, 
-        to
-      )
-      //const events = await home.queryFilter(home.filters.Update(), from, to);
+      // const events = await getEvents(
+      //   this.sdk, 
+      //   this.domain, 
+      //   home, 
+      //   home.filters.Update(), 
+      //   from, 
+      //   to
+      // )
+      const events = await home.queryFilter(home.filters.Update(), from, to);
       const parsedEvents = await Promise.all(
         events.map(
           async (event) => this.limit(async () => 
@@ -400,19 +402,20 @@ export class Indexer {
 
     const replica = this.replicaForDomain(domain);
     {
-      // const events = await replica.queryFilter(
-      //   replica.filters.Update(),
-      //   from,
+      const events = await replica.queryFilter(
+        replica.filters.Update(),
+        from,
+        to
+      );
+      // const events = await getEvents(
+      //   this.sdk, 
+      //   domain, 
+      //   replica, 
+      //   replica.filters.Update(), 
+      //   from, 
       //   to
       // );
-      const events = await getEvents(
-        this.sdk, 
-        domain, 
-        replica, 
-        replica.filters.Update(), 
-        from, 
-        to
-      )
+
       const parsedEvents = await Promise.all(
         events.map(
           async (event) => this.limit(async () => 
@@ -439,19 +442,19 @@ export class Indexer {
     }
 
     {
-      const events = await getEvents(
-        this.sdk, 
-        domain, 
-        replica, 
-        replica.filters.Process(), 
-        from, 
-        to
-      )
-      // const events = await replica.queryFilter(
-      //   replica.filters.Process(),
-      //   from,
+      // const events = await getEvents(
+      //   this.sdk, 
+      //   domain, 
+      //   replica, 
+      //   replica.filters.Process(), 
+      //   from, 
       //   to
-      // );
+      // )
+      const events = await replica.queryFilter(
+        replica.filters.Process(),
+        from,
+        to
+      );
       const parsedEvents = await Promise.all(
         events.map(
           async (event) => this.limit(async () => 
