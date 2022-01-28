@@ -34,7 +34,7 @@ async function improperUpdateCase(homeOrReplica: string) {
 
     console.log(`Dispatched test transaction to home`);
 
-    const [committedRoot,] = await home.suggestUpdate();
+    const [committedRoot] = await home.suggestUpdate();
 
     const updater = await n.getUpdater(tom);
 
@@ -45,10 +45,11 @@ async function improperUpdateCase(homeOrReplica: string) {
       committedRoot,
       fraudRoot
     );
-    
 
     // Submit fraud to home
-    await (await home.update(committedRoot, fraudRoot, improperSignature)).wait();
+    await (
+      await home.update(committedRoot, fraudRoot, improperSignature)
+    ).wait();
 
     console.log(`Submitted fraud update!`);
 
@@ -56,16 +57,12 @@ async function improperUpdateCase(homeOrReplica: string) {
     // Waiting for home to be failed and for connection managers to be disconnected from replicas
     const waiter = new utils.Waiter(
       async () => {
-        const [homeState, blacklist] =
-          await Promise.all([
-            home.state(), 
-            nomadContext.blacklist(),
-          ]);
+        const [homeState, blacklist] = await Promise.all([
+          home.state(),
+          nomadContext.blacklist(),
+        ]);
 
-        if (
-          homeState === 2 &&
-          blacklist.has(tom.domain)
-        ) {
+        if (homeState === 2 && blacklist.has(tom.domain)) {
           return true;
         }
       },
@@ -73,9 +70,13 @@ async function improperUpdateCase(homeOrReplica: string) {
       2_000
     );
 
-    console.log(`Identified in ${(new Date().valueOf() - start) / 1000} seconds`);
-
     [, success] = await waiter.wait();
+
+    console.log(
+      `Identified in ${(new Date().valueOf() - start) / 1000} seconds`
+    );
+
+    nomadContext.killWatchTasks();
 
     if (!success) throw new Error(`Fraud was not prevented in time!`);
   } catch (e) {
@@ -91,8 +92,8 @@ async function improperUpdateCase(homeOrReplica: string) {
   if (!success) process.exit(1);
 }
 
-  (async () => {
-    // Run sequentially in case of port conflicts
-    await improperUpdateCase("home");
-    await improperUpdateCase("replica");
-  })()
+(async () => {
+  // Run sequentially in case of port conflicts
+  await improperUpdateCase("home");
+  await improperUpdateCase("replica");
+})();
