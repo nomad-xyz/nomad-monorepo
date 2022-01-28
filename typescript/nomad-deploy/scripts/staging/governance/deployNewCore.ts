@@ -16,8 +16,8 @@ const rinkebyCoreDeploy = ExistingCoreDeploy.withPath(
 
 // instantiate other existing deploys
 const moonbasealphaCoreDeploy = ExistingCoreDeploy.withPath(
-    moonbasealpha.chain,
-    moonbasealpha.stagingConfig,
+  moonbasealpha.chain,
+  moonbasealpha.stagingConfig,
   path,
 );
 

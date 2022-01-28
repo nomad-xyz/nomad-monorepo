@@ -2,7 +2,11 @@ import { NomadContext } from '@nomad-xyz/sdk/';
 import { expect, AssertionError } from 'chai';
 import { Waiter } from './utils';
 
-export async function checkHubAndSpokeConnections(sdk: NomadContext, spokeDomain: number, watchers: string[]) {
+export async function checkHubAndSpokeConnections(
+  sdk: NomadContext,
+  spokeDomain: number,
+  watchers: string[],
+) {
   let hubCore = await sdk.governorCore();
   let hubBridge = sdk.mustGetBridge(hubCore.domain);
 
@@ -13,49 +17,46 @@ export async function checkHubAndSpokeConnections(sdk: NomadContext, spokeDomain
   // enrolled at one of the old chains' xAppConnectionManager
   for (const wAddress of watchers.map((w) => w.toLowerCase())) {
     const permissionExists =
-        await hubCore.xAppConnectionManager.watcherPermission(
-            wAddress,
-            spokeDomain,
-        );
+      await hubCore.xAppConnectionManager.watcherPermission(
+        wAddress,
+        spokeDomain,
+      );
     expect(
-        permissionExists,
-        `No permission exists for watcher '${wAddress}' and domain: ${spokeDomain}`,
+      permissionExists,
+      `No permission exists for watcher '${wAddress}' and domain: ${spokeDomain}`,
     );
   }
 
   // Checking that new bridge router of new deploy is
   // enrolled at one of the old chains' bridgeRouter
-  const bridgeRouterAddress = await hubBridge.bridgeRouter.remotes(
-      spokeDomain,
-  );
+  const bridgeRouterAddress = await hubBridge.bridgeRouter.remotes(spokeDomain);
   expect('0x' + bridgeRouterAddress.slice(26).toLowerCase()).to.equal(
-      spokeBridge.bridgeRouter.address.toLowerCase(),
-      `Wrong remote BridgeRouter address at hub`,
+    spokeBridge.bridgeRouter.address.toLowerCase(),
+    `Wrong remote BridgeRouter address at hub`,
   );
 
   // Checking that new replica of the new deploy at old chain is
   // enrolled at one of the old chains' xAppConnectionManager
   const actualReplicaAddress = hubCore
-      .getReplica(spokeDomain)!
-      .address.toLowerCase();
-  const replicaAddress =
-      await hubCore.xAppConnectionManager.domainToReplica(spokeDomain);
+    .getReplica(spokeDomain)!
+    .address.toLowerCase();
+  const replicaAddress = await hubCore.xAppConnectionManager.domainToReplica(
+    spokeDomain,
+  );
   expect(replicaAddress.toLowerCase()).to.equal(
-      actualReplicaAddress,
-      `Wrong Replica address at hub for ${spokeDomain}`,
+    actualReplicaAddress,
+    `Wrong Replica address at hub for ${spokeDomain}`,
   );
 
   // Checking that new governance router of the new deploy is
   // enrolled at one of the old chains' governance router
-  const govRouterAddress = await hubCore.governanceRouter.routers(
-      spokeDomain,
-  );
+  const govRouterAddress = await hubCore.governanceRouter.routers(spokeDomain);
   expect('0x' + govRouterAddress.slice(26).toLowerCase()).to.equal(
-      spokeCore.governanceRouterAddress.toLowerCase(),
-      `Wrong remote GovernanceRouter address at hub`,
+    spokeCore.governanceRouterAddress.toLowerCase(),
+    `Wrong remote GovernanceRouter address at hub`,
   );
 
-  console.log("Checks passed!");
+  console.log('Checks passed!');
 }
 
 export async function checkHubToSpokeConnectionWithWaiter(

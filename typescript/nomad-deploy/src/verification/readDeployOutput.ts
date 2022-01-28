@@ -121,10 +121,17 @@ export function parseFileFromDeploy(
       `No ${fileSuffix} files found for ${network} at ${path}/${targetFileName}`,
     );
   }
+  return parseFile(path, targetFileName);
+}
 
-  const fileString: string = fs
-    .readFileSync(`${path}/${targetFileName}`)
-    .toString();
-
+/*
+ * @notice Return the JSON-parsed file
+ * from the given file name
+ * and directory path
+ * @param path relative path to the file
+ * @param fileName the file name
+ * */
+export function parseFile(path: string, fileName: string) {
+  const fileString: string = fs.readFileSync(`${path}/${fileName}`).toString();
   return JSON.parse(fileString);
 }
