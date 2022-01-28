@@ -35,6 +35,7 @@ export class NomadContext extends MultiProvider {
   private bridges: Map<number, BridgeContracts>;
   private _blacklist: Set<number>;
   private _governorDomain?: number;
+  private _watchTasks: NodeJS.Timer[];
 
   constructor(
     domains: NomadDomain[],
@@ -54,6 +55,7 @@ export class NomadContext extends MultiProvider {
     });
 
     this._blacklist = new Set();
+    this._watchTasks = [];
   }
 
   /**
@@ -273,11 +275,21 @@ export class NomadContext extends MultiProvider {
   spawnWatchTasks(nameOrDomains: (string | number)[]) {
     nameOrDomains.forEach((nameOrDomain) => {
       const domain = this.resolveDomain(nameOrDomain);
-      setInterval(
+      const interval = setInterval(
         async () => await this.checkHome.bind(this, domain)(),
         WATCH_INTERVAL_MS,
       );
+      this._watchTasks.push(interval);
     });
+  }
+
+  /**
+   * Kill all spawned watch tasks.
+   *
+   * @dev Kills tasks registered by 'spawnWatchTasks' method.
+   */
+  killWatchTasks() {
+    this._watchTasks.forEach((interval) => clearInterval(interval));
   }
 
   private async checkHome(domain: number): Promise<void> {
