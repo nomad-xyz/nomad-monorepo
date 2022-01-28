@@ -10,7 +10,6 @@ import { BridgeRouter } from "@nomad-xyz/contract-interfaces/bridge";
 import pLimit from 'p-limit';
 
 
-const limit = pLimit(20);
 
 
 export class Indexer {
@@ -19,6 +18,8 @@ export class Indexer {
   orchestrator: Orchestrator;
   persistance: Persistance;
   blockCache: KVCache;
+  limit: pLimit.Limit;
+
   eventCallback: undefined | ((event: NomadEvent) => void);
 
   constructor(domain: number, sdk: NomadContext, orchestrator: Orchestrator) {
@@ -29,6 +30,8 @@ export class Indexer {
       `/tmp/persistance_${this.domain}.json`
     );
     this.blockCache = new KVCache(String(this.domain), this.orchestrator.db);
+    // 20 concurrent requests per indexer
+    this.limit = pLimit(20);
   }
 
   get provider(): ethers.providers.Provider {
@@ -247,7 +250,7 @@ export class Indexer {
       )
       //const events = await br.queryFilter(br.filters.Send(), from, to);
       const parsedEvents = await Promise.all(
-        events.map(async (event) => limit(async () => {
+        events.map(async (event) => this.limit(async () => {
           const [ts, senders2hashes] = await this.getBlockInfo(
             event.blockNumber
           );
@@ -286,7 +289,7 @@ export class Indexer {
       //const events = await br.queryFilter(br.filters.Receive(), from, to);
       const parsedEvents = await Promise.all(
         events.map(
-          async (event) => limit(async () =>
+          async (event) => this.limit(async () =>
             new NomadEvent(
               this.domain,
               EventType.BridgeRouterReceive,
@@ -329,7 +332,7 @@ export class Indexer {
       //const events = await home.queryFilter(home.filters.Dispatch(), from, to);
       const parsedEvents = await Promise.all(
         events.map(
-          async (event) => limit(async () =>
+          async (event) => this.limit(async () =>
             new NomadEvent(
               this.domain,
               EventType.HomeDispatch,
@@ -365,7 +368,7 @@ export class Indexer {
       //const events = await home.queryFilter(home.filters.Update(), from, to);
       const parsedEvents = await Promise.all(
         events.map(
-          async (event) => limit(async () => 
+          async (event) => this.limit(async () => 
             new NomadEvent(
               this.domain,
               EventType.HomeUpdate,
@@ -411,7 +414,7 @@ export class Indexer {
       )
       const parsedEvents = await Promise.all(
         events.map(
-          async (event) => limit(async () => 
+          async (event) => this.limit(async () => 
             new NomadEvent(
               this.domain,
               EventType.ReplicaUpdate,
@@ -450,7 +453,7 @@ export class Indexer {
       // );
       const parsedEvents = await Promise.all(
         events.map(
-          async (event) => limit(async () => 
+          async (event) => this.limit(async () => 
             new NomadEvent(
               this.domain,
               EventType.ReplicaProcess,
