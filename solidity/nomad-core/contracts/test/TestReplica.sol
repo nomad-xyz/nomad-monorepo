@@ -12,7 +12,7 @@ contract TestReplica is Replica {
         uint32 _localDomain,
         uint256,
         uint256
-    ) Replica(_localDomain, 850_000, 15_000) {} // solhint-disable-line no-empty-blocks
+    ) Replica(_localDomain, 850_000, 15_000, 1_000_000) {} // solhint-disable-line no-empty-blocks
 
     function setFailed() public {
         _setFailed();
