@@ -172,22 +172,20 @@ export class Indexer {
   }
 
   dummyTestEventsIntegrity() {
-    // TODO: either drop or make better
-    const homeRoots = new Map<string, string>();
-    const r = new Map<string, string>();
-
-    let initialHomeRoot = "";
-    let initialHomeTimestamp = Number.MAX_VALUE;
-    let initialReplicaRoot = "";
-    let initialReplicaTimestamp = Number.MAX_VALUE;
-    let homeRootsTotal = 0;
-    let replicaRootsTotal = 0;
-
     let allEvents = this.persistance.allEvents();
     if (allEvents.length === 0) {
       this.orchestrator.logger.warn(`No events to test integrity!!!`);
-      return;
+      return ;
     }
+
+    const homeRoots = new Map<string, string>();
+    let initialHomeRoot = "";
+    let initialHomeTimestamp = Number.MAX_VALUE;
+    let homeRootsTotal = 0;
+
+    type ReplicaDomainInfo = {root: string, ts: number, roots: Map<string, string>, total: number};
+
+    const initialReplica: Map<number, ReplicaDomainInfo> = new Map();
 
     for (const event of allEvents) {
       if (event.eventType == EventType.HomeUpdate) {
@@ -200,17 +198,25 @@ export class Indexer {
         }
       } else if (event.eventType == EventType.ReplicaUpdate) {
         const { oldRoot, newRoot } = event.eventData as { oldRoot: string; newRoot: string };
-        r.set(oldRoot, newRoot);
-        replicaRootsTotal += 1;
-        if (event.ts < initialReplicaTimestamp) {
-          initialReplicaTimestamp = event.ts;
-          initialReplicaRoot = oldRoot;
+        const domain = event.replicaOrigin;
+        if (!initialReplica.has(domain)) {
+          initialReplica.set(domain, {root: '', ts: Number.MAX_VALUE, roots: new Map(), total: 0});
+        }
+        const replica = initialReplica.get(domain)!;
+        replica.roots.set(oldRoot, newRoot);
+        replica.total += 1;
+        if (event.ts < replica.ts) {
+          replica.ts = event.ts;
+          replica.root = oldRoot;
         }
       }
     }
 
-    if (homeRootsTotal <= 0) throw new Error(`This is not supposed to be 0, but is ${homeRootsTotal}`);
-    if (replicaRootsTotal <= 0) throw new Error(`This is not supposed to be 0, but is ${replicaRootsTotal}`);
+    if (homeRootsTotal <= 0) throw new Error(`${this.domain}: Total for home is not supposed to be 0, but is ${homeRootsTotal}`);
+
+    for (const [domain, replica] of initialReplica) {
+      if (replica.total <= 0) throw new Error(`${this.domain}: Total for replica ${domain} is not supposed to be 0, but is ${replica.total}`);
+    }
 
     while (true) {
       let newRoot = homeRoots.get(initialHomeRoot);
@@ -221,18 +227,22 @@ export class Indexer {
         break;
       }
     }
-    while (true) {
-      let newRoot = r.get(initialReplicaRoot);
-      if (newRoot) {
-        initialReplicaRoot = newRoot;
-        replicaRootsTotal -= 1;
-      } else {
-        break;
-      }
-    }
+    if (homeRootsTotal !== 0) throw new Error(`${this.domain}: Left roots for home supposed to be 0, but is ${homeRootsTotal}`);
 
-    if (homeRootsTotal !== 0) throw new Error(`This supposed to be 0, but is ${homeRootsTotal}`);
-    if (replicaRootsTotal !== 0) throw new Error(`This supposed to be 0, but is ${replicaRootsTotal}`);
+    for (const [domain, replica] of initialReplica) {
+      let initialReplicaRoot = replica.root;
+      let replicaRootsTotal = replica.total;
+      while (true) {
+        let newRoot = replica.roots.get(initialReplicaRoot);
+        if (newRoot) {
+          initialReplicaRoot = newRoot;
+          replicaRootsTotal -= 1;
+        } else {
+          break;
+        }
+      }
+      if (replicaRootsTotal !== 0) throw new Error(`${this.domain}: Left roots for replica ${domain} supposed to be 0, but is ${replicaRootsTotal} replica for domain ${domain}`)
+    }
   }
 
   savePersistance() {
