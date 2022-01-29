@@ -172,15 +172,21 @@ export class DB {
   }
 
   async insertMessage(messages: NomadMessage[]) {
-    const rows = messages.length;
-    if (!rows) return;
+    if (!messages.length) return;
     const columns = 25;
-    const query = `INSERT INTO messages (hash, origin, destination, nonce, nomad_sender, nomad_recipient, root, state, dispatched_at, updated_at, relayed_at, received_at, processed_at, bridge_msg_type, recipient, bridge_msg_amount, bridge_msg_allow_fast, bridge_msg_details_hash, bridge_msg_token_domain, bridge_msg_token_id, sender, raw, leaf_index, block, evm) VALUES ${expand(
-      rows,
-      columns
-    )};`;
-    const values = messages.map((m) => m.intoDB()).flat();
-    return await this.pool.query(query, values);
+    const batchSize = 2000;
+
+    do {
+      const batch = messages.splice(0, batchSize);
+      const query = `INSERT INTO messages (hash, origin, destination, nonce, nomad_sender, nomad_recipient, root, state, dispatched_at, updated_at, relayed_at, received_at, processed_at, bridge_msg_type, recipient, bridge_msg_amount, bridge_msg_allow_fast, bridge_msg_details_hash, bridge_msg_token_domain, bridge_msg_token_id, sender, raw, leaf_index, block, evm) VALUES ${expand(
+        batch.length,
+        columns
+      )};`;
+      const values = batch.map((m) => m.intoDB()).flat();
+      await this.pool.query(query, values);
+    } while (messages.length > 0);
+    
+    return 
   }
 
   async updateMessage(messages: NomadMessage[]) {
