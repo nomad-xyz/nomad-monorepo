@@ -11,6 +11,7 @@ import pLimit from 'p-limit';
 
 
 const BATCH_SIZE = process.env.BATCH_SIZE ? parseInt(process.env.BATCH_SIZE) : 2000;
+const RETRIES = 100;
 
 
 export class Indexer {
@@ -54,7 +55,7 @@ export class Indexer {
 
     const [block, error] = await retry(
       async () => await this.provider.getBlockWithTransactions(blockNumber),
-      50,
+      RETRIES,
       (error: any) =>
         this.orchestrator.logger.warn(
           `Retrying after RPC Error... Block: ${blockNumber}, Domain: ${this.domain}, Error: ${error.code}`
@@ -118,9 +119,7 @@ export class Indexer {
     );
 
     const fetchEvents = async (from: number, to: number) => {
-      const [fetchedEvents, error] = await retry(
-        async () => {
-          const homeEvents = await this.fetchHome(from, to);
+      const homeEvents = await this.fetchHome(from, to);
           const replicasEvents = (
             await Promise.all(
               replicas.map((r) => this.fetchReplica(r, from, to))
@@ -128,20 +127,22 @@ export class Indexer {
           ).flat();
           const bridgeRouterEvents = await this.fetchBridgeRouter(from, to);
 
-          return [...homeEvents, ...replicasEvents, ...bridgeRouterEvents];
-        },
-        50,
-        (error) =>
-          this.orchestrator.logger.warn(
-            `Some error happened at retrying getting logs between blocks ${from} and ${to} for ${this.domain} domain, error: ${error.message}`
-          )
-      );
+      // const [fetchedEvents, error] = await retry(
+      //   async () => {
+          
+      //   },
+      //   50,
+      //   (error) =>
+      //     this.orchestrator.logger.warn(
+      //       `Some error happened at retrying getting logs between blocks ${from} and ${to} for ${this.domain} domain, error: ${error.message}`
+      //     )
+      // );
 
-      if (error)
-        throw new Error(
-          `Some error happened at retrying getting logs between blocks ${from} and ${to} for ${this.domain} domain, error: ${error}`
-        );
-      return fetchedEvents;
+      // if (error)
+      //   throw new Error(
+      //     `Some error happened at retrying getting logs between blocks ${from} and ${to} for ${this.domain} domain, error: ${error}`
+      //   );
+      return [...homeEvents, ...replicasEvents, ...bridgeRouterEvents];
     };
 
     const allEvents = [];
@@ -230,18 +231,18 @@ export class Indexer {
     if (homeRootsTotal !== 0) throw new Error(`${this.domain}: Left roots for home supposed to be 0, but is ${homeRootsTotal}`);
 
     for (const [domain, replica] of initialReplica) {
-      let initialReplicaRoot = replica.root;
-      let replicaRootsTotal = replica.total;
+      let root = replica.root;
+      let total = replica.total;
       while (true) {
-        let newRoot = replica.roots.get(initialReplicaRoot);
+        let newRoot = replica.roots.get(root);
         if (newRoot) {
-          initialReplicaRoot = newRoot;
-          replicaRootsTotal -= 1;
+          root = newRoot;
+          total -= 1;
         } else {
           break;
         }
       }
-      if (replicaRootsTotal !== 0) throw new Error(`${this.domain}: Left roots for replica ${domain} supposed to be 0, but is ${replicaRootsTotal} replica for domain ${domain}`)
+      if (total !== 0) throw new Error(`${this.domain}: Left roots for replica ${domain} supposed to be 0, but is ${total} replica for domain ${domain}`)
     }
   }
 
@@ -261,7 +262,16 @@ export class Indexer {
       //   from, 
       //   to
       // )
-      const events = await br.queryFilter(br.filters.Send(), from, to);
+      const [events, error] = await retry(async () => {
+        return await br.queryFilter(br.filters.Send(), from, to);
+      }, RETRIES, (e) => {this.orchestrator.logger.warn(`Some error happened at retrying getting logs between blocks ${from} and ${to} for ${this.domain} domain, error: ${e.message}`)})
+      if (error) {
+        this.orchestrator.logger.error(`Couldn't recover the error after ${RETRIES} retries`)
+        throw error
+      }
+      if (events === undefined) {
+        throw new Error(`There is no error, but events for some reason are still undefined`);
+      }
       const parsedEvents = await Promise.all(
         events.map(async (event) => this.limit(async () => {
           const [ts, senders2hashes] = await this.getBlockInfo(
@@ -299,7 +309,17 @@ export class Indexer {
       //   from, 
       //   to
       // )
-      const events = await br.queryFilter(br.filters.Receive(), from, to);
+
+      const [events, error] = await retry(async () => {
+        return await br.queryFilter(br.filters.Receive(), from, to);
+      }, RETRIES, (e) => {this.orchestrator.logger.warn(`Some error happened at retrying getting logs between blocks ${from} and ${to} for ${this.domain} domain, error: ${e.message}`)})
+      if (error) {
+        this.orchestrator.logger.error(`Couldn't recover the error after ${RETRIES} retries`)
+        throw error
+      }
+      if (events === undefined) {
+        throw new Error(`There is no error, but events for some reason are still undefined`);
+      }
       const parsedEvents = await Promise.all(
         events.map(
           async (event) => this.limit(async () =>
@@ -342,7 +362,17 @@ export class Indexer {
       //   from, 
       //   to
       // )
-      const events = await home.queryFilter(home.filters.Dispatch(), from, to);
+      const [events, error] = await retry(async () => {
+        return await home.queryFilter(home.filters.Dispatch(), from, to);
+      }, RETRIES, (e) => {this.orchestrator.logger.warn(`Some error happened at retrying getting logs between blocks ${from} and ${to} for ${this.domain} domain, error: ${e.message}`)})
+      if (error) {
+        this.orchestrator.logger.error(`Couldn't recover the error after ${RETRIES} retries`)
+        throw error
+      }
+      if (events === undefined) {
+        throw new Error(`There is no error, but events for some reason are still undefined`);
+      }
+
       const parsedEvents = await Promise.all(
         events.map(
           async (event) => this.limit(async () =>
@@ -378,7 +408,17 @@ export class Indexer {
       //   from, 
       //   to
       // )
-      const events = await home.queryFilter(home.filters.Update(), from, to);
+      const [events, error] = await retry(async () => {
+        return await home.queryFilter(home.filters.Update(), from, to);
+      }, RETRIES, (e) => {this.orchestrator.logger.warn(`Some error happened at retrying getting logs between blocks ${from} and ${to} for ${this.domain} domain, error: ${e.message}`)})
+      if (error) {
+        this.orchestrator.logger.error(`Couldn't recover the error after ${RETRIES} retries`)
+        throw error
+      }
+      if (events === undefined) {
+        throw new Error(`There is no error, but events for some reason are still undefined`);
+      }
+
       const parsedEvents = await Promise.all(
         events.map(
           async (event) => this.limit(async () => 
@@ -412,11 +452,20 @@ export class Indexer {
 
     const replica = this.replicaForDomain(domain);
     {
-      const events = await replica.queryFilter(
-        replica.filters.Update(),
-        from,
-        to
-      );
+      const [events, error] = await retry(async () => {
+        return await replica.queryFilter(
+          replica.filters.Update(),
+          from,
+          to
+        );
+      }, RETRIES, (e) => {this.orchestrator.logger.warn(`Some error happened at retrying getting logs between blocks ${from} and ${to} for ${this.domain} domain, error: ${e.message}`)})
+      if (error) {
+        this.orchestrator.logger.error(`Couldn't recover the error after ${RETRIES} retries`)
+        throw error
+      }
+      if (events === undefined) {
+        throw new Error(`There is no error, but events for some reason are still undefined`);
+      }
       // const events = await getEvents(
       //   this.sdk, 
       //   domain, 
@@ -460,11 +509,21 @@ export class Indexer {
       //   from, 
       //   to
       // )
-      const events = await replica.queryFilter(
-        replica.filters.Process(),
-        from,
-        to
-      );
+      const [events, error] = await retry(async () => {
+        return await replica.queryFilter(
+          replica.filters.Process(),
+          from,
+          to
+        );
+      }, RETRIES, (e) => {this.orchestrator.logger.warn(`Some error happened at retrying getting logs between blocks ${from} and ${to} for ${this.domain} domain, error: ${e.message}`)})
+      if (error) {
+        this.orchestrator.logger.error(`Couldn't recover the error after ${RETRIES} retries`)
+        throw error
+      }
+      if (events === undefined) {
+        throw new Error(`There is no error, but events for some reason are still undefined`);
+      }
+
       const parsedEvents = await Promise.all(
         events.map(
           async (event) => this.limit(async () => 
