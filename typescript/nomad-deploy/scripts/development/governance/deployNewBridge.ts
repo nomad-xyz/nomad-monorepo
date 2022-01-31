@@ -17,7 +17,7 @@ const rinkebyBridgeDeploy = new ExistingBridgeDeploy(
 );
 
 // make new milkomedaTestnet bridge Deploy
-const milkomedaTestnetBridgeDeploy = new ExistingBridgeDeploy(
+const milkomedaTestnetBridgeDeploy = new BridgeDeploy(
   milkomedaTestnet.chain,
   milkomedaTestnet.bridgeConfig,
   path,

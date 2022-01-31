@@ -1,0 +1,46 @@
+{
+  "environment": "dev",
+  "signers": {
+    "milkomedaTestnet": {
+      "key": "",
+      "type": "hexKey"
+    },
+    "rinkeby": {
+      "key": "",
+      "type": "hexKey"
+    }
+  },
+  "replicas": {
+    "rinkeby": {
+      "address": "0xf9EdA8f3ee170b64c6640094e9a8bF9cb9f359f3",
+      "domain": "2000",
+      "name": "rinkeby",
+      "rpcStyle": "ethereum",
+      "timelag": 100,
+      "connection": {
+        "type": "http",
+        "url": ""
+      }
+    }
+  },
+  "home": {
+    "address": "0x8e68819f8596B7D23CBfe1D8A0605675c1eD646f",
+    "domain": "8000",
+    "name": "milkomedaTestnet",
+    "rpcStyle": "ethereum",
+    "timelag": 5,
+    "connection": {
+      "type": "http",
+      "url": ""
+    }
+  },
+  "tracing": {
+    "level": "debug",
+    "fmt": "json"
+  },
+  "db": "db_path",
+  "index": {
+    "from": "1771254",
+    "chunk": "2000"
+  }
+}
