@@ -493,7 +493,6 @@ class SenderLostAndFound {
       const some = this.dispatchEventsWithMessages.at(index);
       if (some) {
         const [_, msg] = some;
-        // console.log(`Set sender to ${brSend.eventData.from!} for message: ${msg.hash}`)
         msg.updateSender(brSend.eventData.from!);
         msg.evm = brSend.eventData.evmHash!;
         this.dispatchEventsWithMessages.splice(index, 1);
@@ -693,7 +692,6 @@ export class Processor extends Consumer {
   bridgeRouterSend(e: NomadEvent) {
     const hash = this.senderRegistry.bridgeRouterSend(e);
     if (hash) {
-      // console.log(`Setting bridgeRouterSend for `, this.getMsg(hash)?.sender)
       this.addToSyncQueue(hash);
     }
   }
