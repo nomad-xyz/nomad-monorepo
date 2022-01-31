@@ -2,17 +2,18 @@ use crate::{
     cancel_task,
     metrics::CoreMetrics,
     settings::{IndexSettings, Settings},
-    CachingHome, CachingReplica, ContractSyncMetrics, IndexDataTypes,
+    BaseError, CachingHome, CachingReplica, ContractSyncMetrics, IndexDataTypes,
 };
 use async_trait::async_trait;
-use color_eyre::{eyre::WrapErr, Result};
+use color_eyre::{eyre::WrapErr, Report, Result};
 use futures_util::future::select_all;
 use nomad_core::db::DB;
 use tracing::instrument::Instrumented;
 use tracing::{info_span, Instrument};
 
-use std::{collections::HashMap, sync::Arc};
-use tokio::task::JoinHandle;
+use std::{collections::HashMap, sync::Arc, time::Duration};
+use tokio::{task::JoinHandle, time::sleep};
+
 /// Properties shared across all agents
 #[derive(Debug)]
 pub struct AgentCore {
@@ -117,11 +118,18 @@ pub trait NomadAgent: Send + Sync + std::fmt::Debug + AsRef<AgentCore> {
     {
         let span = info_span!("run_all");
         tokio::spawn(async move {
+            if let Ok(failed) = self.is_home_failed().await? {
+                if failed {
+                    return Err(Report::new(BaseError::FailedHome));
+                }
+            }
             // this is the unused must use
             let names: Vec<&str> = self.replicas().keys().map(|k| k.as_str()).collect();
 
             let run_task = self.run_many(&names);
-            let mut tasks = vec![run_task];
+            let home_fail_watch_task = self.watch_home_fail(5);
+
+            let mut tasks = vec![run_task, home_fail_watch_task];
 
             // kludge
             if Self::AGENT_NAME != "kathy" {
@@ -151,5 +159,34 @@ pub trait NomadAgent: Send + Sync + std::fmt::Debug + AsRef<AgentCore> {
             res?
         })
         .instrument(span)
+    }
+
+    /// Spawn a task which watches home for getting into failed state
+    #[allow(clippy::unit_arg)]
+    fn watch_home_fail(&self, interval: u64) -> Instrumented<JoinHandle<Result<()>>> {
+        use nomad_core::Common;
+        let span = info_span!("home_watch");
+        let home = self.home().clone();
+        tokio::spawn(async move {
+            let home = home.clone();
+            loop {
+                if home.state().await? == nomad_core::State::Failed {
+                    return Err(Report::new(BaseError::FailedHome));
+                }
+
+                sleep(Duration::from_secs(interval)).await;
+            }
+        })
+        .instrument(span)
+    }
+
+    /// Returns true if home is in failed state
+    #[allow(clippy::unit_arg)]
+    fn is_home_failed(&self) -> Instrumented<JoinHandle<Result<bool>>> {
+        use nomad_core::Common;
+        let span = info_span!("check_home_state");
+        let home = self.home().clone();
+        tokio::spawn(async move { Ok(home.state().await? == nomad_core::State::Failed) })
+            .instrument(span)
     }
 }

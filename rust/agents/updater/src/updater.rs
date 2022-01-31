@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use color_eyre::{eyre::ensure, Result};
+use color_eyre::{eyre::ensure, Report, Result};
 use ethers::{signers::Signer, types::Address};
 use futures_util::future::select_all;
 use prometheus::IntCounter;
@@ -11,7 +11,7 @@ use tracing::{info, instrument::Instrumented, Instrument};
 use crate::{
     produce::UpdateProducer, settings::UpdaterSettings as Settings, submit::UpdateSubmitter,
 };
-use nomad_base::{AgentCore, ContractSyncMetrics, IndexDataTypes, NomadAgent, NomadDB};
+use nomad_base::{AgentCore, BaseError, ContractSyncMetrics, IndexDataTypes, NomadAgent, NomadDB};
 use nomad_core::{Common, Signers};
 
 /// An updater agent
@@ -107,7 +107,14 @@ impl NomadAgent for Updater {
             self.submitted_update_count.clone(),
         );
 
+        let fail_check = self.is_home_failed();
+        let home_fail_watch_task = self.watch_home_fail(self.interval_seconds);
+
         tokio::spawn(async move {
+            if fail_check.await?? {
+                return Err(Report::new(BaseError::FailedHome));
+            }
+
             let expected: Address = home.updater().await?.into();
             ensure!(
                 expected == address,
@@ -130,7 +137,13 @@ impl NomadAgent for Updater {
             let produce_task = produce.spawn();
             let submit_task = submit.spawn();
 
-            let (res, _, rem) = select_all(vec![sync_task, produce_task, submit_task]).await;
+            let (res, _, rem) = select_all(vec![
+                sync_task,
+                produce_task,
+                submit_task,
+                home_fail_watch_task,
+            ])
+            .await;
 
             for task in rem.into_iter() {
                 task.into_inner().abort();
