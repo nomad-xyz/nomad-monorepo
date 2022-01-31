@@ -138,7 +138,7 @@ export class Indexer {
     let batchTo = from + batchSize;
 
     while (true) {
-      this.orchestrator.logger.info(
+      this.orchestrator.logger.debug(
         `Fetching batch of events for domain ${this.domain} from: ${batchFrom}, to: ${batchTo}`
       );
       const events = await fetchEvents(batchFrom, batchTo);
@@ -147,7 +147,7 @@ export class Indexer {
       this.persistance.store(...events);
       try {
         this.dummyTestEventsIntegrity(batchTo);
-        this.orchestrator.logger.info(`Integrity test PASSED for ${this.domain} between ${batchFrom} and ${batchTo}`);
+        this.orchestrator.logger.debug(`Integrity test PASSED for ${this.domain} between ${batchFrom} and ${batchTo}`);
       } catch(e) {
         const pastFrom = batchFrom;
         const pastTo = batchTo;
