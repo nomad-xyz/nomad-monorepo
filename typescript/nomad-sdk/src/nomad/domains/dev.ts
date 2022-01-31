@@ -67,4 +67,25 @@ export const moonbasealpha: NomadDomain = {
   xAppConnectionManager: '0xD99E2c5eD0AacE4c459A850bd2DE0b1c0De12bfD',
 };
 
-export const devDomains = [rinkeby, kovan, moonbasealpha];
+export const milkomedaTestnet: NomadDomain = {
+  name: 'milkomedaTestnet',
+  id: 8000,
+  paginate: {
+    from: 1771254,
+    blocks: 2000,
+  },
+  home: '0x8e68819f8596B7D23CBfe1D8A0605675c1eD646f',
+  replicas: [
+    {
+      domain: 2000,
+      address: '0x53E7F6AFbECBB18a8E4989b89ADB1f0ce85272F5',
+    },
+  ],
+  governanceRouter: '0x66daa391eF8679b08246Ab9a5F56EBc5Eb6489c8',
+  bridgeRouter: '0x4C2e47cA4Dd7b93A62730e463BE43A0EA01c5A10',
+  tokenRegistry: '0xC2205CA7803B21748AC2854994Cfe10E5440CDEf',
+  ethHelper: '0x3Ec2235bFdBcA03C3709c97D23f9d72c75F8A7Dd',
+  xAppConnectionManager: '0xf116142af150F8E2b939C14f746a67Ed6788266C',
+};
+
+export const devDomains = [rinkeby, kovan, moonbasealpha, milkomedaTestnet];
