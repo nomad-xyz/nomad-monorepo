@@ -166,7 +166,7 @@ pub trait NomadAgent: Send + Sync + std::fmt::Debug + AsRef<AgentCore> {
     fn watch_home_fail(&self, interval: u64) -> Instrumented<JoinHandle<Result<()>>> {
         use nomad_core::Common;
         let span = info_span!("home_watch");
-        let home = self.home().clone();
+        let home = self.home();
         tokio::spawn(async move {
             let home = home.clone();
             loop {
@@ -185,7 +185,7 @@ pub trait NomadAgent: Send + Sync + std::fmt::Debug + AsRef<AgentCore> {
     fn is_home_failed(&self) -> Instrumented<JoinHandle<Result<bool>>> {
         use nomad_core::Common;
         let span = info_span!("check_home_state");
-        let home = self.home().clone();
+        let home = self.home();
         tokio::spawn(async move { Ok(home.state().await? == nomad_core::State::Failed) })
             .instrument(span)
     }
