@@ -33,7 +33,7 @@ export class Indexer {
     );
     this.blockCache = new KVCache(String(this.domain), this.orchestrator.db);
     // 20 concurrent requests per indexer
-    this.limit = pLimit(50);
+    this.limit = pLimit(100);
   }
 
   get provider(): ethers.providers.Provider {
@@ -54,12 +54,13 @@ export class Indexer {
     }
 
     const [block, error] = await retry(
-      async () => await this.provider.getBlockWithTransactions(blockNumber),
+      async () => {
+        return await this.limit(() => this.provider.getBlockWithTransactions(blockNumber))
+      },
       RETRIES,
       (error: any) =>
         this.orchestrator.logger.warn(
           `Retrying after RPC Error... Block: ${blockNumber}, Domain: ${this.domain}, Error: ${error.code}`
-
         )
     );
     if (!block) {
@@ -109,7 +110,7 @@ export class Indexer {
 
   async updateAll(replicas: number[]) {
     let from = Math.max(
-      this.persistance.height + 1,
+      this.persistance.height,
       this.sdk.getDomain(this.domain)?.paginate?.from || 0
     );
     const to = await this.provider.getBlockNumber();
@@ -118,45 +119,44 @@ export class Indexer {
       `Fetching events for domain ${this.domain} from: ${from}, to: ${to}`
     );
 
-    const fetchEvents = async (from: number, to: number) => {
+    const fetchEvents = async (from: number, to: number): Promise<NomadEvent[]> => {
       const homeEvents = await this.fetchHome(from, to);
-          const replicasEvents = (
-            await Promise.all(
-              replicas.map((r) => this.fetchReplica(r, from, to))
-            )
-          ).flat();
-          const bridgeRouterEvents = await this.fetchBridgeRouter(from, to);
+      const replicasEvents = (
+        await Promise.all(
+          replicas.map((r) => this.fetchReplica(r, from, to))
+        )
+      ).flat();
+      const bridgeRouterEvents = await this.fetchBridgeRouter(from, to);
 
-      // const [fetchedEvents, error] = await retry(
-      //   async () => {
-          
-      //   },
-      //   50,
-      //   (error) =>
-      //     this.orchestrator.logger.warn(
-      //       `Some error happened at retrying getting logs between blocks ${from} and ${to} for ${this.domain} domain, error: ${error.message}`
-      //     )
-      // );
-
-      // if (error)
-      //   throw new Error(
-      //     `Some error happened at retrying getting logs between blocks ${from} and ${to} for ${this.domain} domain, error: ${error}`
-      //   );
       return [...homeEvents, ...replicasEvents, ...bridgeRouterEvents];
     };
 
-    const allEvents = [];
+    const allEvents: NomadEvent[] = [];
 
     const batchSize = BATCH_SIZE;
     let batchFrom = from;
     let batchTo = from + batchSize;
 
     while (true) {
+      this.orchestrator.logger.info(
+        `Fetching batch of events for domain ${this.domain} from: ${batchFrom}, to: ${batchTo}`
+      );
       const events = await fetchEvents(batchFrom, batchTo);
       if (!events) throw new Error(`KEk`);
       events.sort((a, b) => a.ts - b.ts);
       this.persistance.store(...events);
-      allEvents.push(...events);
+      try {
+        this.dummyTestEventsIntegrity(batchTo);
+        this.orchestrator.logger.info(`Integrity test PASSED for ${this.domain} between ${batchFrom} and ${batchTo}`);
+      } catch(e) {
+        const pastFrom = batchFrom;
+        const pastTo = batchTo;
+        batchFrom = batchFrom - batchSize/2;
+        batchTo = batchFrom + batchSize;
+        this.orchestrator.logger.warn(`Integrity test not passed for ${this.domain} between ${pastFrom} and ${pastTo}, recollecting between ${batchFrom} and ${batchTo},: ${e}`);
+        continue;
+      }
+      allEvents.push(...events.filter(newEvent => allEvents.every(oldEvent => newEvent.uniqueHash() !== oldEvent.uniqueHash())));
       if (batchTo >= to) break;
       batchFrom = batchTo + 1;
       batchTo = Math.min(to, batchFrom + batchSize);
@@ -172,8 +172,9 @@ export class Indexer {
     return allEvents;
   }
 
-  dummyTestEventsIntegrity() {
+  dummyTestEventsIntegrity(blockTo?: number) {
     let allEvents = this.persistance.allEvents();
+    if (blockTo) allEvents = allEvents.filter(e => e.block <= blockTo);
     if (allEvents.length === 0) {
       this.orchestrator.logger.warn(`No events to test integrity!!!`);
       return ;
@@ -211,12 +212,6 @@ export class Indexer {
           replica.root = oldRoot;
         }
       }
-    }
-
-    if (homeRootsTotal <= 0) throw new Error(`${this.domain}: Total for home is not supposed to be 0, but is ${homeRootsTotal}`);
-
-    for (const [domain, replica] of initialReplica) {
-      if (replica.total <= 0) throw new Error(`${this.domain}: Total for replica ${domain} is not supposed to be 0, but is ${replica.total}`);
     }
 
     while (true) {
@@ -273,7 +268,7 @@ export class Indexer {
         throw new Error(`There is no error, but events for some reason are still undefined`);
       }
       const parsedEvents = await Promise.all(
-        events.map(async (event) => this.limit(async () => {
+        events.map(async (event) => {
           const [ts, senders2hashes] = await this.getBlockInfo(
             event.blockNumber
           );
@@ -295,7 +290,7 @@ export class Indexer {
             event.blockNumber,
             EventSource.Fetch
           );
-        }))
+        })
       );
       allEvents.push(...parsedEvents);
     }
@@ -322,7 +317,7 @@ export class Indexer {
       }
       const parsedEvents = await Promise.all(
         events.map(
-          async (event) => this.limit(async () =>
+          async (event) => 
             new NomadEvent(
               this.domain,
               EventType.BridgeRouterReceive,
@@ -342,7 +337,7 @@ export class Indexer {
               EventSource.Fetch
             ))
         )
-      );
+      ;
       allEvents.push(...parsedEvents);
     }
 
@@ -375,7 +370,7 @@ export class Indexer {
 
       const parsedEvents = await Promise.all(
         events.map(
-          async (event) => this.limit(async () =>
+          async (event) => 
             new NomadEvent(
               this.domain,
               EventType.HomeDispatch,
@@ -395,7 +390,7 @@ export class Indexer {
               EventSource.Fetch
             ))
         )
-      );
+      ;
       fetchedEvents.push(...parsedEvents);
     }
 
@@ -421,7 +416,7 @@ export class Indexer {
 
       const parsedEvents = await Promise.all(
         events.map(
-          async (event) => this.limit(async () => 
+          async (event) =>  
             new NomadEvent(
               this.domain,
               EventType.HomeUpdate,
@@ -440,7 +435,7 @@ export class Indexer {
               EventSource.Fetch
             ))
         )
-      );
+      ;
       fetchedEvents.push(...parsedEvents);
     }
 
@@ -477,7 +472,7 @@ export class Indexer {
 
       const parsedEvents = await Promise.all(
         events.map(
-          async (event) => this.limit(async () => 
+          async (event) => 
             new NomadEvent(
               this.domain,
               EventType.ReplicaUpdate,
@@ -496,7 +491,7 @@ export class Indexer {
               EventSource.Fetch
             ))
         )
-      );
+      ;
       fetchedEvents.push(...parsedEvents);
     }
 
@@ -526,7 +521,7 @@ export class Indexer {
 
       const parsedEvents = await Promise.all(
         events.map(
-          async (event) => this.limit(async () => 
+          async (event) => 
             new NomadEvent(
               this.domain,
               EventType.ReplicaProcess,
@@ -544,7 +539,7 @@ export class Indexer {
               EventSource.Fetch
             ))
         )
-      );
+      ;
       fetchedEvents.push(...parsedEvents);
     }
     return fetchedEvents;
@@ -586,19 +581,22 @@ export class RamPersistance extends Persistance {
   }
 
   store(...events: NomadEvent[]): void {
-    events.forEach((event) => {
-      this.updateFromTo(event.block);
+    for (const event of events) {
       const block = this.block2events.get(event.block);
       if (block) {
+        if (block.some(e => e.uniqueHash() === event.uniqueHash())) {
+          continue;
+        }
         block.push(event);
       } else {
         this.block2events.set(event.block, [event]);
       }
+      this.updateFromTo(event.block);
       if (this.blocks.indexOf(event.block) < 0) {
         this.blocks.push(event.block);
         this.blocks = this.blocks.sort();
       }
-    });
+    };
     this.persist();
   }
   async init(): Promise<void> {

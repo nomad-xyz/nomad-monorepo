@@ -16,7 +16,7 @@ export async function retry<T>(
   tries: number,
   onError: ((e: any) => Promise<void> | void) | undefined
 ): Promise<[T | undefined, any]> {
-  let timeout = 5000;
+  let timeout = 2000;
   let lastError: any = undefined;
   for (let attempt = 0; attempt < tries; attempt++) {
     try {

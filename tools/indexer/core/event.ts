@@ -1,4 +1,5 @@
 import { ethers } from "ethers";
+import { hash } from "./utils";
 
 export enum ContractType {
   Home = "home",
@@ -44,6 +45,32 @@ export type EventData = {
   liquidityProvider?: string;
   evmHash?: string;
 };
+
+export function uniqueHash(d: EventData): string {
+  return hash(
+    d.messageHash || 'undefined',
+    d.leafIndex?.toHexString()  || 'undefined',
+    d.destinationAndNonce?.toHexString() || 'undefined',
+    d.committedRoot || 'undefined',
+    d.oldRoot || 'undefined',
+    d.newRoot || 'undefined',
+    d.success ? 'true' : 'false',
+    d.returnData?.toString()  || 'undefined',
+    d.message || 'undefined',
+    d.signature || 'undefined',
+    d.homeDomain?.toString()  || 'undefined',
+    d.token || 'undefined',
+    d.from || 'undefined',
+    d.toDomain?.toString()  || 'undefined',
+    d.toId || 'undefined',
+    d.amount?.toHexString()  || 'undefined',
+    d.fastLiquidityEnabled ? 'true' : 'false',
+    d.originAndNonce?.toHexString()  || 'undefined',
+    d.recipient || 'undefined',
+    d.liquidityProvider || 'undefined',
+    d.evmHash || 'undefined',
+  )
+}
 
 export class NomadEvent {
   domain: number;
@@ -136,6 +163,10 @@ export class NomadEvent {
       e.block,
       EventSource.Storage
     );
+  }
+
+  uniqueHash(): string {
+    return hash(this.domain.toString(), this.eventType, this.replicaOrigin.toString(), this.block.toString(), uniqueHash(this.eventData))
   }
 }
 
