@@ -13,6 +13,7 @@ import {
 } from './domains';
 import { TransferMessage } from './messages';
 import { hexlify } from '@ethersproject/bytes';
+import { FailedHomeError } from './error';
 
 type Address = string;
 
@@ -443,7 +444,7 @@ export class NomadContext extends MultiProvider {
 
     await this.checkHome(fromDomain);
     if (this.blacklist().has(fromDomain)) {
-      throw new Error('Attempted to send token to failed home!');
+      throw new FailedHomeError('Attempted to send token to failed home!');
     }
 
     const fromBridge = this.mustGetBridge(from);
@@ -513,7 +514,7 @@ export class NomadContext extends MultiProvider {
 
     await this.checkHome(fromDomain);
     if (this.blacklist().has(fromDomain)) {
-      throw new Error('Attempted to send token to failed home!');
+      throw new FailedHomeError('Attempted to send token to failed home!');
     }
 
     const ethHelper = this.mustGetBridge(from).ethHelper;
