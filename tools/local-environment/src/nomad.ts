@@ -1,9 +1,9 @@
-import fs from "fs";
+import fs from 'fs';
 
 // Local imports
-import { Network, Networkish, networkFromObject } from "./network";
-import { Key } from "./key";
-import { Agent, AgentType, agentTypeToString, LocalAgent } from "./agent";
+import { Network, Networkish, networkFromObject } from './network';
+import { Key } from './key';
+import { Agent, AgentType, agentTypeToString, LocalAgent } from './agent';
 
 import {
   Chain,
@@ -11,56 +11,54 @@ import {
   RustConfig,
   DEFAULT_GAS,
   DeployEnvironment,
-} from "@nomad-xyz/deploy/src/chain";
+} from '@nomad-xyz/deploy/src/chain';
 import {
   Governor,
   CoreConfig,
   CoreDeploy,
   ExistingCoreDeploy,
-} from "@nomad-xyz/deploy/src/core/CoreDeploy";
+} from '@nomad-xyz/deploy/src/core/CoreDeploy';
 import {
   BridgeConfig,
   BridgeDeploy,
   ExistingBridgeDeploy,
-} from "@nomad-xyz/deploy/src/bridge/BridgeDeploy";
+} from '@nomad-xyz/deploy/src/bridge/BridgeDeploy';
 import {
   getPathToDeployConfig,
   getPathToBridgeConfig,
-} from "@nomad-xyz/deploy/src/verification/readDeployOutput";
+} from '@nomad-xyz/deploy/src/verification/readDeployOutput';
 import {
   deployBridgesHubAndSpoke,
   deployNewChainBridge,
-} from "@nomad-xyz/deploy/src/bridge";
-import { deployHubAndSpoke, deployNewChain } from "@nomad-xyz/deploy/src/core";
-import { ContractVerificationInput } from "@nomad-xyz/deploy/src/deploy";
-import {
-  enrollSpoke,
-} from "@nomad-xyz/deploy/src/incremental";
-import TestBridgeDeploy from "@nomad-xyz/deploy/src/bridge/TestBridgeDeploy";
+} from '@nomad-xyz/deploy/src/bridge';
+import { deployHubAndSpoke, deployNewChain } from '@nomad-xyz/deploy/src/core';
+import { ContractVerificationInput } from '@nomad-xyz/deploy/src/deploy';
+import { enrollSpoke } from '@nomad-xyz/deploy/src/incremental';
+import TestBridgeDeploy from '@nomad-xyz/deploy/src/bridge/TestBridgeDeploy';
 import {
   BridgeContractAddresses,
   BridgeContracts,
-} from "@nomad-xyz/deploy/src/bridge/BridgeContracts";
+} from '@nomad-xyz/deploy/src/bridge/BridgeContracts';
 
-import { NomadContext } from "@nomad-xyz/sdk";
-import { CoreContracts as NomadCoreContracts } from "@nomad-xyz/sdk/nomad/contracts/CoreContracts";
-import { BridgeContracts as NomadBridgeContracts } from "@nomad-xyz/sdk/nomad/contracts/BridgeContracts";
-import type { NomadDomain } from "@nomad-xyz/sdk/nomad/domains/domain";
-import { CoreContracts } from "@nomad-xyz/deploy/src/core/CoreContracts";
+import { NomadContext } from '@nomad-xyz/sdk';
+import { CoreContracts as NomadCoreContracts } from '@nomad-xyz/sdk/nomad/contracts/CoreContracts';
+import { BridgeContracts as NomadBridgeContracts } from '@nomad-xyz/sdk/nomad/contracts/BridgeContracts';
+import type { NomadDomain } from '@nomad-xyz/sdk/nomad/domains/domain';
+import { CoreContracts } from '@nomad-xyz/deploy/src/core/CoreContracts';
 
 import {
   XAppConnectionManager__factory,
   XAppConnectionManager,
-} from "@nomad-xyz/contract-interfaces/core";
+} from '@nomad-xyz/contract-interfaces/core';
 
-import { Updater } from "@nomad-xyz/test/lib/core";
-import { NonceManager } from "@ethersproject/experimental";
-import { ethers } from "ethers";
-import { Logger, LogLevel } from "./logger";
-import { checkCoreDeploy } from "@nomad-xyz/deploy/src/core/checks";
-import { checkHubAndSpokeBridgeConnections } from "@nomad-xyz/deploy/src/bridge/checks";
-import { checkHubAndSpokeConnections } from "@nomad-xyz/deploy/src/incremental/checks";
-import { utils } from ".";
+import { Updater } from '@nomad-xyz/test/lib/core';
+import { NonceManager } from '@ethersproject/experimental';
+import { ethers } from 'ethers';
+import { Logger, LogLevel } from './logger';
+import { checkCoreDeploy } from '@nomad-xyz/deploy/src/core/checks';
+import { checkHubAndSpokeBridgeConnections } from '@nomad-xyz/deploy/src/bridge/checks';
+import { checkHubAndSpokeConnections } from '@nomad-xyz/deploy/src/incremental/checks';
+import { utils } from '.';
 
 export class Nomad {
   id: number;
@@ -103,33 +101,33 @@ export class Nomad {
       deployed: Array.from(this.deployed),
       host: this.host.domain,
       deployers: Object.fromEntries(
-        Array.from(this.deployers.entries()).map(([n, k]) => [n, k.toString()])
+        Array.from(this.deployers.entries()).map(([n, k]) => [n, k.toString()]),
       ),
       signers: Object.fromEntries(
-        Array.from(this.signers.entries()).map(([n, k]) => [n, k.toString()])
+        Array.from(this.signers.entries()).map(([n, k]) => [n, k.toString()]),
       ),
       updaters: Object.fromEntries(
-        Array.from(this.updaters.entries()).map(([n, k]) => [n, k.toString()])
+        Array.from(this.updaters.entries()).map(([n, k]) => [n, k.toString()]),
       ),
       watchers: Object.fromEntries(
-        Array.from(this.watchers.entries()).map(([n, k]) => [n, k.toString()])
+        Array.from(this.watchers.entries()).map(([n, k]) => [n, k.toString()]),
       ),
       networks: Object.fromEntries(
         Array.from(this.networks.entries()).map(([n, net]) => [
           n,
           net.toObject(),
-        ])
+        ]),
       ),
       deployArtifacts: deployArtifactsToObject(this.deployArtifacts),
     };
   }
 
   static async fromObject(obj: Object): Promise<Nomad> {
-    const hostDomain: number = Object(obj)["host"];
+    const hostDomain: number = Object(obj)['host'];
     const networks = new Map<number, Network>(
-      Array.from(Object.entries(Object(obj)["networks"])).map(([n, net]) => {
+      Array.from(Object.entries(Object(obj)['networks'])).map(([n, net]) => {
         return [parseInt(n), networkFromObject(net as Object)];
-      })
+      }),
     );
 
     if (!hostDomain) throw new Error(`No network host name`);
@@ -146,27 +144,27 @@ export class Nomad {
       }
     });
 
-    o.setId(Object(obj)["id"] as number);
-    o.setDeployed(...(Object(obj)["deployed"] as number[]));
+    o.setId(Object(obj)['id'] as number);
+    o.setDeployed(...(Object(obj)['deployed'] as number[]));
 
-    Array.from(Object.entries(Object(obj)["deployers"])).forEach(([n, k]) => {
+    Array.from(Object.entries(Object(obj)['deployers'])).forEach(([n, k]) => {
       o.setDeployer(parseInt(n), new Key(k as string));
     });
 
-    Array.from(Object.entries(Object(obj)["signers"])).forEach(([n, k]) => {
+    Array.from(Object.entries(Object(obj)['signers'])).forEach(([n, k]) => {
       o.logger.info(`Setting signer`, n, k);
       o.setSigner(parseInt(n), new Key(k as string));
     });
 
-    Array.from(Object.entries(Object(obj)["updaters"])).forEach(([n, k]) => {
+    Array.from(Object.entries(Object(obj)['updaters'])).forEach(([n, k]) => {
       o.setUpdater(parseInt(n), new Key(k as string));
     });
 
-    Array.from(Object.entries(Object(obj)["watchers"])).forEach(([n, k]) => {
+    Array.from(Object.entries(Object(obj)['watchers'])).forEach(([n, k]) => {
       o.setWatcher(parseInt(n), new Key(k as string));
     });
 
-    o.setArtifacts(deployArtifactsFromObject(Object(obj)["deployArtifacts"]));
+    o.setArtifacts(deployArtifactsFromObject(Object(obj)['deployArtifacts']));
 
     await o.updateMultiProvider();
 
@@ -208,7 +206,7 @@ export class Nomad {
     if (domain) {
       if (agentType) {
         const mapKey = `${agentTypeToString(
-          agentType
+          agentType,
         ).toLowerCase()}_${domain}`;
         this.signers.set(mapKey, key);
       } else {
@@ -237,13 +235,13 @@ export class Nomad {
 
   getSignerKey(
     networkish: Networkish,
-    agentType?: string | AgentType
+    agentType?: string | AgentType,
   ): Key | undefined {
     const domain = this.networkToDomain(networkish);
     if (domain) {
       if (agentType) {
         const mapKey = `${agentTypeToString(
-          agentType
+          agentType,
         ).toLowerCase()}_${domain}`;
         return this.signers.get(mapKey);
       } else {
@@ -267,13 +265,13 @@ export class Nomad {
 
   getSpokes(): Network[] {
     return Array.from(this.networks.values()).filter(
-      (network) => network != this.host
+      (network) => network != this.host,
     );
   }
 
   async getUpdater(
     networkish: Networkish,
-    addressOrIndex?: string | number
+    addressOrIndex?: string | number,
   ): Promise<Updater> {
     const network = this.getNetwork(networkish);
     if (!network) throw new Error(`Network not found`);
@@ -282,11 +280,11 @@ export class Nomad {
       addressOrIndex || this.getUpdaterKey(network)?.toAddress();
     if (!addressOrNumInNode)
       throw new Error(
-        `No way to identify updater's address: provide to function, or define in nomad`
+        `No way to identify updater's address: provide to function, or define in nomad`,
       );
 
     const signerWithAddress = await network.getSignerWithAddress(
-      addressOrNumInNode
+      addressOrNumInNode,
     );
     return Updater.fromSigner(signerWithAddress, network.domain);
   }
@@ -350,7 +348,7 @@ export class Nomad {
 
   private getDomainByName(networkName: string): number | undefined {
     const found = Array.from(this.networks.entries()).find(
-      ([_, net]) => net.name == networkName
+      ([_, net]) => net.name == networkName,
     );
 
     if (found) return found[0];
@@ -358,18 +356,18 @@ export class Nomad {
   }
 
   private networkToDomain(networkish: Networkish): number | undefined {
-    if (typeof networkish === "string") {
+    if (typeof networkish === 'string') {
       return this.getDomainByName(networkish);
-    } else if (typeof networkish === "number") {
+    } else if (typeof networkish === 'number') {
       if (!this.networks.has(networkish))
         this.logger.warn(
-          `Even though domain-key pair was added to deployers, domain haven't been added to nomad yet!`
+          `Even though domain-key pair was added to deployers, domain haven't been added to nomad yet!`,
         );
       return networkish;
     } else {
       if (!this.networks.has(networkish.domain))
         this.logger.warn(
-          `Even though network exists it was found not added to nomad yet!`
+          `Even though network exists it was found not added to nomad yet!`,
         );
       return networkish.domain;
     }
@@ -380,7 +378,7 @@ export class Nomad {
   }
 
   async getDomainForNetwork(
-    networkish: Networkish
+    networkish: Networkish,
   ): Promise<NomadDomain | undefined> {
     const network = this.getNetwork(networkish);
 
@@ -395,7 +393,7 @@ export class Nomad {
     const home = artifact.core.coreDeployAddresses.home.proxy;
 
     const replicas = Object.entries(
-      artifact.core.coreDeployAddresses.replicas || {}
+      artifact.core.coreDeployAddresses.replicas || {},
     ).map(([domainStr, replica]) => ({
       domain: parseInt(domainStr),
       address: replica.proxy,
@@ -424,8 +422,8 @@ export class Nomad {
     // but it is possible to do it here as well
     const domains = await Promise.all(
       this.getNetworks().map(async (network) =>
-        this.getDomainForNetwork(network)
-      )
+        this.getDomainForNetwork(network),
+      ),
     );
 
     const filteredDomains = utils.filterUndefined(domains); //.filter(isNomadDomain);
@@ -444,7 +442,7 @@ export class Nomad {
           ctx.registerWalletSigner(network.domain, signerKey.toString());
         } else {
           this.logger.warn(
-            `Signer key was not found for network ${network.name} - Multiprovider might not work`
+            `Signer key was not found for network ${network.name} - Multiprovider might not work`,
           );
         }
       });
@@ -503,24 +501,24 @@ export class Nomad {
     const updater = this.updaters.get(network.domain);
     if (!updater)
       this.logger.warn(
-        `Updater key for ${network.name}(${network.domain}) was not found`
+        `Updater key for ${network.name}(${network.domain}) was not found`,
       ); // throw new Error();
 
     const watcher = this.watchers.get(network.domain);
     if (!watcher)
       this.logger.warn(
-        `Watchers key for ${network.name}(${network.domain}) was not found`
+        `Watchers key for ${network.name}(${network.domain}) was not found`,
       ); // throw new Error();
 
     const governor: Governor | undefined = network.governor;
 
     return {
-      environment: "dev" as DeployEnvironment, // TODO
+      environment: 'dev' as DeployEnvironment, // TODO
       updater: updater!.toAddress(),
       optimisticSeconds: 10, // TODO
       watchers: [watcher!.toAddress()],
       recoveryTimelock: 180, // TODO
-      recoveryManager: "0x24F6c874F56533d9a1422e85e5C7A806ED11c036", // TODO
+      recoveryManager: '0x24F6c874F56533d9a1422e85e5C7A806ED11c036', // TODO
       processGas: 850_000, // TODO
       reserveGas: 15_000, // TODO
       governor,
@@ -546,7 +544,7 @@ export class Nomad {
 
   getExistingCoreDeploy(
     network: Network,
-    fromCache = true
+    fromCache = true,
   ): ExistingCoreDeploy | undefined {
     if (fromCache) {
       const deploy = this.coreCache.get(network.domain);
@@ -564,7 +562,7 @@ export class Nomad {
         chain,
         coreConfig,
         addresses,
-        chain.deployer
+        chain.deployer,
       );
     }
   }
@@ -583,25 +581,25 @@ export class Nomad {
       return new BridgeDeploy(
         chain,
         bridgeConfig,
-        "/tmp/deleteme",
+        '/tmp/deleteme',
         false,
-        coreDeploy.contractOutput
+        coreDeploy.contractOutput,
       );
     } else {
-      const path = getPathToDeployConfig("dev");
+      const path = getPathToDeployConfig('dev');
       return new BridgeDeploy(chain, bridgeConfig, path);
     }
   }
 
   getExistingBridgeDeploy(
     network: Network,
-    fromCache = true
+    fromCache = true,
   ): ExistingBridgeDeploy | undefined {
     if (fromCache) {
       const deploy = this.bridgeCache.get(network.domain);
       if (deploy) return deploy;
     }
-    const path = getPathToBridgeConfig("dev");
+    const path = getPathToBridgeConfig('dev');
     const chain = this.getChain(network);
     const bridgeConfig = this.getBridgeConfig(network);
 
@@ -617,13 +615,13 @@ export class Nomad {
         path,
         bridgeAddresses,
         coreAddresses,
-        chain.deployer
+        chain.deployer,
       );
     }
   }
 
   async getXAppConnectionManager(
-    networkish: Networkish
+    networkish: Networkish,
   ): Promise<XAppConnectionManager> {
     const network = this.getNetwork(networkish);
     if (!network) throw new Error(`No network!`);
@@ -641,14 +639,14 @@ export class Nomad {
       throw new Error(`No XAppConnectionManager address in artifacts`);
 
     return new XAppConnectionManager__factory(signer).attach(
-      XAppConnectionManagerAddress
+      XAppConnectionManagerAddress,
     );
   }
 
   async deployHubNSpokeChains(): Promise<[CoreDeploy, CoreDeploy[]]> {
     const hub = this.getCoreDeploy(this.host);
     const spokes = this.getSpokes().map((network) =>
-      this.getCoreDeploy(network)
+      this.getCoreDeploy(network),
     );
     await deployHubAndSpoke(hub, spokes);
     this.cacheDeploy(hub, ...spokes);
@@ -658,10 +656,10 @@ export class Nomad {
   async deployHubNSpokeBridges(): Promise<[BridgeDeploy, BridgeDeploy[]]> {
     const hub = this.getBridgeDeploy(
       this.host,
-      this.getExistingCoreDeploy(this.host)
+      this.getExistingCoreDeploy(this.host),
     );
     const spokes = this.getSpokes().map((network) =>
-      this.getBridgeDeploy(network, this.getExistingCoreDeploy(network))
+      this.getBridgeDeploy(network, this.getExistingCoreDeploy(network)),
     );
     await deployBridgesHubAndSpoke(hub, spokes);
     this.cacheDeploy(hub, ...spokes);
@@ -719,21 +717,19 @@ export class Nomad {
 
     this.updateArtifacts(
       [hubCoreDeployDeployed, ...spokesCoreDeploysDeployed],
-      [hubBridgeDeployDeployed, ...spokesBridgeDeploysDeployed]
+      [hubBridgeDeployDeployed, ...spokesBridgeDeploysDeployed],
     );
 
     this.setDeployed(
       ...[hubCoreDeployDeployed, ...spokesCoreDeploysDeployed].map(
-        (n) => n.chain.domain
-      )
+        (n) => n.chain.domain,
+      ),
     );
 
     return;
   }
 
-  async deployAdditionalNetworks(
-    newNetworks: Network[]
-  ): Promise<void> {
+  async deployAdditionalNetworks(newNetworks: Network[]): Promise<void> {
     for (const newNetwork of newNetworks) {
       await this.deployAdditionalNetwork(newNetwork);
     }
@@ -741,7 +737,7 @@ export class Nomad {
 
   updateArtifacts(newCores: CoreDeploy[], newBridges: BridgeDeploy[]) {
     const oldCoreDeploys = utils.filterUndefined(
-      this.getNetworks().map((n) => this.getExistingCoreDeploy(n)!)
+      this.getNetworks().map((n) => this.getExistingCoreDeploy(n)!),
     );
 
     const toEjectCores = [
@@ -751,16 +747,18 @@ export class Nomad {
 
     const coreDeployArtifacts = this.ejectCoreDeploysArtifacts(toEjectCores);
 
-    const oldBridgeDeploys = utils.filterUndefined(this.getNetworks().map((n) => {
-      const core = this.getExistingCoreDeploy(n);
-      if (core) {
-        return this.getExistingBridgeDeploy(n)!;
-      }
-    }));
+    const oldBridgeDeploys = utils.filterUndefined(
+      this.getNetworks().map((n) => {
+        const core = this.getExistingCoreDeploy(n);
+        if (core) {
+          return this.getExistingBridgeDeploy(n)!;
+        }
+      }),
+    );
 
     const toEjectBridges = [
       ...newBridges,
-      ...this.filterNewDeploys(oldBridgeDeploys, newBridges)
+      ...this.filterNewDeploys(oldBridgeDeploys, newBridges),
     ] as any as BridgeDeploy[];
 
     const bridgeDeployArtifacts =
@@ -768,18 +766,21 @@ export class Nomad {
 
     const artifacts = this.mergeCoreAndBridgeArtifacts(
       coreDeployArtifacts,
-      bridgeDeployArtifacts
+      bridgeDeployArtifacts,
     );
 
     this.setArtifacts(artifacts);
   }
 
-  private filterNewDeploys(oldDeploys: (ExistingCoreDeploy | ExistingBridgeDeploy)[], newDeploys: (CoreDeploy | BridgeDeploy)[]) {
+  private filterNewDeploys(
+    oldDeploys: (ExistingCoreDeploy | ExistingBridgeDeploy)[],
+    newDeploys: (CoreDeploy | BridgeDeploy)[],
+  ) {
     return oldDeploys.filter(
-        (oldDeploy) =>
-            !newDeploys.find(
-                (newDeploy) => newDeploy.chain.domain === oldDeploy.chain.domain
-            )
+      (oldDeploy) =>
+        !newDeploys.find(
+          (newDeploy) => newDeploy.chain.domain === oldDeploy.chain.domain,
+        ),
     );
   }
 
@@ -791,7 +792,9 @@ export class Nomad {
     const nonce = await deployer.getTransactionCount();
     deployer.setTransactionCount(nonce);
 
-    const oldSpokes = this.getSpokes().filter(s => s.domain != newNetwork.domain).map(n => this.getExistingCoreDeploy(n)!);
+    const oldSpokes = this.getSpokes()
+      .filter((s) => s.domain != newNetwork.domain)
+      .map((n) => this.getExistingCoreDeploy(n)!);
 
     const newCoreDeploy = this.getCoreDeploy(newNetwork);
     await deployNewChain(newCoreDeploy, govCoreDeploy, oldSpokes);
@@ -805,19 +808,21 @@ export class Nomad {
 
     this.updateArtifacts(
       [newCoreDeploy, govCoreDeploy],
-      [newBridgeDeploy, govBridgeDeploy]
+      [newBridgeDeploy, govBridgeDeploy],
     );
 
     await this.updateMultiProvider();
 
-    await enrollSpoke(this.multiprovider!, newNetwork.domain, 
+    await enrollSpoke(
+      this.multiprovider!,
+      newNetwork.domain,
       this.getCoreConfig(newNetwork)!,
     );
 
     await checkCoreDeploy(
       newCoreDeploy,
       [govCoreDeploy.chain.domain],
-      govCoreDeploy.chain.domain
+      govCoreDeploy.chain.domain,
     );
 
     await checkHubAndSpokeBridgeConnections(govBridgeDeploy, [newBridgeDeploy]);
@@ -847,8 +852,8 @@ export class Nomad {
           const agent = this.getAgent(agentType, network);
           await agent.connect();
           return;
-        })
-      )
+        }),
+      ),
     );
 
     await Promise.all(startPromises);
@@ -863,8 +868,8 @@ export class Nomad {
           await agent.connect();
           await agent.start();
           return;
-        })
-      )
+        }),
+      ),
     );
 
     await Promise.all(startPromises);
@@ -873,7 +878,7 @@ export class Nomad {
 
   async stopAgents(
     agentsTypes: (string | AgentType)[],
-    disconnect = false
+    disconnect = false,
   ): Promise<void> {
     const startPromises = this.getNetworks().map(async (network) =>
       Promise.all(
@@ -882,8 +887,8 @@ export class Nomad {
           await agent.stop();
           if (disconnect) await agent.disconnect();
           return;
-        })
-      )
+        }),
+      ),
     );
 
     await Promise.all(startPromises);
@@ -905,7 +910,7 @@ export class Nomad {
       Array.from(this.agents.values()).map(async (agent) => {
         await agent.stop();
         if (disconnect) await agent.disconnect();
-      })
+      }),
     );
 
     return;
@@ -925,7 +930,7 @@ export class Nomad {
             .xAppConnectionManager;
         if (!xappCMAddress)
           throw new Error(
-            `No net address for xAppConnectionManager found in artifacts`
+            `No net address for xAppConnectionManager found in artifacts`,
           );
         return [
           network.name,
@@ -933,7 +938,7 @@ export class Nomad {
             address: xappCMAddress,
             domain: network.domain.toString(),
             name: network.name,
-            rpcStyle: "ethereum",
+            rpcStyle: 'ethereum',
             timelag: this.getChain(network).config.timelag,
             connection: {
               url: network.location.toString(),
@@ -941,57 +946,57 @@ export class Nomad {
             },
           },
         ];
-      })
+      }),
     );
   }
 
   getPartials(): Map<string, Partial> {
     const partials = new Map<string, Partial>();
 
-    partials.set("updater", {
-      db: "updaterdb",
-      interval: "5",
-      pause: "15",
+    partials.set('updater', {
+      db: 'updaterdb',
+      interval: '5',
+      pause: '15',
       updater: {
-        key: "",
-        type: "hexKey",
+        key: '',
+        type: 'hexKey',
       },
     });
 
-    partials.set("relayer", {
-      db: "relayerdb",
-      interval: "10",
+    partials.set('relayer', {
+      db: 'relayerdb',
+      interval: '10',
     });
 
-    partials.set("processor", {
-      db: "processordb",
-      interval: "10",
+    partials.set('processor', {
+      db: 'processordb',
+      interval: '10',
     });
 
-    partials.set("watcher", {
+    partials.set('watcher', {
       tracing: {
-        level: "debug",
-        style: "pretty",
+        level: 'debug',
+        style: 'pretty',
       },
-      db: "watcherdb",
-      interval: "100",
+      db: 'watcherdb',
+      interval: '100',
       watcher: {
-        key: "",
-        type: "hexKey",
+        key: '',
+        type: 'hexKey',
       },
       managers: Object.fromEntries(
-        Array.from(this.getXAppConnectionManagersConfig())
+        Array.from(this.getXAppConnectionManagersConfig()),
       ),
     });
 
-    partials.set("kathy", {
+    partials.set('kathy', {
       chat: {
-        message: "static message",
+        message: 'static message',
         recipient:
-          "0xabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcd",
-        type: "static",
+          '0xabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcd',
+        type: 'static',
       },
-      interval: "20",
+      interval: '20',
     });
 
     return partials;
@@ -1010,8 +1015,8 @@ export class Nomad {
             network.location.toString();
 
           if (prettyLogs) {
-            artifact.core.rustConfig.tracing.level = "info";
-            artifact.core.rustConfig.tracing.fmt = "pretty";
+            artifact.core.rustConfig.tracing.level = 'info';
+            artifact.core.rustConfig.tracing.fmt = 'pretty';
           }
 
           if (injectSigners) {
@@ -1057,7 +1062,7 @@ export class Nomad {
   }
 
   ejectCoreDeploysArtifacts(
-    deploys: CoreDeploy[]
+    deploys: CoreDeploy[],
   ): Map<string, CoreDeploysArtifact> {
     return new Map(
       deploys.map((deploy) => {
@@ -1078,12 +1083,12 @@ export class Nomad {
             contracts,
           },
         ];
-      })
+      }),
     );
   }
 
   ejectBridgeDeploysArtifacts(
-    deploys: Deploy[]
+    deploys: Deploy[],
   ): Map<string, BridgeDeploysArtifact> {
     return new Map(
       deploys.map((deploy) => {
@@ -1104,13 +1109,13 @@ export class Nomad {
         }
 
         return [name, artifact];
-      })
+      }),
     );
   }
 
   mergeCoreAndBridgeArtifacts(
     coreArtifacts: Map<string, CoreDeploysArtifact>,
-    bridgeArtifacts: Map<string, BridgeDeploysArtifact>
+    bridgeArtifacts: Map<string, BridgeDeploysArtifact>,
   ): DeployArtifacts {
     const artifacts = Array.from(coreArtifacts.entries()).reduce(
       (artifactsAccumulator, [name, coreArtifact]) => {
@@ -1123,7 +1128,7 @@ export class Nomad {
         }
         return artifactsAccumulator;
       },
-      new Map<string, CoreAndBridgeArtifact>()
+      new Map<string, CoreAndBridgeArtifact>(),
     );
 
     return {
@@ -1180,13 +1185,13 @@ interface DeployArtifacts {
 }
 
 function deployArtifactsToObject(
-  artifacts: DeployArtifacts | undefined
+  artifacts: DeployArtifacts | undefined,
 ): Object {
   if (!artifacts) return {};
   return Object.fromEntries(
     Array.from(artifacts.merged.entries()).map(([n, cbArtifact]) => {
       return [n, cbArtifactToObject(cbArtifact)];
-    })
+    }),
   );
 }
 
@@ -1194,8 +1199,8 @@ function deployArtifactsFromObject(o: Object): DeployArtifacts {
   const m = new Map();
 
   Object.entries(o).forEach(([name, o]) => {
-    const core = Object(o)["core"] as CoreDeploysArtifact;
-    const bridge = Object(o)["bridge"] as BridgeDeploysArtifact;
+    const core = Object(o)['core'] as CoreDeploysArtifact;
+    const bridge = Object(o)['bridge'] as BridgeDeploysArtifact;
 
     m.set(name, {
       core,
@@ -1211,7 +1216,7 @@ function deployArtifactsFromObject(o: Object): DeployArtifacts {
 function exportDeployArtifacts(
   dir: string,
   artifacts: DeployArtifacts,
-  partials?: Map<string, Partial>
+  partials?: Map<string, Partial>,
 ) {
   const coreDir = `${dir}/latest`;
 
@@ -1231,27 +1236,27 @@ function exportDeployArtifacts(
 
     fs.writeFileSync(
       `${coreDir}/${name}_config.json`,
-      JSON.stringify(config, null, 2)
+      JSON.stringify(config, null, 2),
     );
     fs.writeFileSync(
       `${coreDir}/${name}_contracts.json`,
-      JSON.stringify(contractOutput, null, 2)
+      JSON.stringify(contractOutput, null, 2),
     );
     fs.writeFileSync(
       `${coreDir}/${name}_verification.json`,
-      JSON.stringify(verificationInput, null, 2)
+      JSON.stringify(verificationInput, null, 2),
     );
 
     if (bridge.contracts && bridge.contracts?.toJsonPretty) {
       fs.writeFileSync(
         `${bridgeDir}/${name}_contracts.json`,
-        bridge.contracts?.toJsonPretty()
+        bridge.contracts?.toJsonPretty(),
       );
     }
 
     fs.writeFileSync(
       `${bridgeDir}/${name}_verification.json`,
-      JSON.stringify(bridge.verificationInput, null, 2)
+      JSON.stringify(bridge.verificationInput, null, 2),
     );
   }
 
@@ -1259,7 +1264,7 @@ function exportDeployArtifacts(
     for (const [partialName, partial] of partials) {
       fs.writeFileSync(
         `${coreDir}/${partialName}-partial.json`,
-        JSON.stringify(partial, null, 2)
+        JSON.stringify(partial, null, 2),
       );
     }
   }

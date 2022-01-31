@@ -1,9 +1,9 @@
-import Docker from "dockerode";
+import Docker from 'dockerode';
 
-import { DockerizedActor } from "./actors";
-import { Network } from "./network";
-import { Nomad } from "./nomad";
-import { EventEmitter } from "events";
+import { DockerizedActor } from './actors';
+import { Network } from './network';
+import { Nomad } from './nomad';
+import { EventEmitter } from 'events';
 
 export interface Agent {
   agentType: AgentType;
@@ -28,17 +28,17 @@ export enum AgentType {
 }
 
 function parseAgentType(t: string | AgentType): AgentType {
-  if (typeof t === "string") {
+  if (typeof t === 'string') {
     switch (t.toLowerCase()) {
-      case "updater":
+      case 'updater':
         return AgentType.Updater;
-      case "relayer":
+      case 'relayer':
         return AgentType.Relayer;
-      case "processor":
+      case 'processor':
         return AgentType.Processor;
-      case "watcher":
+      case 'watcher':
         return AgentType.Watcher;
-      case "kathy":
+      case 'kathy':
         return AgentType.Kathy;
     }
     throw new Error(`Agent type is not recognized`);
@@ -48,20 +48,20 @@ function parseAgentType(t: string | AgentType): AgentType {
 }
 
 export function agentTypeToString(t: string | AgentType): string {
-  if (typeof t === "string") {
+  if (typeof t === 'string') {
     return t.toLowerCase();
   } else {
     switch (t) {
       case AgentType.Updater:
-        return "updater";
+        return 'updater';
       case AgentType.Relayer:
-        return "relayer";
+        return 'relayer';
       case AgentType.Processor:
-        return "processor";
+        return 'processor';
       case AgentType.Watcher:
-        return "watcher";
+        return 'watcher';
       case AgentType.Kathy:
-        return "kathy";
+        return 'kathy';
     }
   }
 }
@@ -73,7 +73,7 @@ export class LocalAgent extends DockerizedActor implements Agent {
 
   constructor(agentType: string | AgentType, network: Network, nomad: Nomad) {
     agentType = parseAgentType(agentType);
-    super(`${agentTypeToString(agentType)}_${network.name}`, "agent");
+    super(`${agentTypeToString(agentType)}_${network.name}`, 'agent');
     this.agentType = agentType;
 
     this.network = network;
@@ -93,11 +93,11 @@ export class LocalAgent extends DockerizedActor implements Agent {
       if (signer) {
         const name = network.name.toUpperCase();
         const agentTypeUpperStr = agentTypeToString(
-          this.agentType
+          this.agentType,
         ).toUpperCase();
 
         envs.push(
-          `OPT_${agentTypeUpperStr}_SIGNERS_${name}_KEY=${signer.toString()}`
+          `OPT_${agentTypeUpperStr}_SIGNERS_${name}_KEY=${signer.toString()}`,
         );
         envs.push(`OPT_${agentTypeUpperStr}_SIGNERS_${name}_TYPE=hexKey`);
       }
@@ -128,26 +128,26 @@ export class LocalAgent extends DockerizedActor implements Agent {
 
     // docker run --name $1_$2_agent --env RUN_ENV=latest --restart=always --network="host" --env BASE_CONFIG=$1_config.json -v $(pwd)/../../rust/config:/app/config -d gcr.io/nomad-xyz/nomad-agent ./$2
     return this.docker.createContainer({
-      Image: "gcr.io/nomad-xyz/nomad-agent",
+      Image: 'gcr.io/nomad-xyz/nomad-agent',
       name,
-      Cmd: ["./" + agentTypeToString(this.agentType)],
+      Cmd: ['./' + agentTypeToString(this.agentType)],
       Env: [
-        "RUN_ENV=latest",
+        'RUN_ENV=latest',
         `BASE_CONFIG=${this.network.name}_config.json`,
         ...additionalEnvs,
       ],
       HostConfig: {
         Mounts: [
           {
-            Target: "/app/config",
+            Target: '/app/config',
             Source: agentConfigPath,
-            Type: "bind",
+            Type: 'bind',
           },
         ],
         RestartPolicy: {
-          Name: "always",
+          Name: 'always',
         },
-        NetworkMode: "host",
+        NetworkMode: 'host',
         // AutoRemove: true,
       },
     });

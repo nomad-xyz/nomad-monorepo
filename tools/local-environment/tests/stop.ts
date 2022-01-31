@@ -1,9 +1,9 @@
-import { Nomad } from "../src";
-import fs from "fs";
+import { Nomad } from '../src';
+import fs from 'fs';
 
 (async () => {
   const n = await Nomad.fromObject(
-    JSON.parse(fs.readFileSync("/tmp/nomad.json", "utf8")) as Object
+    JSON.parse(fs.readFileSync('/tmp/nomad.json', 'utf8')) as Object,
   );
 
   console.log(`Home root:`, await n.getCore(n.host).home.root());

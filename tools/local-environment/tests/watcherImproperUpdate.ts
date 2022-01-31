@@ -1,14 +1,14 @@
-import { ethers } from "ethers";
-import { Key, utils } from "../src";
+import { ethers } from 'ethers';
+import { Key, utils } from '../src';
 
-import { setupTwo } from "./common";
+import { setupTwo } from './common';
 
 async function improperUpdateCase(homeOrReplica: string) {
   let success = false;
 
   const { tom, jerry, tomActor, jerryActor, n } = await setupTwo();
 
-  const tomWatcher = await n.getAgent("watcher", tom);
+  const tomWatcher = await n.getAgent('watcher', tom);
   await tomWatcher.connect();
   await tomWatcher.start();
 
@@ -27,34 +27,36 @@ async function improperUpdateCase(homeOrReplica: string) {
       await home.dispatch(
         jerry.domain,
         ethers.utils.hexZeroPad(address, 32),
-        Buffer.from(`01234567890123456789012345678`, "utf8")
+        Buffer.from(`01234567890123456789012345678`, 'utf8'),
       )
     ).wait();
 
     console.log(`Dispatched test transaction to home`);
 
-    const [committedRoot,] = await home.suggestUpdate();
+    const [committedRoot] = await home.suggestUpdate();
 
     const updater = await n.getUpdater(tom);
 
     const fraudRoot =
-      "0x8bae0a4ab4517a16816ef67120f0e3350d595e014158ba72c3626d8c66b67e53";
+      '0x8bae0a4ab4517a16816ef67120f0e3350d595e014158ba72c3626d8c66b67e53';
 
     const { signature: improperSignature } = await updater.signUpdate(
       committedRoot,
-      fraudRoot
+      fraudRoot,
     );
-    
-    if (homeOrReplica === "home") {
-        await (
-            await home.update(committedRoot, fraudRoot, improperSignature)
-          ).wait();
-    } else if (homeOrReplica === "replica") {
-        await (
-            await replica.update(committedRoot, fraudRoot, improperSignature)
-          ).wait();
+
+    if (homeOrReplica === 'home') {
+      await (
+        await home.update(committedRoot, fraudRoot, improperSignature)
+      ).wait();
+    } else if (homeOrReplica === 'replica') {
+      await (
+        await replica.update(committedRoot, fraudRoot, improperSignature)
+      ).wait();
     } else {
-        throw new Error("Must specify 'home' or 'replica' for improper update test case")
+      throw new Error(
+        "Must specify 'home' or 'replica' for improper update test case",
+      );
     }
 
     console.log(`Submitted fraud update!`);
@@ -63,12 +65,13 @@ async function improperUpdateCase(homeOrReplica: string) {
     // Waiting for home to be failed and for connection managers to be disconnected from replicas
     const waiter = new utils.Waiter(
       async () => {
-        const [homeState, domainToReplica, replicaToDomain] =
-          await Promise.all([
+        const [homeState, domainToReplica, replicaToDomain] = await Promise.all(
+          [
             home.state(), // update should always be submitted to home so should be failed
             xapp.domainToReplica(tom.domain),
             xapp.replicaToDomain(replica.address),
-          ]);
+          ],
+        );
 
         if (
           homeState === 2 && // Waiting till Home state will be failed (2)
@@ -79,10 +82,12 @@ async function improperUpdateCase(homeOrReplica: string) {
         }
       },
       6 * 60_000,
-      2_000
+      2_000,
     );
 
-    console.log(`Identified in ${(new Date().valueOf() - start) / 1000} seconds`);
+    console.log(
+      `Identified in ${(new Date().valueOf() - start) / 1000} seconds`,
+    );
 
     [, success] = await waiter.wait();
 
@@ -100,8 +105,8 @@ async function improperUpdateCase(homeOrReplica: string) {
   if (!success) process.exit(1);
 }
 
-  (async () => {
-    // Run sequentially in case of port conflicts
-    await improperUpdateCase("home");
-    await improperUpdateCase("replica");
-  })()
+(async () => {
+  // Run sequentially in case of port conflicts
+  await improperUpdateCase('home');
+  await improperUpdateCase('replica');
+})();

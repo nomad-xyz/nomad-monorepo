@@ -1,8 +1,8 @@
-import { Nomad, utils, Network, LocalNetwork, Key } from "../src";
-import type { TokenIdentifier } from "@nomad-xyz/sdk/nomad/tokens";
-import { ethers } from "ethers";
-import { TransferMessage } from "@nomad-xyz/sdk/nomad";
-import fs from "fs";
+import { Nomad, utils, Network, LocalNetwork, Key } from '../src';
+import type { TokenIdentifier } from '@nomad-xyz/sdk/nomad/tokens';
+import { ethers } from 'ethers';
+import { TransferMessage } from '@nomad-xyz/sdk/nomad';
+import fs from 'fs';
 
 //
 /**
@@ -24,7 +24,7 @@ export async function sendTokensAndConfirm(
   token: TokenIdentifier,
   receiver: string,
   amounts: ethers.BigNumberish[],
-  fastLiquidity = false
+  fastLiquidity = false,
 ) {
   const ctx = n.getMultiprovider();
 
@@ -43,20 +43,20 @@ export async function sendTokensAndConfirm(
       fastLiquidity,
       {
         gasLimit: 10000000,
-      }
+      },
     );
 
     amountTotal = amountTotal.add(amount);
 
     console.log(
-      `Sent from ${from.name} to ${to.name} ${amount.toString()} tokens`
+      `Sent from ${from.name} to ${to.name} ${amount.toString()} tokens`,
     );
   }
 
   if (!result) throw new Error(`Didn't get the result from transactions`);
 
   console.log(
-    `Waiting for the last transactions of ${amounts.length} to be delivered:`
+    `Waiting for the last transactions of ${amounts.length} to be delivered:`,
   );
 
   await result.wait();
@@ -69,17 +69,17 @@ export async function sendTokensAndConfirm(
       const tokenContract = await result!.assetAtDestination();
 
       if (
-        tokenContract?.address !== "0x0000000000000000000000000000000000000000"
+        tokenContract?.address !== '0x0000000000000000000000000000000000000000'
       ) {
         console.log(
           `Hurray! Asset was created at destination:`,
-          tokenContract!.address
+          tokenContract!.address,
         );
         return tokenContract;
       }
     },
     3 * 60_000,
-    2_000
+    2_000,
   );
 
   const [tokenContract, tokenCreated] = await waiter.wait();
@@ -96,24 +96,29 @@ export async function sendTokensAndConfirm(
         return true;
       } else {
         newBalance = await tokenContract!.balanceOf(receiver);
-        console.log(`New balance:`, parseInt(newBalance.toString()), 'must be:', parseInt(tokenContract.toString()));
+        console.log(
+          `New balance:`,
+          parseInt(newBalance.toString()),
+          'must be:',
+          parseInt(tokenContract.toString()),
+        );
       }
     },
     4 * 60_000,
-    2_000
+    2_000,
   );
 
   const [, success] = await waiter2.wait();
 
-  if (!success) throw new Error(`Tokens transfer from ${from.name} to ${to.name} failed`);
+  if (!success)
+    throw new Error(`Tokens transfer from ${from.name} to ${to.name} failed`);
 
   return tokenContract!;
 }
 
-
 export async function setupTwo() {
-  const tom = new LocalNetwork("tom", 1000, "http://localhost:9545");
-  const jerry = new LocalNetwork("jerry", 2000, "http://localhost:9546");
+  const tom = new LocalNetwork('tom', 1000, 'http://localhost:9545');
+  const jerry = new LocalNetwork('jerry', 2000, 'http://localhost:9546');
 
   const tomActor = new Key();
   const jerryActor = new Key();
@@ -130,7 +135,7 @@ export async function setupTwo() {
     t.signer.updater,
     t.signer.watcher,
     t.signer.relayer,
-    t.signer.processor
+    t.signer.processor,
   );
   jerry.addKeys(
     jerryActor,
@@ -141,7 +146,7 @@ export async function setupTwo() {
     j.signer.updater,
     j.signer.watcher,
     j.signer.relayer,
-    j.signer.processor
+    j.signer.processor,
   );
 
   await Promise.all([tom.up(), jerry.up()]);
@@ -153,25 +158,25 @@ export async function setupTwo() {
   n.setWatcher(jerry, j.watcher); // Need for the watcher
   n.setDeployer(jerry, j.deployer); // Need to deploy all
   n.setSigner(jerry, j.signer.base); // Need for home.dispatch
-  n.setSigner(jerry, j.signer.updater, "updater"); // Need for home.dispatch
-  n.setSigner(jerry, j.signer.relayer, "relayer"); // Need for home.dispatch
-  n.setSigner(jerry, j.signer.watcher, "watcher"); // Need for home.dispatch
-  n.setSigner(jerry, j.signer.processor, "processor"); // Need for home.dispatch
+  n.setSigner(jerry, j.signer.updater, 'updater'); // Need for home.dispatch
+  n.setSigner(jerry, j.signer.relayer, 'relayer'); // Need for home.dispatch
+  n.setSigner(jerry, j.signer.watcher, 'watcher'); // Need for home.dispatch
+  n.setSigner(jerry, j.signer.processor, 'processor'); // Need for home.dispatch
 
   n.setUpdater(tom, t.updater); // Need for an update like updater
   n.setWatcher(tom, t.watcher); // Need for the watcher
   n.setDeployer(tom, t.deployer); // Need to deploy all
   n.setSigner(tom, t.signer.base); // Need for home.dispatch
-  n.setSigner(tom, t.signer.updater, "updater"); // Need for home.dispatch
-  n.setSigner(tom, t.signer.relayer, "relayer"); // Need for home.dispatch
-  n.setSigner(tom, t.signer.watcher, "watcher"); // Need for home.dispatch
-  n.setSigner(tom, t.signer.processor, "processor"); // Need for home.dispatch
+  n.setSigner(tom, t.signer.updater, 'updater'); // Need for home.dispatch
+  n.setSigner(tom, t.signer.relayer, 'relayer'); // Need for home.dispatch
+  n.setSigner(tom, t.signer.watcher, 'watcher'); // Need for home.dispatch
+  n.setSigner(tom, t.signer.processor, 'processor'); // Need for home.dispatch
 
   await n.deploy({ injectSigners: true });
 
-  n.exportDeployArtifacts('../../rust/config')
+  n.exportDeployArtifacts('../../rust/config');
 
-  fs.writeFileSync("/tmp/nomad.json", JSON.stringify(n.toObject()));
+  fs.writeFileSync('/tmp/nomad.json', JSON.stringify(n.toObject()));
 
   return {
     tom,

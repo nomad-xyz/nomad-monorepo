@@ -1,13 +1,13 @@
-import * as Stream from "stream";
-import { ethers } from "ethers";
-import { Key } from "./key";
+import * as Stream from 'stream';
+import { ethers } from 'ethers';
+import { Key } from './key';
 
 export function sleep(ms: number) {
   return new Promise((res) => setTimeout(res, ms));
 }
 
 export function readLine(q: string): Promise<string> {
-  const readline = require("readline");
+  const readline = require('readline');
 
   const rl = readline.createInterface({
     input: process.stdin,
@@ -20,19 +20,19 @@ export function readLine(q: string): Promise<string> {
   rl.prompt();
 
   return new Promise((resolve, reject) => {
-    rl.on("line", (userInput: string) => {
+    rl.on('line', (userInput: string) => {
       response = userInput;
       rl.close();
     });
 
-    rl.on("close", () => {
+    rl.on('close', () => {
       resolve(response);
     });
   });
 }
 
 export function paddedZeros(x: string): string {
-  return x + [...Array(64 - x.length * 2).keys()].map((_) => 0).join("") + x;
+  return x + [...Array(64 - x.length * 2).keys()].map((_) => 0).join('') + x;
 }
 
 export function randomTillPoint(n: number): number {
@@ -49,7 +49,7 @@ export class Waiter<T> {
   constructor(
     callback: () => Promise<T | undefined>,
     timeoutMs: number,
-    retryMs: number
+    retryMs: number,
   ) {
     this.resolve = undefined;
     this.reject = undefined;
@@ -108,7 +108,7 @@ class Matcher {
     executor:
       | string
       | ((match: RegExpMatchArray) => Promise<void>)
-      | ((match: RegExpMatchArray) => void)
+      | ((match: RegExpMatchArray) => void),
   ) {
     this.pattern = pattern;
     this.executor = executor;
@@ -129,10 +129,10 @@ export class StreamMatcher extends Stream.Transform {
   }
 
   subscribe() {
-    this.on("data", async (chunk: Buffer) => {
+    this.on('data', async (chunk: Buffer) => {
       if (!this.pattern2executor.size) return;
 
-      const str = chunk.toString("utf8");
+      const str = chunk.toString('utf8');
 
       let matches: Iterable<RegExpMatchArray>;
       for (const [_, p2e] of this.pattern2executor) {
@@ -144,7 +144,7 @@ export class StreamMatcher extends Stream.Transform {
         }
 
         for (const match of matches) {
-          if (typeof p2e.executor === "string") {
+          if (typeof p2e.executor === 'string') {
             this.emit(p2e.executor, match);
           } else {
             await p2e.executor(match);
@@ -167,19 +167,19 @@ export class StreamMatcher extends Stream.Transform {
     executor:
       | string
       | ((match: RegExpMatchArray) => Promise<void>)
-      | ((match: RegExpMatchArray) => void)
+      | ((match: RegExpMatchArray) => void),
   ): void {
     this.pattern2executor.set(
       pattern.toString(),
-      new Matcher(pattern, executor)
+      new Matcher(pattern, executor),
     );
   }
 }
 
 function domainHash(domain: Number): string {
   return ethers.utils.solidityKeccak256(
-    ["uint32", "string"],
-    [domain, "NOMAD"]
+    ['uint32', 'string'],
+    [domain, 'NOMAD'],
   );
 }
 
@@ -187,7 +187,7 @@ export function signUpdate(
   signer: ethers.Wallet,
   domain: number,
   oldRoot: string,
-  newRoot: string
+  newRoot: string,
 ): Promise<string> {
   let message = getMessage(domain, oldRoot, newRoot);
   let msgHash = ethers.utils.arrayify(ethers.utils.keccak256(message));
@@ -197,12 +197,12 @@ export function signUpdate(
 function getMessage(
   domain: number,
   oldRoot: string,
-  newRoot: string
+  newRoot: string,
 ): Uint8Array {
   return ethers.utils.concat(
     [domainHash(domain), oldRoot, newRoot].map((x) => {
       return ethers.utils.arrayify(x);
-    })
+    }),
   );
 }
 
@@ -233,7 +233,7 @@ export function generateDefaultKeys() {
 export function zip<A, B>(a: A[], b: B[]): [A, B][] {
   if (a.length != b.length)
     throw new Error(
-      `Zipping 2 arrays of different length is wrong. a: ${a.length}, b: ${b.length}`
+      `Zipping 2 arrays of different length is wrong. a: ${a.length}, b: ${b.length}`,
     );
   return a.map((x, i) => [x, b[i]]);
 }

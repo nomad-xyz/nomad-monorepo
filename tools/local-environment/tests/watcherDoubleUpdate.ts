@@ -1,14 +1,14 @@
-import { LocalAgent } from "../src/agent";
-import { ethers } from "ethers";
-import { LocalNetwork, Nomad, Key, utils } from "../src";
+import { LocalAgent } from '../src/agent';
+import { ethers } from 'ethers';
+import { LocalNetwork, Nomad, Key, utils } from '../src';
 
-import { sleep } from "../src/utils";
+import { sleep } from '../src/utils';
 
 (async () => {
   let success = false;
 
-  const tom = new LocalNetwork("tom", 1000, "http://localhost:9545");
-  const jerry = new LocalNetwork("jerry", 2000, "http://localhost:9546");
+  const tom = new LocalNetwork('tom', 1000, 'http://localhost:9545');
+  const jerry = new LocalNetwork('jerry', 2000, 'http://localhost:9546');
 
   const updaterKey = new Key();
   const watcherKey = new Key();
@@ -43,7 +43,7 @@ import { sleep } from "../src/utils";
 
   // Scenario
 
-  const tomWatcher = await n.getAgent("watcher", tom);
+  const tomWatcher = await n.getAgent('watcher', tom);
   await tomWatcher.connect();
   await tomWatcher.start();
 
@@ -60,7 +60,7 @@ import { sleep } from "../src/utils";
       await home.dispatch(
         jerry.domain,
         ethers.utils.hexZeroPad(address, 32),
-        Buffer.from(`01234567890123456789012345678`, "utf8")
+        Buffer.from(`01234567890123456789012345678`, 'utf8'),
       )
     ).wait();
 
@@ -80,11 +80,11 @@ import { sleep } from "../src/utils";
     if (!replica) throw new Error(`no replica`);
 
     const fraudRoot =
-      "0x8bae0a4ab4517a16816ef67120f0e3350d595e014158ba72c3626d8c66b67e53";
+      '0x8bae0a4ab4517a16816ef67120f0e3350d595e014158ba72c3626d8c66b67e53';
 
     const { signature: fraudletSignature } = await updater.signUpdate(
       commitedRoot,
-      fraudRoot
+      fraudRoot,
     );
     await (
       await replica.update(commitedRoot, fraudRoot, fraudletSignature)
@@ -93,7 +93,7 @@ import { sleep } from "../src/utils";
     console.log(`Submitted fraudulent update to replica`);
 
     const [homeCommitedRoot, homeRoot, replicaCommitedRoot] = await Promise.all(
-      [home.committedRoot(), home.root(), replica.committedRoot()]
+      [home.committedRoot(), home.root(), replica.committedRoot()],
     );
 
     if (homeCommitedRoot !== homeRoot)
@@ -101,12 +101,12 @@ import { sleep } from "../src/utils";
 
     if (homeRoot === replicaCommitedRoot)
       throw new Error(
-        `Home contract's root should not be equal to replica's committed root`
+        `Home contract's root should not be equal to replica's committed root`,
       );
 
     if (replicaCommitedRoot !== fraudRoot)
       throw new Error(
-        `Fraud didn't happen: replica's root hasn't been set to fraud root`
+        `Fraud didn't happen: replica's root hasn't been set to fraud root`,
       );
 
     // Waiting for Home, Replica will fail, and XAppConnectionManager will unenroll the Replica
@@ -131,7 +131,7 @@ import { sleep } from "../src/utils";
         }
       },
       3 * 60_000,
-      2_000
+      2_000,
     );
 
     [, success] = await waiter.wait();

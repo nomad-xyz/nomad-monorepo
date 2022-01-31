@@ -1,11 +1,11 @@
-import Docker from "dockerode";
-import { ethers } from "ethers";
+import Docker from 'dockerode';
+import { ethers } from 'ethers';
 
-import { Key } from ".";
-import { sleep } from "./utils";
-import { DockerizedActor } from "./actors";
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { Governor } from "@nomad-xyz/deploy/src/core/CoreDeploy";
+import { Key } from '.';
+import { sleep } from './utils';
+import { DockerizedActor } from './actors';
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
+import { Governor } from '@nomad-xyz/deploy/src/core/CoreDeploy';
 
 export type Networkish = string | number | Network;
 
@@ -33,7 +33,7 @@ class DockerNetworkHandler
   keys: Key[];
 
   constructor(network: Network) {
-    super(network.name, "net");
+    super(network.name, 'net');
     this.network = network;
     this.keys = [];
   }
@@ -47,18 +47,18 @@ class DockerNetworkHandler
     const port = this.network.location.port;
 
     return this.docker.createContainer({
-      Image: "hardhat",
+      Image: 'hardhat',
       name,
       Env: [
-        "BLOCK_TIME=300",
+        'BLOCK_TIME=300',
         ...this.keys.map((k, i) => `PRIVATE_KEY${i + 1}=${k.toString()}`),
       ],
       ExposedPorts: {
-        "8545/tcp:": {},
+        '8545/tcp:': {},
       },
       HostConfig: {
         PortBindings: {
-          "8545/tcp": [
+          '8545/tcp': [
             {
               HostPort: port.toString(),
             },
@@ -91,14 +91,14 @@ class Location {
   constructor(url: string, port?: number, scheme?: string) {
     this.url = url;
     this.port = port || 7545;
-    this.scheme = scheme || "http";
+    this.scheme = scheme || 'http';
 
     this.parseFromUrl(url);
   }
 
   private parseFromUrl(url: string) {
     const match = url.match(
-      /(\w+):\/\/((\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})|localhost)\:(\d{1,5})/
+      /(\w+):\/\/((\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})|localhost)\:(\d{1,5})/,
     );
     if (match) {
       this.scheme = match[1];
@@ -109,9 +109,9 @@ class Location {
 
   isLocal(): boolean {
     return (
-      this.url.includes("localhost") ||
-      this.url.includes("0.0.0.0") ||
-      this.url.includes("127.0.0.1")
+      this.url.includes('localhost') ||
+      this.url.includes('0.0.0.0') ||
+      this.url.includes('127.0.0.1')
     );
   }
 
@@ -130,7 +130,7 @@ export abstract class Network {
     name: string,
     domain: number,
     url: string,
-    options?: AnyNetworkOptions
+    options?: AnyNetworkOptions,
   ) {
     this.name = name;
     this.domain = domain;
@@ -146,7 +146,7 @@ export abstract class Network {
     ...args: string[]
   ): Promise<ethers.Contract> {
     let signer: ethers.providers.JsonRpcSigner;
-    if (typeof from === "string") {
+    if (typeof from === 'string') {
       signer = this.getJsonRpcSigner(from);
     } else {
       signer = from;
@@ -188,14 +188,14 @@ export abstract class Network {
   }
 
   getJsonRpcSigner(
-    addressOrIndex: string | number
+    addressOrIndex: string | number,
   ): ethers.providers.JsonRpcSigner {
     const provider = this.getJsonRpcProvider();
     return provider.getSigner(addressOrIndex);
   }
 
   getSignerWithAddress(
-    addressOrIndex: string | number
+    addressOrIndex: string | number,
   ): Promise<SignerWithAddress> {
     const signer = this.getJsonRpcSigner(addressOrIndex);
     return SignerWithAddress.create(signer);
@@ -217,7 +217,7 @@ interface LocalNetworkOptions extends AnyNetworkOptions {
 }
 
 export function networkFromObject(o: Object): Network {
-  if (Object(o)["type"] === "local") {
+  if (Object(o)['type'] === 'local') {
     return LocalNetwork.fromObject(o);
   } else {
     return RemoteNetwork.fromObject(o);
@@ -233,7 +233,7 @@ export class LocalNetwork extends Network {
     name: string,
     domain: number,
     url: string,
-    options?: LocalNetworkOptions
+    options?: LocalNetworkOptions,
   ) {
     super(name, domain, url, options);
     this.firstStart = true;
@@ -242,11 +242,11 @@ export class LocalNetwork extends Network {
   }
 
   static fromObject(o: Object): Network {
-    const name = Object(o)["name"];
-    const domain = Object(o)["domain"];
-    const locationStr = Object(o)["location"];
-    const notFirstStart = Object(o)["notFirstStart"];
-    const keys = Object(o)["keys"];
+    const name = Object(o)['name'];
+    const domain = Object(o)['domain'];
+    const locationStr = Object(o)['location'];
+    const notFirstStart = Object(o)['notFirstStart'];
+    const keys = Object(o)['keys'];
 
     return new LocalNetwork(name, domain, locationStr, {
       notFirstStart,
@@ -324,15 +324,15 @@ export class RemoteNetwork extends Network {
     name: string,
     domain: number,
     url: string,
-    options?: RemoteNetworkOptions
+    options?: RemoteNetworkOptions,
   ) {
     super(name, domain, url, options);
   }
 
   static fromObject(o: Object): Network {
-    const name = Object(o)["name"];
-    const domain = Object(o)["domain"];
-    const locationStr = Object(o)["location"];
+    const name = Object(o)['name'];
+    const domain = Object(o)['domain'];
+    const locationStr = Object(o)['location'];
 
     return new LocalNetwork(name, domain, locationStr, {});
   }

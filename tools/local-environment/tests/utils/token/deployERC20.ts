@@ -1,10 +1,10 @@
-import fs from "fs";
-import { ethers } from "ethers";
-const solc = require("solc");
+import fs from 'fs';
+import { ethers } from 'ethers';
+const solc = require('solc');
 
 export function getCustomToken() {
-  const solFilename = "Token.sol";
-  const solLocation = __dirname + "/contract";
+  const solFilename = 'Token.sol';
+  const solLocation = __dirname + '/contract';
 
   const sources = Object.fromEntries(
     fs.readdirSync(solLocation).map((filename) => {
@@ -12,19 +12,19 @@ export function getCustomToken() {
       return [
         filename,
         {
-          content: fs.readFileSync(solPath, "utf8"),
+          content: fs.readFileSync(solPath, 'utf8'),
         },
       ];
-    })
+    }),
   );
 
   const input = {
-    language: "Solidity",
+    language: 'Solidity',
     sources,
     settings: {
       outputSelection: {
-        "*": {
-          "*": ["*"],
+        '*': {
+          '*': ['*'],
         },
       },
     },
@@ -35,7 +35,7 @@ export function getCustomToken() {
     evm: {
       bytecode: { object: bytecode },
     },
-  } = tempFile.contracts[solFilename]["Token"];
+  } = tempFile.contracts[solFilename]['Token'];
 
   return new ethers.ContractFactory(abi, bytecode);
 

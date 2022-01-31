@@ -1,13 +1,13 @@
-import { LocalNetwork, Nomad, Key, utils } from "../src";
-import type { TokenIdentifier } from "@nomad-xyz/sdk/nomad/tokens";
-import fs from "fs";
-import { getCustomToken } from "./utils/token/deployERC20";
-import { getRandomTokenAmount } from "../src/utils";
-import { sendTokensAndConfirm } from "./common";
+import { LocalNetwork, Nomad, Key, utils } from '../src';
+import type { TokenIdentifier } from '@nomad-xyz/sdk/nomad/tokens';
+import fs from 'fs';
+import { getCustomToken } from './utils/token/deployERC20';
+import { getRandomTokenAmount } from '../src/utils';
+import { sendTokensAndConfirm } from './common';
 
 (async () => {
-  const tom = new LocalNetwork("tom", 1000, "http://localhost:9545");
-  const jerry = new LocalNetwork("jerry", 2000, "http://localhost:9546");
+  const tom = new LocalNetwork('tom', 1000, 'http://localhost:9545');
+  const jerry = new LocalNetwork('jerry', 2000, 'http://localhost:9546');
 
   const sender = new Key();
   const receiver = new Key();
@@ -24,7 +24,7 @@ import { sendTokensAndConfirm } from "./common";
     t.signer.updater,
     t.signer.watcher,
     t.signer.relayer,
-    t.signer.processor
+    t.signer.processor,
   );
   jerry.addKeys(
     receiver,
@@ -35,7 +35,7 @@ import { sendTokensAndConfirm } from "./common";
     j.signer.updater,
     j.signer.watcher,
     j.signer.relayer,
-    j.signer.processor
+    j.signer.processor,
   );
 
   await Promise.all([tom.up(), jerry.up()]);
@@ -47,24 +47,24 @@ import { sendTokensAndConfirm } from "./common";
   n.setWatcher(jerry, j.watcher); // Need for the watcher
   n.setDeployer(jerry, j.deployer); // Need to deploy all
   n.setSigner(jerry, j.signer.base); // Need for home.dispatch
-  n.setSigner(jerry, j.signer.updater, "updater"); // Need for home.dispatch
-  n.setSigner(jerry, j.signer.relayer, "relayer"); // Need for home.dispatch
-  n.setSigner(jerry, j.signer.watcher, "watcher"); // Need for home.dispatch
-  n.setSigner(jerry, j.signer.processor, "processor"); // Need for home.dispatch
+  n.setSigner(jerry, j.signer.updater, 'updater'); // Need for home.dispatch
+  n.setSigner(jerry, j.signer.relayer, 'relayer'); // Need for home.dispatch
+  n.setSigner(jerry, j.signer.watcher, 'watcher'); // Need for home.dispatch
+  n.setSigner(jerry, j.signer.processor, 'processor'); // Need for home.dispatch
 
   n.setUpdater(tom, t.updater); // Need for an update like updater
   n.setWatcher(tom, t.watcher); // Need for the watcher
   n.setDeployer(tom, t.deployer); // Need to deploy all
   n.setSigner(tom, t.signer.base); // Need for home.dispatch
-  n.setSigner(tom, t.signer.updater, "updater"); // Need for home.dispatch
-  n.setSigner(tom, t.signer.relayer, "relayer"); // Need for home.dispatch
-  n.setSigner(tom, t.signer.watcher, "watcher"); // Need for home.dispatch
-  n.setSigner(tom, t.signer.processor, "processor"); // Need for home.dispatch
+  n.setSigner(tom, t.signer.updater, 'updater'); // Need for home.dispatch
+  n.setSigner(tom, t.signer.relayer, 'relayer'); // Need for home.dispatch
+  n.setSigner(tom, t.signer.watcher, 'watcher'); // Need for home.dispatch
+  n.setSigner(tom, t.signer.processor, 'processor'); // Need for home.dispatch
 
   await n.deploy({ injectSigners: true });
   await n.startAllAgents();
 
-  fs.writeFileSync("/tmp/nomad.json", JSON.stringify(n.toObject()));
+  fs.writeFileSync('/tmp/nomad.json', JSON.stringify(n.toObject()));
 
   // Scenario
 
@@ -76,8 +76,8 @@ import { sendTokensAndConfirm } from "./common";
     const tokenOnTom = await tom.deployToken(
       tokenFactory,
       sender.toAddress(),
-      "MyToken",
-      "MTK"
+      'MyToken',
+      'MTK',
     );
 
     const token: TokenIdentifier = {
@@ -97,14 +97,11 @@ import { sendTokensAndConfirm } from "./common";
     const amount2 = getRandomTokenAmount();
     const amount3 = getRandomTokenAmount();
 
-    await sendTokensAndConfirm(
-      n,
-      tom,
-      jerry,
-      token,
-      receiver.toAddress(),
-      [amount1, amount2, amount3]
-    );
+    await sendTokensAndConfirm(n, tom, jerry, token, receiver.toAddress(), [
+      amount1,
+      amount2,
+      amount3,
+    ]);
 
     const tokenContract = await sendTokensAndConfirm(
       n,
@@ -112,14 +109,14 @@ import { sendTokensAndConfirm } from "./common";
       tom,
       token,
       new Key().toAddress(),
-      [amount3, amount2, amount1]
+      [amount3, amount2, amount1],
     );
 
     if (
       tokenContract.address.toLowerCase() !== token.id.toString().toLowerCase()
     ) {
       throw new Error(
-        `Resolved asset at destination Jerry is not the same as the token`
+        `Resolved asset at destination Jerry is not the same as the token`,
       );
     }
 

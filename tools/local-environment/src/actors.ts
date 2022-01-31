@@ -1,6 +1,6 @@
-import Docker from "dockerode";
-import { EventEmitter } from "events";
-import { StreamMatcher } from "./utils";
+import Docker from 'dockerode';
+import { EventEmitter } from 'events';
+import { StreamMatcher } from './utils';
 
 class DockerEmitter extends EventEmitter {
   unsubscribe() {
@@ -89,14 +89,14 @@ export abstract class DockerizedActor {
             stream.pipe(this.logMatcher);
           }
         }
-      }
+      },
     );
   }
 
   registerAllLogEvents(): void {
     this.logMatcherRegisterEvent(
-      "info_messages",
-      /INFO\".+\"message\"\:\"([^\"]+)/
+      'info_messages',
+      /INFO\".+\"message\"\:\"([^\"]+)/,
     );
   }
 
@@ -113,7 +113,7 @@ export abstract class DockerizedActor {
 
   unsubscribeFromContainerEvents(): void {
     if (this.isSubscribed()) {
-      this.eventsStream?.emit("end");
+      this.eventsStream?.emit('end');
 
       delete this.eventsStream;
     }
@@ -128,17 +128,17 @@ export abstract class DockerizedActor {
       },
     });
 
-    events.on("data", (data: Buffer) => {
-      const event: DockerEvent = JSON.parse(data.toString("utf8"));
+    events.on('data', (data: Buffer) => {
+      const event: DockerEvent = JSON.parse(data.toString('utf8'));
       switch (event.Action) {
-        case "start":
-          this.events?.emit("start");
+        case 'start':
+          this.events?.emit('start');
           break;
-        case "stop":
-          this.events?.emit("stop");
+        case 'stop':
+          this.events?.emit('stop');
           break;
-        case "restart":
-          this.events?.emit("restart");
+        case 'restart':
+          this.events?.emit('restart');
           break;
       }
     });
@@ -163,14 +163,14 @@ export abstract class DockerizedActor {
   }
 
   private async findContainerIdByName(
-    name: string
+    name: string,
   ): Promise<string | undefined> {
     let containers = await this.docker.listContainers({
       all: true,
     });
 
     containers = containers.filter((c) =>
-      c.Names.some((n) => n === `/${name}`)
+      c.Names.some((n) => n === `/${name}`),
     );
 
     return containers[0]?.Id;
