@@ -19,8 +19,6 @@ async function testSdkFailedHome() {
     const replica = n.getCore(jerry).getReplica(tom.domain)!;
     if (!replica) throw new Error(`no replica`);
 
-    const xapp = await n.getXAppConnectionManager(jerry);
-
     await (
       await tomHome.dispatch(
         jerry.domain,
@@ -83,6 +81,8 @@ async function testSdkFailedHome() {
       if (!nomadContext.blacklist().has(tom.domain)) {
         throw new Error('SDK did not black list he failed tom home!');
       }
+
+      success = true;
     }
   } catch (e) {
     console.error(`Test failed:`, e);
