@@ -9,6 +9,8 @@ services:
       - PROGRAM=core
     ports:
       - "9090:3000"
+    depends_on:
+      - "postgres"
     links:
       - postgres
 
@@ -18,11 +20,15 @@ services:
     command: npm run start indexer
     ports:
       - "8080:3000"
+    expose:
+      - 8080
     links:
       - postgres
     env_file: .env
     environment:
       - PROGRAM=api
+    depends_on:
+      - "postgres"
 
   postgres:
     image: postgres:latest
@@ -37,3 +43,5 @@ services:
         max-file: "3"
     ports:
       - '5432:5432'
+    expose:
+      - 5432
