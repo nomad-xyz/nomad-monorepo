@@ -19,7 +19,7 @@ use nomad_base::{
 };
 use nomad_core::{
     ChainCommunicationError, Common, CommonEvents, ConnectionManager, DoubleUpdate,
-    FailureNotification, Home, SignedFailureNotification, SignedUpdate, Signers, State, TxOutcome,
+    FailureNotification, Home, SignedFailureNotification, SignedUpdate, Signers, TxOutcome,
 };
 
 use crate::settings::WatcherSettings as Settings;
@@ -595,7 +595,7 @@ impl NomadAgent for Watcher {
 
 #[cfg(test)]
 mod test {
-    use nomad_base::{BaseError, IndexSettings};
+    use nomad_base::IndexSettings;
     use nomad_test::mocks::MockIndexer;
     use std::sync::Arc;
     use tokio::sync::mpsc;
@@ -605,7 +605,7 @@ mod test {
     use ethers::signers::{LocalWallet, Signer};
 
     use nomad_base::{CachingReplica, CommonIndexers, HomeIndexers, Homes, Replicas};
-    use nomad_core::{DoubleUpdate, SignedFailureNotification, Update};
+    use nomad_core::{DoubleUpdate, SignedFailureNotification, State, Update};
     use nomad_test::mocks::{MockConnectionManagerContract, MockHomeContract, MockReplicaContract};
     use nomad_test::test_utils;
 
