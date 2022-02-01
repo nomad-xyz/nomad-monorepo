@@ -1,5 +1,5 @@
 import * as rinkeby from '../../../config/testnets/rinkeby';
-import * as milkomedaTestnet from '../../../config/testnets/milkomedaTestnet';
+import * as milkomedatestnet from '../../../config/testnets/milkomedatestnet';
 import { ExistingCoreDeploy } from '../../../src/core/CoreDeploy';
 import { ExistingBridgeDeploy } from '../../../src/bridge/BridgeDeploy';
 import { getPathToDeployConfig } from '../../../src/verification/readDeployOutput';
@@ -22,26 +22,26 @@ const rinkebyBridgeDeploy = new ExistingBridgeDeploy(
 );
 const rinkebyDomain = deploysToSDK(rinkebyCoreDeploy, rinkebyBridgeDeploy);
 
-// Enroll milkomedaTestnet as spoke to Rinkeby hub
-const milkomedaTestnetCoreDeploy = ExistingCoreDeploy.withPath(
-  milkomedaTestnet.chain,
-  milkomedaTestnet.devConfig,
+// Enroll milkomedatestnet as spoke to Rinkeby hub
+const milkomedatestnetCoreDeploy = ExistingCoreDeploy.withPath(
+  milkomedatestnet.chain,
+  milkomedatestnet.devConfig,
   path,
 );
-const milkomedaTestnetBridgeDeploy = new ExistingBridgeDeploy(
-  milkomedaTestnet.chain,
-  milkomedaTestnet.bridgeConfig,
+const milkomedatestnetBridgeDeploy = new ExistingBridgeDeploy(
+  milkomedatestnet.chain,
+  milkomedatestnet.bridgeConfig,
   path,
 );
-const milkomedaTestnetDomain = deploysToSDK(
-  milkomedaTestnetCoreDeploy,
-  milkomedaTestnetBridgeDeploy,
+const milkomedatestnetDomain = deploysToSDK(
+  milkomedatestnetCoreDeploy,
+  milkomedatestnetBridgeDeploy,
 );
 
 // setup SDK
-const sdkDomains = [rinkebyDomain, milkomedaTestnetDomain];
+const sdkDomains = [rinkebyDomain, milkomedatestnetDomain];
 const sdk = NomadContext.fromDomains(sdkDomains);
-const sdkCores = [rinkebyCoreDeploy, milkomedaTestnetCoreDeploy];
+const sdkCores = [rinkebyCoreDeploy, milkomedatestnetCoreDeploy];
 sdkCores.forEach((core) => {
   sdk.registerProvider(core.chain.domain, core.provider);
   sdk.registerSigner(core.chain.domain, core.deployer);
@@ -49,6 +49,6 @@ sdkCores.forEach((core) => {
 
 checkHubAndSpokeConnections(
   sdk,
-  milkomedaTestnetDomain.id,
-  milkomedaTestnet.devConfig.watchers,
+  milkomedatestnetDomain.id,
+  milkomedatestnet.devConfig.watchers,
 );

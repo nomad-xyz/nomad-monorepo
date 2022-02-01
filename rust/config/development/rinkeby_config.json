@@ -5,7 +5,7 @@
       "key": "",
       "type": "hexKey"
     },
-    "milkomedaTestnet": {
+    "milkomedatestnet": {
       "key": "",
       "type": "hexKey"
     },
@@ -19,10 +19,10 @@
     }
   },
   "replicas": {
-    "milkomedaTestnet": {
+    "milkomedatestnet": {
       "address": "0x53E7F6AFbECBB18a8E4989b89ADB1f0ce85272F5",
       "domain": "8000",
-      "name": "milkomedaTestnet",
+      "name": "milkomedatestnet",
       "rpcStyle": "ethereum",
       "timelag": 5,
       "connection": {

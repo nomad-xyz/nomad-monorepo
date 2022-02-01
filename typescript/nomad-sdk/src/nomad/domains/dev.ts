@@ -67,8 +67,8 @@ export const moonbasealpha: NomadDomain = {
   xAppConnectionManager: '0xD99E2c5eD0AacE4c459A850bd2DE0b1c0De12bfD',
 };
 
-export const milkomedaTestnet: NomadDomain = {
-  name: 'milkomedaTestnet',
+export const milkomedatestnet: NomadDomain = {
+  name: 'milkomedatestnet',
   id: 8000,
   paginate: {
     from: 1771254,
@@ -88,4 +88,4 @@ export const milkomedaTestnet: NomadDomain = {
   xAppConnectionManager: '0xf116142af150F8E2b939C14f746a67Ed6788266C',
 };
 
-export const devDomains = [rinkeby, kovan, moonbasealpha, milkomedaTestnet];
+export const devDomains = [rinkeby, kovan, moonbasealpha, milkomedatestnet];

@@ -12,7 +12,7 @@ if (!rpc) {
 }
 
 const chainJson: ChainJson = {
-  name: 'milkomedaTestnet',
+  name: 'milkomedatestnet',
   rpc,
   deployerKey: process.env.MILKOMEDA_TESTNET_DEPLOYER_KEY,
   domain: 8000,

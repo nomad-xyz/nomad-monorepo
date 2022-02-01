@@ -1,5 +1,5 @@
 import * as rinkeby from '../../../config/testnets/rinkeby';
-import * as milkomedaTestnet from '../../../config/testnets/milkomedaTestnet';
+import * as milkomedatestnet from '../../../config/testnets/milkomedatestnet';
 import {
   BridgeDeploy,
   ExistingBridgeDeploy,
@@ -16,12 +16,12 @@ const rinkebyBridgeDeploy = new ExistingBridgeDeploy(
   path,
 );
 
-// make new milkomedaTestnet bridge Deploy
-const milkomedaTestnetBridgeDeploy = new BridgeDeploy(
-  milkomedaTestnet.chain,
-  milkomedaTestnet.bridgeConfig,
+// make new milkomedatestnet bridge Deploy
+const milkomedatestnetBridgeDeploy = new BridgeDeploy(
+  milkomedatestnet.chain,
+  milkomedatestnet.bridgeConfig,
   path,
 );
 
 // Deploy Kovan bridge with Rinkeby hub
-deployNewChainBridge(milkomedaTestnetBridgeDeploy, rinkebyBridgeDeploy);
+deployNewChainBridge(milkomedatestnetBridgeDeploy, rinkebyBridgeDeploy);

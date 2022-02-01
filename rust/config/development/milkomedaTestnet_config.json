@@ -1,7 +1,7 @@
 {
   "environment": "dev",
   "signers": {
-    "milkomedaTestnet": {
+    "milkomedatestnet": {
       "key": "",
       "type": "hexKey"
     },
@@ -26,7 +26,7 @@
   "home": {
     "address": "0x8e68819f8596B7D23CBfe1D8A0605675c1eD646f",
     "domain": "8000",
-    "name": "milkomedaTestnet",
+    "name": "milkomedatestnet",
     "rpcStyle": "ethereum",
     "timelag": 5,
     "connection": {

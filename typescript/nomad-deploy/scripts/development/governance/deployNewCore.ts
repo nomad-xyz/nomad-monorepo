@@ -1,7 +1,7 @@
 import * as rinkeby from '../../../config/testnets/rinkeby';
 import * as kovan from '../../../config/testnets/kovan';
 import * as moonbasealpha from '../../../config/testnets/moonbasealpha';
-import * as milkomedaTestnet from '../../../config/testnets/milkomedaTestnet';
+import * as milkomedatestnet from '../../../config/testnets/milkomedatestnet';
 import { CoreDeploy, ExistingCoreDeploy } from '../../../src/core/CoreDeploy';
 import { deployNewChain } from '../../../src/core';
 import { getPathToDeployConfig } from '../../../src/verification/readDeployOutput';
@@ -29,13 +29,13 @@ const kovanCoreDeploy = ExistingCoreDeploy.withPath(
 );
 
 // Instantiate new milkomeda deploy
-const milkomedaTestnetCoreDeploy = new CoreDeploy(
-  milkomedaTestnet.chain,
-  milkomedaTestnet.devConfig,
+const milkomedatestnetCoreDeploy = new CoreDeploy(
+  milkomedatestnet.chain,
+  milkomedatestnet.devConfig,
 );
 
 // deploy Milkomeda core
-deployNewChain(milkomedaTestnetCoreDeploy, rinkebyCoreDeploy, [
+deployNewChain(milkomedatestnetCoreDeploy, rinkebyCoreDeploy, [
   moonbaseAlphaCoreDeploy,
   kovanCoreDeploy,
 ]);
