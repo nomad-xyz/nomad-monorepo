@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use color_eyre::{
     eyre::{bail, eyre},
-    Report, Result,
+    Result,
 };
 use ethers::prelude::H256;
 use futures_util::future::select_all;
@@ -392,7 +392,7 @@ impl NomadAgent for Processor {
     {
         tokio::spawn(async move {
             if self.is_home_failed().await?? {
-                return Err(Report::new(BaseError::FailedHome));
+                return Err(BaseError::FailedHome.into());
             }
 
             info!("Starting Processor tasks");
@@ -415,7 +415,7 @@ impl NomadAgent for Processor {
                 IndexDataTypes::Both,
             );
 
-            let home_fail_watch_task = self.watch_home_fail(self.interval);
+            let home_fail_watch_task = self.watch_home_fail(self.interval, true);
 
             info!("started indexer, sync and home fail watch");
 

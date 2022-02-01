@@ -11,6 +11,7 @@ use nomad_core::db::DB;
 use tracing::instrument::Instrumented;
 use tracing::{info_span, Instrument};
 
+use futures_util::FutureExt;
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::{task::JoinHandle, time::sleep};
 
@@ -127,7 +128,7 @@ pub trait NomadAgent: Send + Sync + std::fmt::Debug + AsRef<AgentCore> {
             let names: Vec<&str> = self.replicas().keys().map(|k| k.as_str()).collect();
 
             let run_task = self.run_many(&names);
-            let home_fail_watch_task = self.watch_home_fail(5);
+            let home_fail_watch_task = self.watch_home_fail(5, true);
 
             let mut tasks = vec![run_task, home_fail_watch_task];
 
@@ -161,9 +162,15 @@ pub trait NomadAgent: Send + Sync + std::fmt::Debug + AsRef<AgentCore> {
         .instrument(span)
     }
 
-    /// Spawn a task which watches home for getting into failed state
+    /// Spawn a task which continuously watch home for getting into failed state
+    /// and resolve once it happened.
+    /// `Reported` flag turns `Ok(())` into `Err(Report)` on failed home.
     #[allow(clippy::unit_arg)]
-    fn watch_home_fail(&self, interval: u64) -> Instrumented<JoinHandle<Result<()>>> {
+    fn watch_home_fail(
+        &self,
+        interval: u64,
+        reported: bool,
+    ) -> Instrumented<JoinHandle<Result<()>>> {
         use nomad_core::Common;
         let span = info_span!("home_watch");
         let home = self.home();
@@ -171,7 +178,11 @@ pub trait NomadAgent: Send + Sync + std::fmt::Debug + AsRef<AgentCore> {
             let home = home.clone();
             loop {
                 if home.state().await? == nomad_core::State::Failed {
-                    return Err(Report::new(BaseError::FailedHome));
+                    if reported {
+                        return Err(BaseError::FailedHome.into());
+                    } else {
+                        return Ok(());
+                    }
                 }
 
                 sleep(Duration::from_secs(interval)).await;
@@ -180,7 +191,7 @@ pub trait NomadAgent: Send + Sync + std::fmt::Debug + AsRef<AgentCore> {
         .instrument(span)
     }
 
-    /// Returns true if home is in failed state
+    /// Returns `true` if home is in failed state. Intended to return once and immediately
     #[allow(clippy::unit_arg)]
     fn is_home_failed(&self) -> Instrumented<JoinHandle<Result<bool>>> {
         use nomad_core::Common;

@@ -547,7 +547,7 @@ impl NomadAgent for Watcher {
             let sync_task_unified = select_all(sync_tasks);
 
             let double_update_watch_task = self.watch_double_update();
-            let improper_update_watch_task = self.watch_improper_update();
+            let improper_update_watch_task = self.watch_home_fail(self.interval_seconds, false);
 
             // Race index and run tasks
             info!("Selecting across tasks...");
@@ -583,27 +583,26 @@ impl NomadAgent for Watcher {
                     self.shutdown().await;
                 },
                 improper_res = improper_update_watch_task => {
-                    let state = improper_res??;
-                    if state == State::Failed {
-                        tracing::error!(
-                            "Improper update detected! Notifying all contracts and unenrolling replicas!",
-                        );
+                    // `self.watch_home_fail(..., false)` returns `Ok(())` on failed home,
+                    // we just want to bubble up related errors first
+                    improper_res??;
 
-                        self.handle_improper_update_failure()
-                            .await
-                            .iter()
-                            .for_each(|res| tracing::info!("{:#?}", res));
+                    tracing::error!(
+                        "Improper update detected! Notifying all contracts and unenrolling replicas!",
+                    );
 
-                        bail!(
-                            r#"
-                            Improper update detected!
-                            Replicas unenrolled!
-                            Watcher has been shut down!
-                        "#
-                        )
-                    }
+                    self.handle_improper_update_failure()
+                        .await
+                        .iter()
+                        .for_each(|res| tracing::info!("{:#?}", res));
 
-                    self.shutdown().await;
+                    bail!(
+                        r#"
+                        Improper update detected!
+                        Replicas unenrolled!
+                        Watcher has been shut down!
+                    "#
+                    )
                 }
             }
 
@@ -615,10 +614,11 @@ impl NomadAgent for Watcher {
 
 #[cfg(test)]
 mod test {
-    use nomad_base::IndexSettings;
+    use nomad_base::{BaseError, IndexSettings};
     use nomad_test::mocks::MockIndexer;
     use std::sync::Arc;
     use tokio::sync::mpsc;
+    use tokio_test::assert_err;
 
     use ethers::core::types::H256;
     use ethers::signers::{LocalWallet, Signer};
@@ -1090,8 +1090,8 @@ mod test {
                 // Home returns failed state
                 mock_home
                     .expect__state()
-                    .times(1)
-                    .return_once(move || Ok(State::Failed));
+                    .times(2)
+                    .returning(move || Ok(State::Failed));
             }
 
             // Connection manager expectations
@@ -1181,8 +1181,11 @@ mod test {
                 };
 
                 let watcher = Watcher::new(updater.into(), 1, connection_managers.clone(), core);
-                let state = watcher.watch_improper_update().await.unwrap().unwrap();
-                assert_eq!(state, State::Failed);
+                let state = watcher.watch_home_fail(1, false).await.unwrap().unwrap();
+                assert_eq!(state, ());
+
+                let state = watcher.watch_home_fail(1, true).await.unwrap();
+                assert_err!(state);
 
                 watcher.handle_improper_update_failure().await;
             }

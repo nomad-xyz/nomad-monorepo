@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use color_eyre::{eyre::ensure, Report, Result};
+use color_eyre::{eyre::ensure, Result};
 use ethers::{signers::Signer, types::Address};
 use futures_util::future::select_all;
 use prometheus::IntCounter;
@@ -108,11 +108,11 @@ impl NomadAgent for Updater {
         );
 
         let fail_check = self.is_home_failed();
-        let home_fail_watch_task = self.watch_home_fail(self.interval_seconds);
+        let home_fail_watch_task = self.watch_home_fail(self.interval_seconds, true);
 
         tokio::spawn(async move {
             if fail_check.await?? {
-                return Err(Report::new(BaseError::FailedHome));
+                return Err(BaseError::FailedHome.into());
             }
 
             let expected: Address = home.updater().await?.into();
