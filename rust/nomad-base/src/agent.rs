@@ -127,7 +127,7 @@ pub trait NomadAgent: Send + Sync + std::fmt::Debug + AsRef<AgentCore> {
             let names: Vec<&str> = self.replicas().keys().map(|k| k.as_str()).collect();
 
             let run_task = self.run_many(&names);
-            let home_fail_watch_task = self.watch_home_fail(5, true);
+            let home_fail_watch_task = self.watch_home_fail(5);
 
             let mut tasks = vec![run_task, home_fail_watch_task];
 
@@ -165,11 +165,7 @@ pub trait NomadAgent: Send + Sync + std::fmt::Debug + AsRef<AgentCore> {
     /// and resolve once it happened.
     /// `Reported` flag turns `Ok(())` into `Err(Report)` on failed home.
     #[allow(clippy::unit_arg)]
-    fn watch_home_fail(
-        &self,
-        interval: u64,
-        reported: bool,
-    ) -> Instrumented<JoinHandle<Result<()>>> {
+    fn watch_home_fail(&self, interval: u64) -> Instrumented<JoinHandle<Result<()>>> {
         use nomad_core::Common;
         let span = info_span!("home_watch");
         let home = self.home();
@@ -177,11 +173,7 @@ pub trait NomadAgent: Send + Sync + std::fmt::Debug + AsRef<AgentCore> {
             let home = home.clone();
             loop {
                 if home.state().await? == nomad_core::State::Failed {
-                    if reported {
-                        return Err(BaseError::FailedHome.into());
-                    } else {
-                        return Ok(());
-                    }
+                    return Err(BaseError::FailedHome.into());
                 }
 
                 sleep(Duration::from_secs(interval)).await;

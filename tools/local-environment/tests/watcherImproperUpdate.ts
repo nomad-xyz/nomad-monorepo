@@ -81,11 +81,6 @@ async function improperUpdateCase(homeOrReplica: string) {
           ]
         );
 
-        const a = n.getWatcherKey(jerry)!.toAddress();
-        const watcherPermission = await xapp.watcherPermission(a, tom.domain);
-        console.log(homeState, domainToReplica, replicaToDomain);
-        console.log(watcherPermission, a);
-
         if (
           homeState === 2 && // Waiting till Home state will be failed (2)
           domainToReplica !== replica.address && // Waiting till XAppConnectionManager will stop pointing at replica's address for jerry's domian
