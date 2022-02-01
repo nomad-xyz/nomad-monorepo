@@ -113,7 +113,21 @@ export class Indexer {
       this.persistance.height,
       this.sdk.getDomain(this.domain)?.paginate?.from || 0
     );
-    const to = await this.provider.getBlockNumber();
+    const [to, error] = await retry(
+      async () => {
+        return await this.provider.getBlockNumber()
+      },
+      RETRIES,
+      (error: any) =>
+        this.orchestrator.logger.warn(
+          `Retrying after RPC Error on .getBlockNumber() method... Error: ${error}`
+        )
+    );
+    if (!to) {
+      throw new Error(
+        `Retrying .getBlockNumber() method... exhausted maximum retry count. Throwing: ${error}`
+      );
+    }
 
     this.orchestrator.logger.info(
       `Fetching events for domain ${this.domain} from: ${from}, to: ${to}`
