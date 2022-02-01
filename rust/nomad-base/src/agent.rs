@@ -5,7 +5,7 @@ use crate::{
     BaseError, CachingHome, CachingReplica, ContractSyncMetrics, IndexDataTypes,
 };
 use async_trait::async_trait;
-use color_eyre::{eyre::WrapErr, Report, Result};
+use color_eyre::{eyre::WrapErr, Result};
 use futures_util::future::select_all;
 use nomad_core::db::DB;
 use tracing::instrument::Instrumented;
@@ -118,11 +118,7 @@ pub trait NomadAgent: Send + Sync + std::fmt::Debug + AsRef<AgentCore> {
     {
         let span = info_span!("run_all");
         tokio::spawn(async move {
-            if let Ok(failed) = self.is_home_failed().await? {
-                if failed {
-                    return Err(Report::new(BaseError::FailedHome));
-                }
-            }
+            self.assert_home_not_failed().await?;
             // this is the unused must use
             let names: Vec<&str> = self.replicas().keys().map(|k| k.as_str()).collect();
 
@@ -184,11 +180,17 @@ pub trait NomadAgent: Send + Sync + std::fmt::Debug + AsRef<AgentCore> {
 
     /// Returns `true` if home is in failed state. Intended to return once and immediately
     #[allow(clippy::unit_arg)]
-    fn is_home_failed(&self) -> Instrumented<JoinHandle<Result<bool>>> {
+    fn assert_home_not_failed(&self) -> Instrumented<JoinHandle<Result<()>>> {
         use nomad_core::Common;
         let span = info_span!("check_home_state");
         let home = self.home();
-        tokio::spawn(async move { Ok(home.state().await? == nomad_core::State::Failed) })
-            .instrument(span)
+        tokio::spawn(async move {
+            if home.state().await? == nomad_core::State::Failed {
+                Err(BaseError::FailedHome.into())
+            } else {
+                Ok(())
+            }
+        })
+        .instrument(span)
     }
 }

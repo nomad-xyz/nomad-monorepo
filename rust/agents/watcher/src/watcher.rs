@@ -564,32 +564,33 @@ impl NomadAgent for Watcher {
                     self.shutdown().await;
                 },
                 improper_res = improper_update_watch_task => {
-                    let some_base_error: BaseError = improper_res? // Result<(), E>, where E is either BaseError or Some RPC error
-                        .err() // Option<E>, where E is either BaseError or Some RPC error
-                        .expect("Expected some error on resolve of self.watch_home_fail(...)")
-                        .downcast::<BaseError>()?; // Result<E, Self>, where E is BaseError and Self is the original error. Then "?" bubbles Self
 
-                    match some_base_error {
-                        BaseError::FailedHome => {},
-                        _ => return Err(some_base_error.into())
+                    if let Err(e) = improper_res? {
+                        let some_base_error = e.downcast::<BaseError>()?;
+                        if let BaseError::FailedHome = some_base_error {
+                            tracing::error!(
+                                "Improper update detected! Notifying all contracts and unenrolling replicas!",
+                            );
+        
+                            self.handle_improper_update_failure()
+                                .await
+                                .iter()
+                                .for_each(|res| tracing::info!("{:#?}", res));
+        
+                            bail!(
+                                r#"
+                                Improper update detected!
+                                Replicas unenrolled!
+                                Watcher has been shut down!
+                            "#
+                            )
+                        } else {
+                            return Err(some_base_error.into())
+                        }
+                    } else {
+                        error!("It should not happen that self.watch_home_fail() would return Ok.");
+                        self.shutdown().await;
                     }
-
-                    tracing::error!(
-                        "Improper update detected! Notifying all contracts and unenrolling replicas!",
-                    );
-
-                    self.handle_improper_update_failure()
-                        .await
-                        .iter()
-                        .for_each(|res| tracing::info!("{:#?}", res));
-
-                    bail!(
-                        r#"
-                        Improper update detected!
-                        Replicas unenrolled!
-                        Watcher has been shut down!
-                    "#
-                    )
                 }
             }
 
@@ -605,7 +606,6 @@ mod test {
     use nomad_test::mocks::MockIndexer;
     use std::sync::Arc;
     use tokio::sync::mpsc;
-    use tokio_test::assert_err;
 
     use ethers::core::types::H256;
     use ethers::signers::{LocalWallet, Signer};

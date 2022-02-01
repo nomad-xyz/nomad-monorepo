@@ -14,8 +14,8 @@ use tokio::{sync::RwLock, task::JoinHandle, time::sleep};
 use tracing::{debug, error, info, info_span, instrument, instrument::Instrumented, Instrument};
 
 use nomad_base::{
-    cancel_task, decl_agent, AgentCore, BaseError, CachingHome, CachingReplica,
-    ContractSyncMetrics, IndexDataTypes, NomadAgent, NomadDB, ProcessorError,
+    cancel_task, decl_agent, AgentCore, CachingHome, CachingReplica, ContractSyncMetrics,
+    IndexDataTypes, NomadAgent, NomadDB, ProcessorError,
 };
 use nomad_core::{
     accumulator::merkle::Proof, CommittedMessage, Common, Home, HomeEvents, MessageStatus,
@@ -391,9 +391,7 @@ impl NomadAgent for Processor {
         Self: Sized + 'static,
     {
         tokio::spawn(async move {
-            if self.is_home_failed().await?? {
-                return Err(BaseError::FailedHome.into());
-            }
+            self.assert_home_not_failed().await??;
 
             info!("Starting Processor tasks");
 

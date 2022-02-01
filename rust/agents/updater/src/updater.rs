@@ -11,7 +11,7 @@ use tracing::{info, instrument::Instrumented, Instrument};
 use crate::{
     produce::UpdateProducer, settings::UpdaterSettings as Settings, submit::UpdateSubmitter,
 };
-use nomad_base::{AgentCore, BaseError, ContractSyncMetrics, IndexDataTypes, NomadAgent, NomadDB};
+use nomad_base::{AgentCore, ContractSyncMetrics, IndexDataTypes, NomadAgent, NomadDB};
 use nomad_core::{Common, Signers};
 
 /// An updater agent
@@ -107,13 +107,11 @@ impl NomadAgent for Updater {
             self.submitted_update_count.clone(),
         );
 
-        let fail_check = self.is_home_failed();
+        let fail_check = self.assert_home_not_failed();
         let home_fail_watch_task = self.watch_home_fail(self.interval_seconds);
 
         tokio::spawn(async move {
-            if fail_check.await?? {
-                return Err(BaseError::FailedHome.into());
-            }
+            fail_check.await??;
 
             let expected: Address = home.updater().await?.into();
             ensure!(
