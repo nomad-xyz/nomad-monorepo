@@ -108,7 +108,7 @@ impl NomadAgent for Updater {
         );
 
         let fail_check = self.is_home_failed();
-        let home_fail_watch_task = self.watch_home_fail(self.interval_seconds, true);
+        let home_fail_watch_task = self.watch_home_fail(self.interval_seconds);
 
         tokio::spawn(async move {
             if fail_check.await?? {

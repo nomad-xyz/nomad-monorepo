@@ -14,8 +14,8 @@ use tokio::{
 use tracing::{error, info, info_span, instrument::Instrumented, Instrument};
 
 use nomad_base::{
-    cancel_task, AgentCore, CachingHome, ConnectionManagers, ContractSyncMetrics, IndexDataTypes,
-    NomadAgent, NomadDB,
+    cancel_task, AgentCore, BaseError, CachingHome, ConnectionManagers, ContractSyncMetrics,
+    IndexDataTypes, NomadAgent, NomadDB,
 };
 use nomad_core::{
     ChainCommunicationError, Common, CommonEvents, ConnectionManager, DoubleUpdate,
@@ -528,7 +528,7 @@ impl NomadAgent for Watcher {
             let sync_task_unified = select_all(sync_tasks);
 
             let double_update_watch_task = self.watch_double_update();
-            let improper_update_watch_task = self.watch_home_fail(self.interval_seconds, false);
+            let improper_update_watch_task = self.watch_home_fail(self.interval_seconds);
 
             // Race index and run tasks
             info!("Selecting across tasks...");
@@ -564,9 +564,15 @@ impl NomadAgent for Watcher {
                     self.shutdown().await;
                 },
                 improper_res = improper_update_watch_task => {
-                    // `self.watch_home_fail(..., false)` returns `Ok(())` on failed home,
-                    // we just want to bubble up related errors first
-                    improper_res??;
+                    let some_base_error: BaseError = improper_res? // Result<(), E>, where E is either BaseError or Some RPC error
+                        .err() // Option<E>, where E is either BaseError or Some RPC error
+                        .expect("Expected some error on resolve of self.watch_home_fail(...)")
+                        .downcast::<BaseError>()?; // Result<E, Self>, where E is BaseError and Self is the original error. Then "?" bubbles Self
+
+                    match some_base_error {
+                        BaseError::FailedHome => {},
+                        _ => return Err(some_base_error.into())
+                    }
 
                     tracing::error!(
                         "Improper update detected! Notifying all contracts and unenrolling replicas!",
@@ -1071,8 +1077,8 @@ mod test {
                 // Home returns failed state
                 mock_home
                     .expect__state()
-                    .times(2)
-                    .returning(move || Ok(State::Failed));
+                    .times(1)
+                    .return_once(move || Ok(State::Failed));
             }
 
             // Connection manager expectations
@@ -1162,11 +1168,20 @@ mod test {
                 };
 
                 let watcher = Watcher::new(updater.into(), 1, connection_managers.clone(), core);
-                let state = watcher.watch_home_fail(1, false).await.unwrap().unwrap();
-                assert_eq!(state, ());
+                let state = watcher
+                    .watch_home_fail(1)
+                    .await
+                    .unwrap()
+                    .err()
+                    .unwrap()
+                    .downcast::<BaseError>()
+                    .unwrap();
 
-                let state = watcher.watch_home_fail(1, true).await.unwrap();
-                assert_err!(state);
+                assert!(if let BaseError::FailedHome = state {
+                    true
+                } else {
+                    false
+                });
 
                 watcher.handle_improper_update_failure().await;
             }

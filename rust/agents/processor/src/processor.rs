@@ -415,7 +415,7 @@ impl NomadAgent for Processor {
                 IndexDataTypes::Both,
             );
 
-            let home_fail_watch_task = self.watch_home_fail(self.interval, true);
+            let home_fail_watch_task = self.watch_home_fail(self.interval);
 
             info!("started indexer, sync and home fail watch");
 
