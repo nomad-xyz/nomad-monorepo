@@ -373,25 +373,6 @@ impl Watcher {
         .in_current_span()
     }
 
-    /// Periodically poll `home.state()` to check for failure due to improper
-    /// update. If failed state detected, return `State::Failed`.
-    fn watch_improper_update(&self) -> Instrumented<JoinHandle<Result<State>>> {
-        let home = self.home();
-        let interval = self.interval_seconds;
-
-        tokio::spawn(async move {
-            loop {
-                let state = home.state().await?;
-                if state == State::Failed {
-                    return Ok(state);
-                }
-
-                sleep(Duration::from_secs(interval)).await;
-            }
-        })
-        .in_current_span()
-    }
-
     async fn create_signed_failure(&self) -> SignedFailureNotification {
         FailureNotification {
             home_domain: self.home().local_domain(),

@@ -11,7 +11,6 @@ use nomad_core::db::DB;
 use tracing::instrument::Instrumented;
 use tracing::{info_span, Instrument};
 
-use futures_util::FutureExt;
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::{task::JoinHandle, time::sleep};
 
