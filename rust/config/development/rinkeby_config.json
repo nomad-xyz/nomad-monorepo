@@ -5,20 +5,24 @@
       "key": "",
       "type": "hexKey"
     },
-    "kovan": {
+    "milkomedatestnet": {
       "key": "",
       "type": "hexKey"
     },
     "moonbasealpha": {
       "key": "",
       "type": "hexKey"
+    },
+    "kovan": {
+      "key": "",
+      "type": "hexKey"
     }
   },
   "replicas": {
-    "kovan": {
-      "address": "0xFA58C14B693C44140208211dDa4A81c182B557c1",
-      "domain": "3000",
-      "name": "kovan",
+    "milkomedatestnet": {
+      "address": "0x53E7F6AFbECBB18a8E4989b89ADB1f0ce85272F5",
+      "domain": "8000",
+      "name": "milkomedatestnet",
       "rpcStyle": "ethereum",
       "timelag": 5,
       "connection": {
@@ -30,6 +34,17 @@
       "address": "0x6d8aCF60f3ddB6C49dEF2A2b77E56BE2FF1502Cf",
       "domain": "5000",
       "name": "moonbasealpha",
+      "rpcStyle": "ethereum",
+      "timelag": 5,
+      "connection": {
+        "type": "http",
+        "url": ""
+      }
+    },
+    "kovan": {
+      "address": "0xFA58C14B693C44140208211dDa4A81c182B557c1",
+      "domain": "3000",
+      "name": "kovan",
       "rpcStyle": "ethereum",
       "timelag": 5,
       "connection": {

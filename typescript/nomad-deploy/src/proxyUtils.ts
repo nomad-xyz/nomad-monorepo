@@ -119,7 +119,7 @@ export async function duplicate<T extends ethers.Contract>(
 
   return new BeaconProxy(
     prev.implementation,
-    prev.proxy.attach(proxy.address) as T,
+    prev.proxy.attach(proxy.address).connect(deploy.deployer) as T,
     prev.beacon,
   );
 }

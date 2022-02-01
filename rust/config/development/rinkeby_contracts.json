@@ -22,6 +22,11 @@
       "implementation": "0x2e54DAA00F7e7dc2BCf55Fd719ff040BD0549A0C",
       "proxy": "0xA062dcaEc568Ccf01560F168D0638af2fE663019",
       "beacon": "0x0eD8d83d918865CE2D52da2e0dc1bC98a048A4b1"
+    },
+    "8000": {
+      "implementation": "0x2e54DAA00F7e7dc2BCf55Fd719ff040BD0549A0C",
+      "proxy": "0xf9EdA8f3ee170b64c6640094e9a8bF9cb9f359f3",
+      "beacon": "0x0eD8d83d918865CE2D52da2e0dc1bC98a048A4b1"
     }
   },
   "recoveryManager": "0xa4849f1D96B26066f9C631FCdc8F1457D27Fb5EC",
