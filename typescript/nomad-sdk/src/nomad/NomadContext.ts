@@ -13,6 +13,7 @@ import {
 } from './domains';
 import { TransferMessage } from './messages';
 import { hexlify } from '@ethersproject/bytes';
+import { FailedHomeError } from './error';
 
 type Address = string;
 
@@ -31,6 +32,7 @@ type Address = string;
 export class NomadContext extends MultiProvider {
   private cores: Map<number, CoreContracts>;
   private bridges: Map<number, BridgeContracts>;
+  private _blacklist: Set<number>;
   private _governorDomain?: number;
 
   constructor(
@@ -49,6 +51,8 @@ export class NomadContext extends MultiProvider {
     bridges.forEach((bridge) => {
       this.bridges.set(bridge.domain, bridge);
     });
+
+    this._blacklist = new Set();
   }
 
   /**
@@ -251,6 +255,22 @@ export class NomadContext extends MultiProvider {
     return this.mustGetCore(await this.governorDomain());
   }
 
+  blacklist(): Set<number> {
+    return this._blacklist;
+  }
+
+  private async checkHome(nameOrDomain: string | number): Promise<void> {
+    const domain = this.resolveDomain(nameOrDomain);
+    const home = this.mustGetCore(domain).home;
+    const state = await home.state();
+    if (state === 2) {
+      console.log(`Home for domain ${domain} is failed!`);
+      this._blacklist.add(domain);
+    } else {
+      this._blacklist.delete(domain);
+    }
+  }
+
   /**
    * Resolve the local representation of a token on some domain. E.g. find the
    * deployed Celo address of Ethereum's Sushi Token.
@@ -420,6 +440,13 @@ export class NomadContext extends MultiProvider {
     enableFast = false,
     overrides: ethers.Overrides = {},
   ): Promise<TransferMessage> {
+    const fromDomain = this.resolveDomain(from);
+
+    await this.checkHome(fromDomain);
+    if (this.blacklist().has(fromDomain)) {
+      throw new FailedHomeError('Attempted to send token to failed home!');
+    }
+
     const fromBridge = this.mustGetBridge(from);
     const bridgeAddress = fromBridge.bridgeRouter.address;
 
@@ -483,6 +510,13 @@ export class NomadContext extends MultiProvider {
     enableFast = false,
     overrides: ethers.PayableOverrides = {},
   ): Promise<TransferMessage> {
+    const fromDomain = this.resolveDomain(from);
+
+    await this.checkHome(fromDomain);
+    if (this.blacklist().has(fromDomain)) {
+      throw new FailedHomeError('Attempted to send token to failed home!');
+    }
+
     const ethHelper = this.mustGetBridge(from).ethHelper;
     if (!ethHelper) {
       throw new Error(`No ethHelper for ${from}`);

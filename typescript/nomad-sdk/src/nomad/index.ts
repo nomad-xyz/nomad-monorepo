@@ -20,4 +20,6 @@ export { mainnetDomains, devDomains, stagingDomains } from './domains';
 export type { AnnotatedLifecycleEvent, NomadLifecyleEvent } from './events';
 export { queryAnnotatedEvents, Annotated } from './events';
 
+export { FailedHomeError } from './error';
+
 export { NomadContext, mainnet, dev, staging } from './NomadContext';

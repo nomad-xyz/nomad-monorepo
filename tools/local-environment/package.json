@@ -20,7 +20,8 @@
     "build": "npm i && npm run hardhat_build && npm run nomad_tests_build && npm run agents_build",
     "test-tokens": "npx ts-node tests/sendTokensCase.ts",
     "test-double-update": "npx ts-node tests/watcherDoubleUpdate.ts",
-    "test-improper-update": "npx ts-node tests/watcherImproperUpdate.ts"
+    "test-improper-update": "npx ts-node tests/watcherImproperUpdate.ts",
+    "test-sdk-failed-home": "npx ts-node tests/sdkFailedHome.ts"
   },
   "author": "",
   "license": "ISC",
