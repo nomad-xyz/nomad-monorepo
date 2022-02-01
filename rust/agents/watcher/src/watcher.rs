@@ -571,12 +571,12 @@ impl NomadAgent for Watcher {
                             tracing::error!(
                                 "Improper update detected! Notifying all contracts and unenrolling replicas!",
                             );
-        
+
                             self.handle_improper_update_failure()
                                 .await
                                 .iter()
                                 .for_each(|res| tracing::info!("{:#?}", res));
-        
+
                             bail!(
                                 r#"
                                 Improper update detected!
