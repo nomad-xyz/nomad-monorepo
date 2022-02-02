@@ -94,7 +94,7 @@ function getNetworks() {
       break;
     
     default:
-      networks = ['kovan', 'moonbasealpha', 'rinkeby'];
+      networks = ['kovan', 'moonbasealpha', 'rinkeby', 'milkomedatestnet'];
       break;
   }
 
@@ -138,11 +138,14 @@ function getReplicas(origin: string) {
         case 'kovan':
           replicas = ['rinkeby']
           break;
+        case 'milkomedatestnet':
+            replicas = ['rinkeby']
+            break;
         case 'moonbasealpha':
           replicas = ['rinkeby']
           break;
         case 'rinkeby':
-            replicas = ['kovan', 'moonbasealpha']
+            replicas = ['kovan', 'moonbasealpha', 'milkomedatestnet']
             break;
         default: 
           throw new Error(`Invalid Origin, no replicas available for ${origin}`)
