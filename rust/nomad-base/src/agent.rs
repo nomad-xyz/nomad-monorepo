@@ -118,14 +118,11 @@ pub trait NomadAgent: Send + Sync + std::fmt::Debug + AsRef<AgentCore> {
     {
         let span = info_span!("run_all");
         tokio::spawn(async move {
-            self.assert_home_not_failed().await?;
             // this is the unused must use
             let names: Vec<&str> = self.replicas().keys().map(|k| k.as_str()).collect();
 
             let run_task = self.run_many(&names);
-            let home_fail_watch_task = self.watch_home_fail(5);
-
-            let mut tasks = vec![run_task, home_fail_watch_task];
+            let mut tasks = vec![run_task];
 
             // kludge
             if Self::AGENT_NAME != "kathy" {
