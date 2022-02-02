@@ -1,17 +1,59 @@
+import { LocalAgent } from "../src/agent";
 import { ethers } from "ethers";
 import { LocalNetwork, Nomad, Key, utils } from "../src";
-import { setupTwo } from "./common";
+
+import { sleep, Waiter } from "../src/utils";
+import { waitAgentFailure } from "./common";
 
 (async () => {
   let success = false;
 
-  const { tom, jerry, n } = await setupTwo();
+  const tom = new LocalNetwork("tom", 1000, "http://localhost:9545");
+  const jerry = new LocalNetwork("jerry", 2000, "http://localhost:9546");
+
+  const updaterKey = new Key();
+  const watcherKey = new Key();
+  const jerryDeployerKey = new Key();
+  const jerrySignerKey = new Key();
+  const tomDeployerKey = new Key();
+  const tomSignerKey = new Key();
+
+  tom.addKeys(updaterKey, watcherKey, tomDeployerKey, tomSignerKey);
+  jerry.addKeys(updaterKey, watcherKey, jerryDeployerKey, jerrySignerKey);
+
+  await Promise.all([tom.up(), jerry.up()]);
+
+  console.log(`Started both`);
+
+  const n = new Nomad(tom);
+  n.addNetwork(jerry);
+
+  n.setUpdater(tom, updaterKey);
+  n.setWatcher(tom, watcherKey);
+  n.setDeployer(tom, tomDeployerKey);
+  n.setSigner(tom, tomSignerKey);
+
+  n.setUpdater(jerry, updaterKey); // Need for an update like updater
+  n.setWatcher(jerry, watcherKey); // Need for the watcher
+  n.setDeployer(jerry, jerryDeployerKey); // Need to deploy all
+  n.setSigner(jerry, jerrySignerKey); // Need for home.dispatch
+
+  await n.deploy({ injectSigners: true });
+
+  // n.exportDeployArtifacts('../../rust/config');
 
   // Scenario
 
   const tomWatcher = await n.getAgent("watcher", tom);
   await tomWatcher.connect();
   await tomWatcher.start();
+
+  const updaterWaiter: Waiter<true> = await waitAgentFailure(n, tom, "updater");
+  const processorWaiter: Waiter<true> = await waitAgentFailure(
+    n,
+    tom,
+    "processor"
+  );
 
   try {
     const address = new Key().toAddress();
@@ -103,6 +145,23 @@ import { setupTwo } from "./common";
     [, success] = await waiter.wait();
 
     if (!success) throw new Error(`Fraud was not prevented in time!`);
+
+    let testControlValue: true | undefined, testTimedOut: boolean;
+    [testControlValue, testTimedOut] = await updaterWaiter.wait();
+
+    if (!testTimedOut)
+      throw new Error(`Updater test reached timeout without success`);
+    if (!testControlValue)
+      throw new Error(`Updater test didn't return success`);
+
+    [testControlValue, testTimedOut] = await processorWaiter.wait();
+
+    if (!testTimedOut)
+      throw new Error(`Processor test reached timeout without success`);
+    if (!testControlValue)
+      throw new Error(`Processor test didn't return success`);
+
+    success = testTimedOut && testControlValue;
   } catch (e) {
     console.log(`Faced an error:`, e);
   }

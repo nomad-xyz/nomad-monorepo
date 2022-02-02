@@ -1,24 +1,16 @@
 import { ethers } from "ethers";
 import { Key, utils } from "../src";
-import { Waiter } from "../src/utils";
 
-import { setupTwo, waitAgentFailure } from "./common";
+import { setupTwo } from "./common";
 
 async function improperUpdateCase(homeOrReplica: string) {
   let success = false;
 
-  const { tom, jerry, tomActor, jerryActor, n } = await setupTwo();
+  const { tom, jerry, n } = await setupTwo();
 
   const tomWatcher = await n.getAgent("watcher", tom);
   await tomWatcher.connect();
   await tomWatcher.start();
-
-  const updaterWaiter: Waiter<true> = await waitAgentFailure(n, tom, "updater");
-  const processorWaiter: Waiter<true> = await waitAgentFailure(
-    n,
-    tom,
-    "processor"
-  );
 
   try {
     const address = new Key().toAddress();
@@ -100,23 +92,6 @@ async function improperUpdateCase(homeOrReplica: string) {
     console.log(
       `Identified in ${(new Date().valueOf() - start) / 1000} seconds`
     );
-
-    let testControlValue: true | undefined, testTimedOut: boolean;
-    [testControlValue, testTimedOut] = await updaterWaiter.wait();
-
-    if (!testTimedOut)
-      throw new Error(`Updater test reached timeout without success`);
-    if (!testControlValue)
-      throw new Error(`Updater test didn't return success`);
-
-    [testControlValue, testTimedOut] = await processorWaiter.wait();
-
-    if (!testTimedOut)
-      throw new Error(`Processor test reached timeout without success`);
-    if (!testControlValue)
-      throw new Error(`Processor test didn't return success`);
-
-    success = testTimedOut && testControlValue;
   } catch (e) {
     console.log(`Faced an error:`, e);
   }
