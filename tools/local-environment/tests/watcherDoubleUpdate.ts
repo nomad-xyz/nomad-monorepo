@@ -1,5 +1,5 @@
 import { ethers } from "ethers";
-import { LocalNetwork, Nomad, Key, utils } from "../src";
+import { Key, utils } from "../src";
 import { setupTwo } from "./common";
 
 (async () => {

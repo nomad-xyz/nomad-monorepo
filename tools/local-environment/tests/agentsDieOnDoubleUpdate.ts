@@ -1,52 +1,13 @@
-import { LocalAgent } from "../src/agent";
 import { ethers } from "ethers";
-import { LocalNetwork, Nomad, Key, utils } from "../src";
+import { Key, utils } from "../src";
 
-import { sleep, Waiter } from "../src/utils";
-import { waitAgentFailure } from "./common";
+import { Waiter } from "../src/utils";
+import { setupTwo, waitAgentFailure } from "./common";
 
 (async () => {
   let success = false;
 
-  const tom = new LocalNetwork("tom", 1000, "http://localhost:9545");
-  const jerry = new LocalNetwork("jerry", 2000, "http://localhost:9546");
-
-  const updaterKey = new Key();
-  const watcherKey = new Key();
-  const jerryDeployerKey = new Key();
-  const jerrySignerKey = new Key();
-  const tomDeployerKey = new Key();
-  const tomSignerKey = new Key();
-
-  tom.addKeys(updaterKey, watcherKey, tomDeployerKey, tomSignerKey);
-  jerry.addKeys(updaterKey, watcherKey, jerryDeployerKey, jerrySignerKey);
-
-  await Promise.all([tom.up(), jerry.up()]);
-
-  console.log(`Started both`);
-
-  const n = new Nomad(tom);
-  n.addNetwork(jerry);
-
-  n.setUpdater(tom, updaterKey);
-  n.setWatcher(tom, watcherKey);
-  n.setDeployer(tom, tomDeployerKey);
-  n.setSigner(tom, tomSignerKey);
-
-  n.setUpdater(jerry, updaterKey); // Need for an update like updater
-  n.setWatcher(jerry, watcherKey); // Need for the watcher
-  n.setDeployer(jerry, jerryDeployerKey); // Need to deploy all
-  n.setSigner(jerry, jerrySignerKey); // Need for home.dispatch
-
-  await n.deploy({ injectSigners: true });
-
-  // n.exportDeployArtifacts('../../rust/config');
-
-  // Scenario
-
-  const tomWatcher = await n.getAgent("watcher", tom);
-  await tomWatcher.connect();
-  await tomWatcher.start();
+  const { tom, jerry, n } = await setupTwo();
 
   const updaterWaiter: Waiter<true> = await waitAgentFailure(n, tom, "updater");
   const processorWaiter: Waiter<true> = await waitAgentFailure(
