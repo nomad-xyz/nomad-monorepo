@@ -3,6 +3,8 @@ import type { TokenIdentifier } from "@nomad-xyz/sdk/nomad/tokens";
 import { ethers } from "ethers";
 import { TransferMessage } from "@nomad-xyz/sdk/nomad";
 import fs from "fs";
+import { Waiter } from "../src/utils";
+import { LocalAgent } from "../src/agent";
 
 //
 /**
@@ -96,7 +98,12 @@ export async function sendTokensAndConfirm(
         return true;
       } else {
         newBalance = await tokenContract!.balanceOf(receiver);
-        console.log(`New balance:`, parseInt(newBalance.toString()), 'must be:', parseInt(tokenContract.toString()));
+        console.log(
+          `New balance:`,
+          parseInt(newBalance.toString()),
+          "must be:",
+          parseInt(tokenContract.toString())
+        );
       }
     },
     4 * 60_000,
@@ -105,11 +112,11 @@ export async function sendTokensAndConfirm(
 
   const [, success] = await waiter2.wait();
 
-  if (!success) throw new Error(`Tokens transfer from ${from.name} to ${to.name} failed`);
+  if (!success)
+    throw new Error(`Tokens transfer from ${from.name} to ${to.name} failed`);
 
   return tokenContract!;
 }
-
 
 export async function setupTwo() {
   const tom = new LocalNetwork("tom", 1000, "http://localhost:9545");
@@ -169,7 +176,7 @@ export async function setupTwo() {
 
   await n.deploy({ injectSigners: true });
 
-  n.exportDeployArtifacts('../../rust/config')
+  n.exportDeployArtifacts("../../rust/config");
 
   fs.writeFileSync("/tmp/nomad.json", JSON.stringify(n.toObject()));
 
@@ -180,4 +187,52 @@ export async function setupTwo() {
     jerryActor,
     n,
   };
+}
+
+export async function waitAgentFailure(
+  n: Nomad,
+  network: Network,
+  agentType: string
+): Promise<Waiter<true>> {
+  const agent = (await n.getAgent(agentType, network)) as LocalAgent;
+
+  let startsCount = 0;
+  let homeFailed = false;
+
+  await agent.connect();
+
+  const agentEvents = await agent.getEvents();
+
+  agentEvents.on("start", () => {
+    console.log(
+      `   =========================   ${agentType} started   =========================   `
+    );
+    startsCount += 1;
+  });
+
+  agent.logMatcherRegisterEvent(
+    "homeFailed",
+    /Home contract is in failed state/
+  );
+
+  agentEvents.once("logs.homeFailed", () => {
+    console.log(
+      `   =========================   ${agentType} homeFailed   =========================   `
+    );
+    homeFailed = true;
+  });
+  await agent.start();
+
+  return new Waiter(
+    async (): Promise<true | undefined> => {
+      if (
+        homeFailed &&
+        startsCount >= 3 // initial start + 1st failed start after the first failure + 2nd failed start
+      ) {
+        return true;
+      }
+    },
+    10 * 60_000,
+    2_000
+  );
 }

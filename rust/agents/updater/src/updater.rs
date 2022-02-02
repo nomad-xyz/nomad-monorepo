@@ -107,7 +107,12 @@ impl NomadAgent for Updater {
             self.submitted_update_count.clone(),
         );
 
+        let fail_check = self.assert_home_not_failed();
+        let home_fail_watch_task = self.watch_home_fail(self.interval_seconds);
+
         tokio::spawn(async move {
+            fail_check.await??;
+
             let expected: Address = home.updater().await?.into();
             ensure!(
                 expected == address,
@@ -130,7 +135,13 @@ impl NomadAgent for Updater {
             let produce_task = produce.spawn();
             let submit_task = submit.spawn();
 
-            let (res, _, rem) = select_all(vec![sync_task, produce_task, submit_task]).await;
+            let (res, _, rem) = select_all(vec![
+                sync_task,
+                produce_task,
+                submit_task,
+                home_fail_watch_task,
+            ])
+            .await;
 
             for task in rem.into_iter() {
                 task.into_inner().abort();

@@ -83,23 +83,17 @@ async function sendTokensTriangular(
   const amount2 = getRandomTokenAmount();
   const amount3 = getRandomTokenAmount();
 
-   await sendTokensAndConfirm(
-    n,
-    a,
-    b,
-    token,
-    bActor.toAddress(),
-    [amount1, amount2, amount3]
-  );
+  await sendTokensAndConfirm(n, a, b, token, bActor.toAddress(), [
+    amount1,
+    amount2,
+    amount3,
+  ]);
 
-  await sendTokensAndConfirm(
-    n,
-    b,
-    c,
-    token,
-    cActor.toAddress(),
-    [amount3, amount2, amount1]
-  );
+  await sendTokensAndConfirm(n, b, c, token, cActor.toAddress(), [
+    amount3,
+    amount2,
+    amount1,
+  ]);
 
   const tokenContract = await sendTokensAndConfirm(
     n,
@@ -153,24 +147,17 @@ async function sendTokensHubAndSpoke(
   const amount3 = getRandomTokenAmount();
 
   // send tokens A to C
-  await sendTokensAndConfirm(
-    n,
-    a,
-    c,
-    token,
-    cActor.toAddress(),
-    [amount2, amount3, amount1]
-  );
+  await sendTokensAndConfirm(n, a, c, token, cActor.toAddress(), [
+    amount2,
+    amount3,
+    amount1,
+  ]);
 
   // send tokens A to B
-  await sendTokensAndConfirm(
-    n,
-    a,
-    b,
-    token,
-    bActor.toAddress(),
-    [amount1, amount2]
-  );
+  await sendTokensAndConfirm(n, a, b, token, bActor.toAddress(), [
+    amount1,
+    amount2,
+  ]);
 
   // send tokens B to A
   const tokenContract1 = await sendTokensAndConfirm(
@@ -195,22 +182,21 @@ async function sendTokensHubAndSpoke(
   // send tokens C to B (should fail!!)
   let tokenSendFailed = true;
   try {
-    await sendTokensAndConfirm(
-        n,
-        c,
-        b,
-        token,
-        new Key().toAddress(),
-        [amount2, amount3, amount1]
-    );
+    await sendTokensAndConfirm(n, c, b, token, new Key().toAddress(), [
+      amount2,
+      amount3,
+      amount1,
+    ]);
     tokenSendFailed = false;
-  } catch(e) {
-    console.log(`Failed sending from ${c.name} to ${b.name} as expected`)
+  } catch (e) {
+    console.log(`Failed sending from ${c.name} to ${b.name} as expected`);
   }
-  if (!tokenSendFailed) throw new Error(`Supposed to not be able to send tokens`);
+  if (!tokenSendFailed)
+    throw new Error(`Supposed to not be able to send tokens`);
 
   if (
-    tokenContract1.address.toLowerCase() !== token.id.toString().toLowerCase() ||
+    tokenContract1.address.toLowerCase() !==
+      token.id.toString().toLowerCase() ||
     tokenContract2.address.toLowerCase() !== token.id.toString().toLowerCase()
   ) {
     throw new Error(
@@ -238,7 +224,7 @@ async function teardown(n: Nomad) {
     const { daffy, daffyActor } = await setupDaffy(n);
     await n.stopAllAgents(true);
     await n.startAgents(["updater", "relayer", "processor"]);
-    
+
     console.log(`Daffy setup complete`);
 
     await sendTokensHubAndSpoke(

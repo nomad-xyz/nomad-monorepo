@@ -391,6 +391,8 @@ impl NomadAgent for Processor {
         Self: Sized + 'static,
     {
         tokio::spawn(async move {
+            self.assert_home_not_failed().await??;
+
             info!("Starting Processor tasks");
 
             // tree sync
@@ -411,10 +413,12 @@ impl NomadAgent for Processor {
                 IndexDataTypes::Both,
             );
 
-            info!("started indexer and sync");
+            let home_fail_watch_task = self.watch_home_fail(self.interval);
+
+            info!("started indexer, sync and home fail watch");
 
             // instantiate task array here so we can optionally push run_task
-            let mut tasks = vec![home_sync_task, prover_sync_task];
+            let mut tasks = vec![home_sync_task, prover_sync_task, home_fail_watch_task];
 
             if !self.index_only {
                 // this is the unused must use

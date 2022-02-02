@@ -14,12 +14,12 @@ use tokio::{
 use tracing::{error, info, info_span, instrument::Instrumented, Instrument};
 
 use nomad_base::{
-    cancel_task, AgentCore, CachingHome, ConnectionManagers, ContractSyncMetrics, IndexDataTypes,
-    NomadAgent, NomadDB,
+    cancel_task, AgentCore, BaseError, CachingHome, ConnectionManagers, ContractSyncMetrics,
+    IndexDataTypes, NomadAgent, NomadDB,
 };
 use nomad_core::{
     ChainCommunicationError, Common, CommonEvents, ConnectionManager, DoubleUpdate,
-    FailureNotification, Home, SignedFailureNotification, SignedUpdate, Signers, State, TxOutcome,
+    FailureNotification, Home, SignedFailureNotification, SignedUpdate, Signers, TxOutcome,
 };
 
 use crate::settings::WatcherSettings as Settings;
@@ -373,25 +373,6 @@ impl Watcher {
         .in_current_span()
     }
 
-    /// Periodically poll `home.state()` to check for failure due to improper
-    /// update. If failed state detected, return `State::Failed`.
-    fn watch_improper_update(&self) -> Instrumented<JoinHandle<Result<State>>> {
-        let home = self.home();
-        let interval = self.interval_seconds;
-
-        tokio::spawn(async move {
-            loop {
-                let state = home.state().await?;
-                if state == State::Failed {
-                    return Ok(state);
-                }
-
-                sleep(Duration::from_secs(interval)).await;
-            }
-        })
-        .in_current_span()
-    }
-
     async fn create_signed_failure(&self) -> SignedFailureNotification {
         FailureNotification {
             home_domain: self.home().local_domain(),
@@ -547,7 +528,7 @@ impl NomadAgent for Watcher {
             let sync_task_unified = select_all(sync_tasks);
 
             let double_update_watch_task = self.watch_double_update();
-            let improper_update_watch_task = self.watch_improper_update();
+            let improper_update_watch_task = self.watch_home_fail(self.interval_seconds);
 
             // Race index and run tasks
             info!("Selecting across tasks...");
@@ -583,27 +564,33 @@ impl NomadAgent for Watcher {
                     self.shutdown().await;
                 },
                 improper_res = improper_update_watch_task => {
-                    let state = improper_res??;
-                    if state == State::Failed {
-                        tracing::error!(
-                            "Improper update detected! Notifying all contracts and unenrolling replicas!",
-                        );
 
-                        self.handle_improper_update_failure()
-                            .await
-                            .iter()
-                            .for_each(|res| tracing::info!("{:#?}", res));
+                    if let Err(e) = improper_res? {
+                        let some_base_error = e.downcast::<BaseError>()?;
+                        if let BaseError::FailedHome = some_base_error {
+                            tracing::error!(
+                                "Improper update detected! Notifying all contracts and unenrolling replicas!",
+                            );
 
-                        bail!(
-                            r#"
-                            Improper update detected!
-                            Replicas unenrolled!
-                            Watcher has been shut down!
-                        "#
-                        )
+                            self.handle_improper_update_failure()
+                                .await
+                                .iter()
+                                .for_each(|res| tracing::info!("{:#?}", res));
+
+                            bail!(
+                                r#"
+                                Improper update detected!
+                                Replicas unenrolled!
+                                Watcher has been shut down!
+                            "#
+                            )
+                        } else {
+                            return Err(some_base_error.into())
+                        }
+                    } else {
+                        error!("It should not happen that self.watch_home_fail() would return Ok.");
+                        self.shutdown().await;
                     }
-
-                    self.shutdown().await;
                 }
             }
 
@@ -624,7 +611,7 @@ mod test {
     use ethers::signers::{LocalWallet, Signer};
 
     use nomad_base::{CachingReplica, CommonIndexers, HomeIndexers, Homes, Replicas};
-    use nomad_core::{DoubleUpdate, SignedFailureNotification, Update};
+    use nomad_core::{DoubleUpdate, SignedFailureNotification, State, Update};
     use nomad_test::mocks::{MockConnectionManagerContract, MockHomeContract, MockReplicaContract};
     use nomad_test::test_utils;
 
@@ -1181,8 +1168,20 @@ mod test {
                 };
 
                 let watcher = Watcher::new(updater.into(), 1, connection_managers.clone(), core);
-                let state = watcher.watch_improper_update().await.unwrap().unwrap();
-                assert_eq!(state, State::Failed);
+                let state = watcher
+                    .watch_home_fail(1)
+                    .await
+                    .unwrap()
+                    .err()
+                    .unwrap()
+                    .downcast::<BaseError>()
+                    .unwrap();
+
+                assert!(if let BaseError::FailedHome = state {
+                    true
+                } else {
+                    false
+                });
 
                 watcher.handle_improper_update_failure().await;
             }

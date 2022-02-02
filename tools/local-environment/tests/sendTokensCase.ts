@@ -97,14 +97,11 @@ import { sendTokensAndConfirm } from "./common";
     const amount2 = getRandomTokenAmount();
     const amount3 = getRandomTokenAmount();
 
-    await sendTokensAndConfirm(
-      n,
-      tom,
-      jerry,
-      token,
-      receiver.toAddress(),
-      [amount1, amount2, amount3]
-    );
+    await sendTokensAndConfirm(n, tom, jerry, token, receiver.toAddress(), [
+      amount1,
+      amount2,
+      amount3,
+    ]);
 
     const tokenContract = await sendTokensAndConfirm(
       n,

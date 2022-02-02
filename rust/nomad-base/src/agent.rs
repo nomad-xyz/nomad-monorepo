@@ -2,7 +2,7 @@ use crate::{
     cancel_task,
     metrics::CoreMetrics,
     settings::{IndexSettings, Settings},
-    CachingHome, CachingReplica, ContractSyncMetrics, IndexDataTypes,
+    BaseError, CachingHome, CachingReplica, ContractSyncMetrics, IndexDataTypes,
 };
 use async_trait::async_trait;
 use color_eyre::{eyre::WrapErr, Result};
@@ -11,8 +11,9 @@ use nomad_core::db::DB;
 use tracing::instrument::Instrumented;
 use tracing::{info_span, Instrument};
 
-use std::{collections::HashMap, sync::Arc};
-use tokio::task::JoinHandle;
+use std::{collections::HashMap, sync::Arc, time::Duration};
+use tokio::{task::JoinHandle, time::sleep};
+
 /// Properties shared across all agents
 #[derive(Debug)]
 pub struct AgentCore {
@@ -149,6 +150,43 @@ pub trait NomadAgent: Send + Sync + std::fmt::Debug + AsRef<AgentCore> {
             }
 
             res?
+        })
+        .instrument(span)
+    }
+
+    /// Spawn a task which continuously watch home for getting into failed state
+    /// and resolve once it happened.
+    /// `Reported` flag turns `Ok(())` into `Err(Report)` on failed home.
+    #[allow(clippy::unit_arg)]
+    fn watch_home_fail(&self, interval: u64) -> Instrumented<JoinHandle<Result<()>>> {
+        use nomad_core::Common;
+        let span = info_span!("home_watch");
+        let home = self.home();
+        tokio::spawn(async move {
+            let home = home.clone();
+            loop {
+                if home.state().await? == nomad_core::State::Failed {
+                    return Err(BaseError::FailedHome.into());
+                }
+
+                sleep(Duration::from_secs(interval)).await;
+            }
+        })
+        .instrument(span)
+    }
+
+    /// Returns `true` if home is in failed state. Intended to return once and immediately
+    #[allow(clippy::unit_arg)]
+    fn assert_home_not_failed(&self) -> Instrumented<JoinHandle<Result<()>>> {
+        use nomad_core::Common;
+        let span = info_span!("check_home_state");
+        let home = self.home();
+        tokio::spawn(async move {
+            if home.state().await? == nomad_core::State::Failed {
+                Err(BaseError::FailedHome.into())
+            } else {
+                Ok(())
+            }
         })
         .instrument(span)
     }

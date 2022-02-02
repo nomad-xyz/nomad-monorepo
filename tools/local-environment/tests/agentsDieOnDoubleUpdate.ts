@@ -1,17 +1,20 @@
 import { ethers } from "ethers";
 import { Key, utils } from "../src";
-import { setupTwo } from "./common";
+
+import { Waiter } from "../src/utils";
+import { setupTwo, waitAgentFailure } from "./common";
 
 (async () => {
   let success = false;
 
   const { tom, jerry, n } = await setupTwo();
 
-  // Scenario
-
-  const tomWatcher = await n.getAgent("watcher", tom);
-  await tomWatcher.connect();
-  await tomWatcher.start();
+  const updaterWaiter: Waiter<true> = await waitAgentFailure(n, tom, "updater");
+  const processorWaiter: Waiter<true> = await waitAgentFailure(
+    n,
+    tom,
+    "processor"
+  );
 
   try {
     const address = new Key().toAddress();
@@ -103,6 +106,23 @@ import { setupTwo } from "./common";
     [, success] = await waiter.wait();
 
     if (!success) throw new Error(`Fraud was not prevented in time!`);
+
+    let testControlValue: true | undefined, testTimedOut: boolean;
+    [testControlValue, testTimedOut] = await updaterWaiter.wait();
+
+    if (!testTimedOut)
+      throw new Error(`Updater test reached timeout without success`);
+    if (!testControlValue)
+      throw new Error(`Updater test didn't return success`);
+
+    [testControlValue, testTimedOut] = await processorWaiter.wait();
+
+    if (!testTimedOut)
+      throw new Error(`Processor test reached timeout without success`);
+    if (!testControlValue)
+      throw new Error(`Processor test didn't return success`);
+
+    success = testTimedOut && testControlValue;
   } catch (e) {
     console.log(`Faced an error:`, e);
   }

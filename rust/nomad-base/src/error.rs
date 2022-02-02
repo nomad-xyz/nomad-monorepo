@@ -14,6 +14,9 @@ pub enum BaseError {
     #[error("{0}")]
     DbError(#[from] DbError),
     /// Bubbled up from underlying
+    #[error("Home contract is in failed state")]
+    FailedHome,
+    /// Bubbled up from underlying
     #[error("{0}")]
     NomadError(#[from] NomadError),
 }

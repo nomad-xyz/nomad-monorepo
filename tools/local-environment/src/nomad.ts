@@ -33,9 +33,7 @@ import {
 } from "@nomad-xyz/deploy/src/bridge";
 import { deployHubAndSpoke, deployNewChain } from "@nomad-xyz/deploy/src/core";
 import { ContractVerificationInput } from "@nomad-xyz/deploy/src/deploy";
-import {
-  enrollSpoke,
-} from "@nomad-xyz/deploy/src/incremental";
+import { enrollSpoke } from "@nomad-xyz/deploy/src/incremental";
 import TestBridgeDeploy from "@nomad-xyz/deploy/src/bridge/TestBridgeDeploy";
 import {
   BridgeContractAddresses,
@@ -506,11 +504,17 @@ export class Nomad {
         `Updater key for ${network.name}(${network.domain}) was not found`
       ); // throw new Error();
 
-    const watcher = this.watchers.get(network.domain);
-    if (!watcher)
-      this.logger.warn(
-        `Watchers key for ${network.name}(${network.domain}) was not found`
-      ); // throw new Error();
+    let watchers: string[] = [];
+    if (network.isGovernor()) {
+      watchers = Array.from(this.watchers.entries())
+        .filter(([domain, _]) => domain !== network.domain)
+        .map(([_, k]) => k.toAddress());
+    } else {
+      const hub = this.getNetworks().find((n) => n.isGovernor());
+      if (hub) {
+        watchers.push(this.watchers.get(hub.domain)!.toAddress());
+      }
+    }
 
     const governor: Governor | undefined = network.governor;
 
@@ -518,7 +522,7 @@ export class Nomad {
       environment: "dev" as DeployEnvironment, // TODO
       updater: updater!.toAddress(),
       optimisticSeconds: 10, // TODO
-      watchers: [watcher!.toAddress()],
+      watchers,
       recoveryTimelock: 180, // TODO
       recoveryManager: "0x24F6c874F56533d9a1422e85e5C7A806ED11c036", // TODO
       processGas: 850_000, // TODO
@@ -731,9 +735,7 @@ export class Nomad {
     return;
   }
 
-  async deployAdditionalNetworks(
-    newNetworks: Network[]
-  ): Promise<void> {
+  async deployAdditionalNetworks(newNetworks: Network[]): Promise<void> {
     for (const newNetwork of newNetworks) {
       await this.deployAdditionalNetwork(newNetwork);
     }
@@ -751,16 +753,18 @@ export class Nomad {
 
     const coreDeployArtifacts = this.ejectCoreDeploysArtifacts(toEjectCores);
 
-    const oldBridgeDeploys = utils.filterUndefined(this.getNetworks().map((n) => {
-      const core = this.getExistingCoreDeploy(n);
-      if (core) {
-        return this.getExistingBridgeDeploy(n)!;
-      }
-    }));
+    const oldBridgeDeploys = utils.filterUndefined(
+      this.getNetworks().map((n) => {
+        const core = this.getExistingCoreDeploy(n);
+        if (core) {
+          return this.getExistingBridgeDeploy(n)!;
+        }
+      })
+    );
 
     const toEjectBridges = [
       ...newBridges,
-      ...this.filterNewDeploys(oldBridgeDeploys, newBridges)
+      ...this.filterNewDeploys(oldBridgeDeploys, newBridges),
     ] as any as BridgeDeploy[];
 
     const bridgeDeployArtifacts =
@@ -774,12 +778,15 @@ export class Nomad {
     this.setArtifacts(artifacts);
   }
 
-  private filterNewDeploys(oldDeploys: (ExistingCoreDeploy | ExistingBridgeDeploy)[], newDeploys: (CoreDeploy | BridgeDeploy)[]) {
+  private filterNewDeploys(
+    oldDeploys: (ExistingCoreDeploy | ExistingBridgeDeploy)[],
+    newDeploys: (CoreDeploy | BridgeDeploy)[]
+  ) {
     return oldDeploys.filter(
-        (oldDeploy) =>
-            !newDeploys.find(
-                (newDeploy) => newDeploy.chain.domain === oldDeploy.chain.domain
-            )
+      (oldDeploy) =>
+        !newDeploys.find(
+          (newDeploy) => newDeploy.chain.domain === oldDeploy.chain.domain
+        )
     );
   }
 
@@ -791,7 +798,9 @@ export class Nomad {
     const nonce = await deployer.getTransactionCount();
     deployer.setTransactionCount(nonce);
 
-    const oldSpokes = this.getSpokes().filter(s => s.domain != newNetwork.domain).map(n => this.getExistingCoreDeploy(n)!);
+    const oldSpokes = this.getSpokes()
+      .filter((s) => s.domain != newNetwork.domain)
+      .map((n) => this.getExistingCoreDeploy(n)!);
 
     const newCoreDeploy = this.getCoreDeploy(newNetwork);
     await deployNewChain(newCoreDeploy, govCoreDeploy, oldSpokes);
@@ -810,8 +819,10 @@ export class Nomad {
 
     await this.updateMultiProvider();
 
-    await enrollSpoke(this.multiprovider!, newNetwork.domain, 
-      this.getCoreConfig(newNetwork)!,
+    await enrollSpoke(
+      this.multiprovider!,
+      newNetwork.domain,
+      this.getCoreConfig(newNetwork)!
     );
 
     await checkCoreDeploy(
