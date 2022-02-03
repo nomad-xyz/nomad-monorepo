@@ -3,55 +3,40 @@ import { NomadMessage } from "./consumer";
 import { messages, Prisma, PrismaClient } from '@prisma/client'
 import { BigNumber } from "ethers";
 
-function fromDb(m: messages): NomadMessage {
-  return NomadMessage.fromDB(
-    m.origin,
-    m.destination,
-    m.nonce,
-    m.root,
-    m.hash,
-    BigNumber.from(m.leaf_index),
-    m.raw,
-    m.block,
-    Number(m.dispatched_at),
-    Number(m.updated_at),
-    Number(m.relayed_at),
-    Number(m.received_at),
-    Number(m.processed_at),
-    m.sender || '',
-    m.evm || ''
-  )
-}
+// function fromDb(m: messages): NomadMessage {
+//   return 
 
-function toDb(m: NomadMessage): Prisma.messagesCreateManyInput {
-  return {
-    hash: m.hash,
-    origin: m.origin,
-    destination: m.destination,
-    nonce: m.nonce,
-    nomad_sender: m.nomadSender,
-    nomad_recipient: m.nomadRecipient,
-    root: m.root,
-    state: m.state,
-    block: m.block,
-    dispatched_at: m.timings.dispatchedAt,
-    updated_at: m.timings.updatedAt,
-    relayed_at: m.timings.relayedAt,
-    received_at: m.timings.receivedAt,
-    processed_at: m.timings.processedAt,
-    sender: m.sender,
-    bridge_msg_type: m.bridgeMsgType,
-    recipient: m.bridgeMsgTo,
-    bridge_msg_amount: m.bridgeMsgAmount?.toHexString() || undefined,
-    bridge_msg_allow_fast: m.bridgeMsgAllowFast,
-    bridge_msg_details_hash: m.bridgeMsgDetailsHash,
-    bridge_msg_token_domain: m.bridgeMsgTokenDomain,
-    bridge_msg_token_id: m.bridgeMsgTokenId,
-    raw: m.raw,
-    leaf_index: m.leafIndex.toHexString(),
-    evm: m.evm,
-  }
-}
+// }
+
+// function toDb(m: NomadMessage): Prisma.messagesCreateManyInput {
+//   return {
+//     hash: m.hash,
+//     origin: m.origin,
+//     destination: m.destination,
+//     nonce: m.nonce,
+//     nomad_sender: m.nomadSender,
+//     nomad_recipient: m.nomadRecipient,
+//     root: m.root,
+//     state: m.state,
+//     block: m.block,
+//     dispatched_at: m.timings.dispatchedAt,
+//     updated_at: m.timings.updatedAt,
+//     relayed_at: m.timings.relayedAt,
+//     received_at: m.timings.receivedAt,
+//     processed_at: m.timings.processedAt,
+//     sender: m.sender,
+//     bridge_msg_type: m.bridgeMsgType,
+//     recipient: m.bridgeMsgTo,
+//     bridge_msg_amount: m.bridgeMsgAmount?.toHexString() || undefined,
+//     bridge_msg_allow_fast: m.bridgeMsgAllowFast,
+//     bridge_msg_details_hash: m.bridgeMsgDetailsHash,
+//     bridge_msg_token_domain: m.bridgeMsgTokenDomain,
+//     bridge_msg_token_id: m.bridgeMsgTokenId,
+//     raw: m.raw,
+//     leaf_index: m.leafIndex.toHexString(),
+//     evm: m.evm,
+//   }
+// }
 
 export interface MsgRequest {
   size?: number;
@@ -88,21 +73,21 @@ export class DB {
   async getMessageByEvm(tx: string): Promise<NomadMessage[]> {
     const messages = await this.client.messages.findMany({
       where: {
-        evm: tx
+        tx
       }
     });
 
-    return messages.map(fromDb)
+    return messages.map(NomadMessage.deserialize)
   }
 
-  async getMessageByHash(hash: string): Promise<NomadMessage | undefined> {
+  async getMessageByHash(messageHash: string): Promise<NomadMessage | undefined> {
     const message = await this.client.messages.findUnique({
       where: {
-        hash
+        messageHash
       }
     });
 
-    return message ? fromDb(message) : undefined
+    return message ? NomadMessage.deserialize(message) : undefined
   }
 
   async getMessages(req: MsgRequest): Promise<NomadMessage[]> {
@@ -121,14 +106,14 @@ export class DB {
       skip
     });
 
-    return messages.map(fromDb)
+    return messages.map(NomadMessage.deserialize)
   }
 
   async insertMessage(messages: NomadMessage[]) {
     if (!messages.length) return;
     
     return await this.client.messages.createMany({
-      data: messages.map(toDb),
+      data: messages.map(message => message.serialize()),
       skipDuplicates: true,
     })
   }
@@ -139,9 +124,9 @@ export class DB {
     return await Promise.all(messages.map(m => {
       this.client.messages.update({
         where: {
-          hash: m.hash
+          messageHash: m.messageHash
         },
-        data: toDb(m),
+        data: m.serialize(),
       })
     }));
   }
@@ -149,10 +134,10 @@ export class DB {
   async getExistingHashes(): Promise<string[]> {
     const rows = await this.client.messages.findMany({
       select: {
-        hash: true
+        messageHash: true
       }
     });
-    return rows.map(row => row.hash)
+    return rows.map(row => row.messageHash)
   }
 
   async getAllKeyPair(namespace: string): Promise<Map<string, string>> {
@@ -166,6 +151,22 @@ export class DB {
       }
     });
     return new Map(rows.map(row => [row.key, row.value]))
+  }
+
+  async getKeyPair(namespace: string, key: string): Promise<string | undefined> {
+    const row = await this.client.kv_storage.findUnique({
+      select: {
+        value: true
+      },
+      where: {
+        namespace_key: {
+          namespace,
+          key
+        }
+      }
+    });
+    if (row) return row.value;
+    return undefined
   }
 
   async setKeyPair(namespace: string, key: string, value: string): Promise<void> {

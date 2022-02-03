@@ -69,33 +69,24 @@ export function reviver(key: any, value: any): any {
 }
 
 export class KVCache {
-  m: Map<string, string>;
   name: string;
   db: DB;
 
   constructor(name: string, db: DB) {
     this.db = db;
-    this.m = new Map();
     this.name = name;
   }
 
   async init() {
-    await this.tryLoad();
-  }
-
-  async tryLoad() {
-    try {
-      this.m = await this.db.getAllKeyPair(this.name);
-    } catch (_) {}
+    // await this.tryLoad();
   }
 
   async set(k: string, v: string) {
-    this.m.set(k, v);
     await this.db.setKeyPair(this.name, k, v);
   }
 
-  get(k: string): string | undefined {
-    return this.m.get(k);
+  async get(k: string): Promise<string | undefined> {
+    return await this.db.getKeyPair(this.name, k)
   }
 }
 
@@ -118,4 +109,22 @@ export function createLogger(name: string, environment: string) {
     level: "debug",
     environment: environment,
   });
+}
+
+export class Padded {
+  private s: string;
+
+  constructor(s: string) {
+    if (s.length !== 66) throw new Error(`Input string length must be 66, got: ${s.length}`);
+    if (s.slice(0, 2) !== '0x') throw new Error(`Input string length must start with '0x', got: ${s}`);
+    this.s = s.toLowerCase();
+  }
+
+  toEVMAddress() {
+    return "0x" + this.s.slice(26);
+  }
+
+  valueOf(): string {
+    return this.s;
+  }
 }

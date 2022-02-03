@@ -43,7 +43,7 @@ export class Indexer {
   async getBlockInfo(
     blockNumber: number
   ): Promise<[number, Map<string, string>]> {
-    const possibleBlock = this.blockCache.get(String(blockNumber));
+    const possibleBlock = await this.blockCache.get(String(blockNumber));
     if (possibleBlock) {
       const [ts, txs] = possibleBlock.split(".");
       const x: string[] = txs.split(",");

@@ -20,31 +20,30 @@ model kv_storage {
 
 model messages {
   id                      Int      @id @default(autoincrement())
-  hash                    String   @unique @db.VarChar(66)
+  messageHash                    String   @unique @db.VarChar(66)
   origin                  Int
   destination             Int
   nonce                   Int
-  nomad_sender            String   @db.VarChar(42)
-  nomad_recipient         String   @db.VarChar(42)
+  internalSender          String   @map("internal_sender") @db.VarChar(42)
+  internalRecipient       String   @map("internal_recipient") @db.VarChar(42)
   root                    String   @db.VarChar(66)
   state                   Int
-  block                   Int
-  dispatched_at           BigInt
-  updated_at              BigInt
-  relayed_at              BigInt
-  received_at             BigInt
-  processed_at            BigInt
+  dispatchBlock                   Int
+  dispatchedAt            Int @map("dispatched_at")
+  updatedAt               Int @map("updated_at")
+  relayedAt               Int @map("relayed_at")
+  receivedAt              Int @map("received_at")
+  processedAt             Int @map("processed_at")
   sender                  String?  @db.VarChar(42)
-  bridge_msg_type         String?  @db.VarChar(20)
   recipient               String?  @db.VarChar(42)
-  bridge_msg_amount       String?  @db.VarChar(256)
-  bridge_msg_allow_fast   Boolean?
-  bridge_msg_details_hash String?  @db.VarChar(66)
-  bridge_msg_token_domain Int?
-  bridge_msg_token_id     String?  @db.VarChar(42)
-  raw                     String   @db.VarChar
-  leaf_index              String   @db.VarChar(256)
-  evm                     String?  @db.VarChar(66)
+  amount       String?  @db.VarChar(256)
+  allowFast    Boolean?  @map("allow_fast")
+  detailsHash   String?  @map("details_hash") @db.VarChar(66)
+  tokenDomain   Int? @map("token_domain")
+  tokenId      String? @map("token_id")  @db.VarChar(42)
+  body                     String   @db.VarChar
+  leafIndex              String   @db.VarChar(256)
+  tx                     String?  @db.VarChar(66)
   createdAt               DateTime @default(now()) @db.Timestamp(6)
 
   @@index([id], map: "messages_id_index")

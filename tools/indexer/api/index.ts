@@ -28,13 +28,13 @@ export async function run(db: DB, logger: Logger) {
 
   app.get("/tx/:tx", log, async (req, res) => {
     const messages = await db.getMessageByEvm(req.params.tx);
-    return res.json(messages.map(m => m.toObject()));
+    return res.json(messages.map(m => m.serialize()));
   });
 
   app.get("/hash/:hash", log, async (req, res) => {
     const message = await db.getMessageByHash(req.params.hash);
     if (!message) return res.status(404).json({});
-    return res.json(message.toObject());
+    return res.json(message.serialize());
   });
 
   app.get(
