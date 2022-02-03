@@ -4,30 +4,46 @@
     "key": "",
     "type": "hexKey"
   },
-  "connectionManagers": [
-    {
-      "address": "0x0000000000000000000000000000000000000000",
-      "domain": "60",
-      "name": "ethereum",
+  "managers": {
+    "rinkeby": {
+      "address": "0x7e365A910383cE8Dfa6860B080a9D4cd58d2BD13",
+      "domain": "2000",
+      "name": "rinkeby",
       "rpcStyle": "ethereum",
-      "config": {
-        "connection": {
-          "type": "ws",
-          "url": "ws://localhost:8545"
-        }
+      "connection": {
+        "type": "http",
+        "url": ""
       }
     },
-    {
-      "address": "0x0000000000000000000000000000000000000000",
-      "domain": "61",
-      "name": "eth-classic",
+    "kovan": {
+      "address": "0xE469D8587D45BF85297BD924b159E726E7CA5408",
+      "domain": "3000",
+      "name": "kovan",
       "rpcStyle": "ethereum",
-      "config": {
-        "connection": {
-          "type": "ws",
-          "url": "ws://localhost:8545"
-        }
+      "connection": {
+        "type": "http",
+        "url": ""
+      }
+    },
+    "moonbasealpha": {
+      "address": "0xD99E2c5eD0AacE4c459A850bd2DE0b1c0De12bfD",
+      "domain": "5000",
+      "name": "moonbasealpha",
+      "rpcStyle": "ethereum",
+      "connection": {
+        "type": "http",
+        "url": ""
+      }
+    },
+    "milkomedatestnet": {
+      "address": "0xf116142af150F8E2b939C14f746a67Ed6788266C",
+      "domain": "8000",
+      "name": "milkomedatestnet",
+      "rpcStyle": "ethereum",
+      "connection": {
+        "type": "http",
+        "url": ""
       }
     }
-  ]
+  }
 }
