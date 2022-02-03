@@ -1,20 +1,42 @@
 import { NomadMessage } from "./consumer";
-import { Pool } from "pg";
 
-// expand(3, 2) returns "($1, $2), ($3, $4), ($5, $6)"
-function expand(rowCount: number, columnCount: number, startAt = 1) {
-  var index = startAt;
-  return Array(rowCount)
-    .fill(0)
-    .map(
-      (v) =>
-        `(${Array(columnCount)
-          .fill(0)
-          .map((v) => `$${index++}`)
-          .join(", ")})`
-    )
-    .join(", ");
-}
+import { messages, Prisma, PrismaClient } from '@prisma/client'
+import { BigNumber } from "ethers";
+
+// function fromDb(m: messages): NomadMessage {
+//   return 
+
+// }
+
+// function toDb(m: NomadMessage): Prisma.messagesCreateManyInput {
+//   return {
+//     hash: m.hash,
+//     origin: m.origin,
+//     destination: m.destination,
+//     nonce: m.nonce,
+//     nomad_sender: m.nomadSender,
+//     nomad_recipient: m.nomadRecipient,
+//     root: m.root,
+//     state: m.state,
+//     block: m.block,
+//     dispatched_at: m.timings.dispatchedAt,
+//     updated_at: m.timings.updatedAt,
+//     relayed_at: m.timings.relayedAt,
+//     received_at: m.timings.receivedAt,
+//     processed_at: m.timings.processedAt,
+//     sender: m.sender,
+//     bridge_msg_type: m.bridgeMsgType,
+//     recipient: m.bridgeMsgTo,
+//     bridge_msg_amount: m.bridgeMsgAmount?.toHexString() || undefined,
+//     bridge_msg_allow_fast: m.bridgeMsgAllowFast,
+//     bridge_msg_details_hash: m.bridgeMsgDetailsHash,
+//     bridge_msg_token_domain: m.bridgeMsgTokenDomain,
+//     bridge_msg_token_id: m.bridgeMsgTokenId,
+//     raw: m.raw,
+//     leaf_index: m.leafIndex.toHexString(),
+//     evm: m.evm,
+//   }
+// }
 
 export interface MsgRequest {
   size?: number;
@@ -25,49 +47,21 @@ export interface MsgRequest {
   sender?: string;
 }
 
-class Contr {
-  args: string[];
-  offset: number;
-  constructor(offset: number) {
-    this.args = [];
-    this.offset = offset;
-  }
-
-  add(arg: string) {
-    if (!arg.match(/[a-z]+/)) throw new Error(`Can add only a-z characters`);
-    this.args.push(arg);
-  }
-
-  static fromReq(r: MsgRequest, offset = 0): string {
-    const c = new Contr(offset);
-    if (r.sender) c.add("sender");
-    if (r.recipient) c.add("recipient");
-    if (r.origin) c.add("origin");
-    if (r.destination) c.add("destination");
-    return c.construct();
-  }
-
-  construct(): string {
-    return this.args.length
-      ? "where " +
-          this.args
-            .map((a, i) => `${a} = $${i + 1 + this.offset}`)
-            .join(" and ")
-      : "";
-  }
-}
 
 export class DB {
-  pool: Pool;
+  client: PrismaClient;
   syncedOnce: boolean;
 
   constructor() {
     this.syncedOnce = false;
-    this.pool = new Pool();
+    this.client = new PrismaClient();
   }
 
   async connect() {
-    await this.pool.connect();
+  }
+
+  async disconnect() {
+    await this.client.$disconnect();
   }
 
   get startupSync() {
@@ -76,177 +70,134 @@ export class DB {
     return !value;
   }
 
-  async getMessageByEvm(tx: string): Promise<NomadMessage> {
-    const query = `SELECT origin, destination, nonce, root, leaf_index, raw, block, sender, dispatched_at, updated_at, relayed_at, received_at, processed_at, hash FROM messages where evm = $1 order by dispatched_at desc;`;
-    const result = await this.pool.query(query, [tx.toLowerCase()]);
-    const entry = result.rows[0];
-    return NomadMessage.fromDB(
-      entry.origin,
-      entry.destination,
-      entry.nonce,
-      entry.root,
-      entry.hash,
-      entry.leaf_index,
-      entry.raw,
-      entry.block,
-      entry.dispatched_at,
-      entry.updated_at,
-      entry.relayed_at,
-      entry.received_at,
-      entry.processed_at,
-      entry.sender,
-      tx
-    );
+  async getMessageByEvm(tx: string): Promise<NomadMessage[]> {
+    const messages = await this.client.messages.findMany({
+      where: {
+        tx
+      }
+    });
+
+    return messages.map(NomadMessage.deserialize)
   }
 
-  async getMessageByHash(hash: string): Promise<NomadMessage> {
-    const query = `SELECT origin, destination, nonce, root, leaf_index, raw, block, sender, evm, dispatched_at, updated_at, relayed_at, received_at, processed_at FROM messages where hash = $1 order by dispatched_at desc;`;
-    const result = await this.pool.query(query, [hash.toLowerCase()]);
-    const entry = result.rows[0];
-    return NomadMessage.fromDB(
-      entry.origin,
-      entry.destination,
-      entry.nonce,
-      entry.root,
-      hash,
-      entry.leaf_index,
-      entry.raw,
-      entry.block,
-      entry.dispatched_at,
-      entry.updated_at,
-      entry.relayed_at,
-      entry.received_at,
-      entry.processed_at,
-      entry.sender,
-      entry.evm
-    );
+  async getMessageByHash(messageHash: string): Promise<NomadMessage | undefined> {
+    const message = await this.client.messages.findUnique({
+      where: {
+        messageHash
+      }
+    });
+
+    return message ? NomadMessage.deserialize(message) : undefined
   }
 
   async getMessages(req: MsgRequest): Promise<NomadMessage[]> {
-    const limit = req.size || 15;
+    const take = req.size || 15;
     const page = req.page || 1;
-    const offset = (page || -1) * limit;
-    const args: any[] = [limit, offset];
+    const skip = (page || -1) * take;
 
-    const c = new Contr(args.length);
-
-    if (req.sender) {
-      c.add("sender");
-      args.push(req.sender.toLowerCase());
-    }
-    if (req.recipient) {
-      c.add("recipient");
-      args.push(req.recipient.toLowerCase());
-    }
-    if (req.origin) {
-      c.add("origin");
-      args.push(req.origin);
-    }
-    if (req.destination) {
-      c.add("destination");
-      args.push(req.destination);
-    }
-
-    const query = `SELECT origin, destination, nonce, root, leaf_index, raw, block, sender, hash, evm, dispatched_at, updated_at, relayed_at, received_at, processed_at FROM messages ${c.construct()} order by dispatched_at desc limit $1 offset $2;`;
-    const result = await this.pool.query(query, args);
-
-    return result.rows.map((entry) => {
-      return NomadMessage.fromDB(
-        entry.origin,
-        entry.destination,
-        entry.nonce,
-        entry.root,
-        entry.hash,
-        entry.leaf_index,
-        entry.raw,
-        entry.block,
-        entry.dispatched_at,
-        entry.updated_at,
-        entry.relayed_at,
-        entry.received_at,
-        entry.processed_at,
-        entry.sender,
-        entry.evm
-      );
+    const messages = await this.client.messages.findMany({
+      where: {
+        sender: req.sender,
+        recipient: req.recipient,
+        origin: req.origin,
+        destination: req.destination,
+      },
+      take,
+      skip
     });
+
+    return messages.map(NomadMessage.deserialize)
   }
 
   async insertMessage(messages: NomadMessage[]) {
     if (!messages.length) return;
-    const columns = 25;
-    const batchSize = 2000;
-
-    do {
-      const batch = messages.splice(0, batchSize);
-      const query = `INSERT INTO messages (hash, origin, destination, nonce, nomad_sender, nomad_recipient, root, state, dispatched_at, updated_at, relayed_at, received_at, processed_at, bridge_msg_type, recipient, bridge_msg_amount, bridge_msg_allow_fast, bridge_msg_details_hash, bridge_msg_token_domain, bridge_msg_token_id, sender, raw, leaf_index, block, evm) VALUES ${expand(
-        batch.length,
-        columns
-      )};`;
-      const values = batch.map((m) => m.intoDB()).flat();
-      await this.pool.query(query, values);
-    } while (messages.length > 0);
     
-    return 
+    return await this.client.messages.createMany({
+      data: messages.map(message => message.serialize()),
+      skipDuplicates: true,
+    })
   }
 
   async updateMessage(messages: NomadMessage[]) {
-    const rows = messages.length;
-    if (!rows) return;
-    const promises = messages.map((m) => {
-      const query = `UPDATE messages SET
-        origin = $2,
-        destination = $3,
-        nonce = $4,
-        nomad_sender = $5,
-        nomad_recipient = $6,
-        root = $7,
-        state = $8,
-        dispatched_at = $9,
-        updated_at = $10,
-        relayed_at = $11,
-        received_at = $12,
-        processed_at = $13,
-        bridge_msg_type = $14,
-        recipient = $15,
-        bridge_msg_amount = $16,
-        bridge_msg_allow_fast = $17,
-        bridge_msg_details_hash = $18,
-        bridge_msg_token_domain = $19,
-        bridge_msg_token_id = $20,
-        sender = $21,
-        raw = $22,
-        leaf_index = $23,
-        block = $24,
-        evm = $25
-        WHERE hash = $1
-        `;
-      return this.pool.query(query, m.intoDB());
-    });
+    if (!messages.length) return;
 
-    return await Promise.all(promises);
+    return await Promise.all(messages.map(m => {
+      this.client.messages.update({
+        where: {
+          messageHash: m.messageHash
+        },
+        data: m.serialize(),
+      })
+    }));
   }
 
   async getExistingHashes(): Promise<string[]> {
-    const res = await this.pool.query(`select hash from messages;`);
-    return res.rows.map((r) => r.hash) as string[];
+    const rows = await this.client.messages.findMany({
+      select: {
+        messageHash: true
+      }
+    });
+    return rows.map(row => row.messageHash)
   }
 
   async getAllKeyPair(namespace: string): Promise<Map<string, string>> {
-    const res = await this.pool.query(
-      `select key, value from kv_storage where namespace = $1;`,
-      [namespace]
-    );
-    return new Map(res.rows.map((r) => [r.key, r.value]));
+    const rows = await this.client.kv_storage.findMany({
+      select: {
+        key: true,
+        value: true
+      },
+      where: {
+        namespace
+      }
+    });
+    return new Map(rows.map(row => [row.key, row.value]))
   }
 
-  async setKeyPair(namespace: string, k: string, v: string): Promise<void> {
-    await this.pool.query(
-      `INSERT INTO kv_storage (namespace, key, value)
-        VALUES($1,$2,$3) 
-        ON CONFLICT (namespace, key) 
-        DO 
-           UPDATE SET value = $3;`,
-      [namespace, k, v]
-    );
+  async getKeyPair(namespace: string, key: string): Promise<string | undefined> {
+    const row = await this.client.kv_storage.findUnique({
+      select: {
+        value: true
+      },
+      where: {
+        namespace_key: {
+          namespace,
+          key
+        }
+      }
+    });
+    if (row) return row.value;
+    return undefined
+  }
+
+  async setKeyPair(namespace: string, key: string, value: string): Promise<void> {
+    const where: Prisma.kv_storageWhereUniqueInput = {
+      namespace_key: {
+        namespace, key
+      }
+    };
+
+    const create: Prisma.kv_storageCreateInput = {
+      namespace, key, value
+    };
+    const update: Prisma.kv_storageUpdateInput =  {
+      value
+    };
+    await this.client.kv_storage.upsert({
+      where,
+      update,
+      create,
+    })
+
+    // const found = await this.getKeyPair(namespace, key);
+    // if (found) {
+    //   await this.client.kv_storage.update({
+    //     where,
+    //     data: update,
+    //   })
+    // } else {
+    //   await this.client.kv_storage.create({
+    //     data: create
+    //   })
+    // }
   }
 }

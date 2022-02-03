@@ -7,6 +7,7 @@ services:
     env_file: .env
     environment:
       - PROGRAM=core
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/postgres?connect_timeout=300&schema=public
     ports:
       - "9090:3000"
     depends_on:
@@ -27,6 +28,7 @@ services:
     env_file: .env
     environment:
       - PROGRAM=api
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/postgres?connect_timeout=300&schema=public
     depends_on:
       - "postgres"
 
