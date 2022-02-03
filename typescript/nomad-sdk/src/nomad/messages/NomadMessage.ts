@@ -150,6 +150,7 @@ export class NomadMessage {
           messages.push(message);
         }
       } catch (e) {
+        console.log("An error occured while getting NomadMessage from Receipt", e);
         continue;
       }
     }

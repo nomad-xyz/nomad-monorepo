@@ -17,6 +17,10 @@ export const rinkeby: NomadDomain = {
       domain: 5000,
       address: '0xA062dcaEc568Ccf01560F168D0638af2fE663019',
     },
+    {
+      domain: 8000,
+      address: '0xf9EdA8f3ee170b64c6640094e9a8bF9cb9f359f3',
+    },
   ],
   governanceRouter: '0xB1F0bB0d6a40d5003f2A62D9a146791A90270F1d',
   bridgeRouter: '0xeACafFb9fBCe3d4c4C5D07AF5DFa51CcF5a348b7',
