@@ -299,14 +299,14 @@ export class NomadMessage {
       nonce: this.nonce,
       root: this.root,
       hash: this.hash,
-      leafIndex: this.leafIndex,
+      leafIndex: this.leafIndex.toHexString(),
       sender: this.sender,
       nomadSender: this.nomadSender,
       nomadRecipient: this.nomadRecipient,
       hasMessage: this.hasMessage,
       bridgeMsgType: this.bridgeMsgType,
       bridgeMsgTo: this.bridgeMsgTo,
-      bridgeMsgAmount: this.bridgeMsgAmount,
+      bridgeMsgAmount: this.bridgeMsgAmount?.toHexString(),
       bridgeMsgAllowFast: this.bridgeMsgAllowFast,
       bridgeMsgDetailsHash: this.bridgeMsgDetailsHash,
       bridgeMsgTokenDomain: this.bridgeMsgTokenDomain,
@@ -331,8 +331,8 @@ export class NomadMessage {
     receivedAt: number,
     processedAt: number,
     block: number,
-    sender: string,
-    evm: string
+    sender?: string,
+    evm?: string
   ): NomadMessage {
     const m = new NomadMessage(
       origin,
@@ -349,7 +349,7 @@ export class NomadMessage {
     m.timings.relayed(relayedAt);
     m.timings.received(receivedAt);
     m.timings.processed(processedAt);
-    m.updateSender(sender);
+    m.sender = sender;
     m.evm = evm;
     return m;
   }
