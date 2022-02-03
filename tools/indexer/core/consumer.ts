@@ -1,11 +1,12 @@
 import { parseMessage } from "@nomad-xyz/sdk/dist/nomad/messages/NomadMessage";
-import { ethers } from "ethers";
+import { BigNumber, ethers } from "ethers";
 import { EventType, NomadEvent } from "./event";
 import { Statistics } from "./types";
-import { parseBody } from "@nomad-xyz/sdk/dist/nomad/messages/BridgeMessage";
+import { parseBody, ParsedTransferMessage } from "@nomad-xyz/sdk/dist/nomad/messages/BridgeMessage";
 import { parseAction } from "@nomad-xyz/sdk/dist/nomad/messages/GovernanceMessage";
 import { DB } from "./db";
 import Logger from "bunyan";
+import { Padded } from "./utils";
 
 class StatisticsCollector {
   s: Statistics;
@@ -224,10 +225,31 @@ class Timings {
     }
     return undefined;
   }
-}
 
-function bytes32ToAddress(s: string) {
-  return "0x" + s.slice(26);
+  serialize() {
+    return {
+      dispatchedAt: this.dispatchedAt,
+      updatedAt: this.updatedAt,
+      relayedAt: this.relayedAt,
+      processedAt: this.processedAt,
+      receivedAt: this.receivedAt,
+    }
+  }
+
+  static deserialize(s: {
+    dispatchedAt: number;
+    updatedAt: number;
+    relayedAt: number;
+    processedAt: number;
+    receivedAt: number;
+}): Timings {
+    const t = new Timings(s.dispatchedAt);
+    t.updatedAt = s.updatedAt;
+    t.relayedAt = s.relayedAt;
+    t.processedAt = s.processedAt;
+    t.receivedAt = s.receivedAt;
+    return t;
+  }
 }
 
 enum MessageType {
@@ -236,122 +258,172 @@ enum MessageType {
   GovernanceMessage,
 }
 
+export type MinimumSerializedNomadMessage = {
+  origin: number,// m.origin,
+  destination: number,//   m.destination,
+  nonce: number,//   m.nonce,
+  root: string,//   m.root,
+  messageHash: string,//   m.hash,
+  leafIndex: string,//   BigNumber.from(m.leaf_index),
+  body: string,//   m.raw,
+  dispatchBlock: number,//   m.block,
+  dispatchedAt: number,//   Number(m.dispatched_at),
+  updatedAt: number,//   Number(m.updated_at),
+  relayedAt: number,//   Number(m.relayed_at),
+  receivedAt: number,//   Number(m.received_at),
+  processedAt: number,//   Number(m.processed_at),
+  sender: string | null,//   m.sender || '',
+  tx: string | null,//   m.evm || ''
+  state: MsgState,
+}
+
+export type ExtendedSerializedNomadMessage = MinimumSerializedNomadMessage & {
+  internalSender: string,// PADDED! // internalSender: this.internalSender,
+  internalRecipient: string,// PADDED! // internalRecipient: this.internalRecipient,
+  // hasMessage: MessageType | null,// hasMessage: this.hasMessage,
+  // bridgeMsgType: this.transferMessage.action.type,
+  recipient: string | null,// PADDED!// bridgeMsgTo: this.recipient(), // PADDED!
+  amount: string | null,// bridgeMsgAmount: this.transferMessage.action.amount.toHexString(),
+  allowFast: boolean | null,// bridgeMsgAllowFast: this.transferMessage.action.allowFast,
+  detailsHash: string | null,// bridgeMsgDetailsHash: this.transferMessage.action.detailsHash,
+  tokenDomain: number | null,// bridgeMsgTokenDomain: this.tokenDomain(),
+  tokenId: string | null,// PADDED! // bridgeMsgTokenId: this.tokenId(), // PADDED!
+}
+
 export class NomadMessage {
   origin: number;
   destination: number;
   nonce: number;
   root: string;
-  hash: string;
+  messageHash: string;
   leafIndex: ethers.BigNumber;
-  raw: string;
   sender?: string;
-  nomadSender: string;
-  nomadRecipient: string;
+  internalSender: Padded; // PADDED!
+  internalRecipient: Padded; // PADDED!
+
+  body: string;
   hasMessage: MessageType;
-  bridgeMsgType?: string;
-  bridgeMsgTo?: string;
-  bridgeMsgAmount?: ethers.BigNumber;
-  bridgeMsgAllowFast?: boolean;
-  bridgeMsgDetailsHash?: string;
-  bridgeMsgTokenDomain?: number;
-  bridgeMsgTokenId?: string;
+  transferMessage?: ParsedTransferMessage;
+
   state: MsgState;
+  dispatchBlock: number;
+  tx?: string;
+
   timings: Timings;
-  block: number;
-  evm?: string;
 
   constructor(
     origin: number,
     destination: number,
     nonce: number,
     root: string,
-    hash: string,
+    messageHash: string,
     leafIndex: ethers.BigNumber,
     // destinationAndNonce: ethers.BigNumber,
-    message: string,
-    createdAt: number,
-    block: number
+    body: string,
+    dispatchedAt: number,
+    dispatchBlock: number
   ) {
     this.origin = origin;
     this.destination = destination;
     this.nonce = nonce;
     this.root = root.toLowerCase();
-    this.hash = hash.toLowerCase();
+    this.messageHash = messageHash.toLowerCase();
     this.leafIndex = leafIndex;
-    // this.destinationAndNonce = destinationAndNonce;
-    this.raw = message;
-    const parsed = parseMessage(message);
-    this.nomadSender = bytes32ToAddress(parsed.sender);
-    this.nomadRecipient = bytes32ToAddress(parsed.recipient);
+
+    this.body = body;
+    const parsed = parseMessage(body);
+    this.internalSender = new Padded(parsed.sender); // PADDED!
+    this.internalRecipient = new Padded(parsed.recipient); // PADDED!
     this.hasMessage = MessageType.NoMessage;
 
     this.tryParseMessage(parsed.body);
 
     this.state = MsgState.Dispatched;
-    this.timings = new Timings(createdAt);
-    this.block = block;
+    this.timings = new Timings(dispatchedAt);
+    this.dispatchBlock = dispatchBlock;
   }
 
-  toObject() {
+  // PADDED!
+  /** 
+   * PADDED!
+  */
+  recipient(): Padded | undefined {
+    return this.transferMessage ? new Padded(this.transferMessage!.action.to) : undefined
+  }
+
+  // PADDED!
+  /** 
+   * PADDED!
+  */
+  tokenId(): Padded | undefined {
+    return this.transferMessage ? new Padded(this.transferMessage!.token.id as string) : undefined
+  }
+
+  tokenDomain(): number | undefined {
+    return this.transferMessage ? this.transferMessage?.token.domain as number : undefined
+  }
+
+  amount(): BigNumber | undefined {
+    return this.transferMessage ? this.transferMessage?.action.amount : undefined
+  }
+
+  allowFast(): boolean | undefined {
+    return this.transferMessage ? this.transferMessage?.action.allowFast : undefined
+  }
+
+  detailsHash(): string | undefined {
+    return this.transferMessage ? this.transferMessage?.action.detailsHash : undefined
+  }
+
+  
+
+
+  static deserialize(s: MinimumSerializedNomadMessage) {
+    const m = new NomadMessage(
+          s.origin,
+          s.destination,
+          s.nonce,
+          s.root,
+          s.messageHash,
+          BigNumber.from(s.leafIndex),
+          s.body,
+          s.dispatchedAt,
+          s.dispatchBlock
+        );
+        m.timings.updated(s.updatedAt);
+        m.timings.relayed(s.relayedAt);
+        m.timings.received(s.receivedAt);
+        m.timings.processed(s.processedAt);
+        m.sender = s.sender || undefined;
+        m.tx = s.tx || undefined;
+        m.state = s.state;
+        return m;
+  }
+
+  serialize(): ExtendedSerializedNomadMessage {
     return {
       origin: this.origin,
       destination: this.destination,
       nonce: this.nonce,
       root: this.root,
-      hash: this.hash,
-      leafIndex: this.leafIndex,
-      sender: this.sender,
-      nomadSender: this.nomadSender,
-      nomadRecipient: this.nomadRecipient,
-      hasMessage: this.hasMessage,
-      bridgeMsgType: this.bridgeMsgType,
-      bridgeMsgTo: this.bridgeMsgTo,
-      bridgeMsgAmount: this.bridgeMsgAmount,
-      bridgeMsgAllowFast: this.bridgeMsgAllowFast,
-      bridgeMsgDetailsHash: this.bridgeMsgDetailsHash,
-      bridgeMsgTokenDomain: this.bridgeMsgTokenDomain,
-      bridgeMsgTokenId: this.bridgeMsgTokenId,
+      messageHash: this.messageHash,
+      leafIndex: this.leafIndex.toHexString(),
+      sender: this.sender || null,
       state: this.state,
-      timings: this.timings,
-      tx: this.evm,
+      ...this.timings.serialize(),
+      tx: this.tx || null,
+      body: this.body,
+      dispatchBlock: this.dispatchBlock,
+      internalSender: this.internalSender.valueOf(),
+      internalRecipient: this.internalRecipient.valueOf(),
+      // hasMessage: this.hasMessage,
+      recipient: this.recipient()?.valueOf() || null,
+      amount: this.amount()?.toHexString() || null,
+      allowFast: this.allowFast() || null,
+      detailsHash: this.detailsHash() || null,
+      tokenDomain: this.tokenDomain() || null,
+      tokenId: this.tokenId()?.valueOf() || null,
     };
-  }
-
-  static fromDB(
-    origin: number,
-    destination: number,
-    nonce: number,
-    root: string,
-    hash: string,
-    leafIndex: ethers.BigNumber,
-    message: string,
-    createdAt: number,
-    updatedAt: number,
-    relayedAt: number,
-    receivedAt: number,
-    processedAt: number,
-    block: number,
-    sender: string,
-    evm: string
-  ): NomadMessage {
-    const m = new NomadMessage(
-      origin,
-      destination,
-      nonce,
-      root,
-      hash,
-      leafIndex,
-      message,
-      createdAt,
-      block
-    );
-    m.timings.updated(updatedAt);
-    m.timings.relayed(relayedAt);
-    m.timings.received(receivedAt);
-    m.timings.processed(processedAt);
-    m.updateSender(sender);
-    m.evm = evm;
-    return m;
   }
 
   tryParseMessage(body: string) {
@@ -360,18 +432,7 @@ export class NomadMessage {
 
   tryParseTransferMessage(body: string): boolean {
     try {
-      const bridgeMessage = parseBody(body);
-      this.bridgeMsgType = bridgeMessage.action.type as string;
-      this.bridgeMsgTo = bytes32ToAddress(
-        bridgeMessage.action.to
-      ).toLowerCase();
-      this.bridgeMsgAmount = bridgeMessage.action.amount;
-      this.bridgeMsgAllowFast = bridgeMessage.action.allowFast;
-      this.bridgeMsgDetailsHash = bridgeMessage.action.detailsHash;
-      this.bridgeMsgTokenDomain = bridgeMessage.token.domain as number;
-      this.bridgeMsgTokenId = bytes32ToAddress(
-        bridgeMessage.token.id as string
-      ).toLowerCase();
+      this.transferMessage = parseBody(body);
       this.hasMessage = MessageType.TransferMessage;
       return true;
     } catch (e) {
@@ -388,7 +449,7 @@ export class NomadMessage {
         message.address;
         message.domain;
       }
-      this.bridgeMsgType = message.type;
+      // this.bridgeMsgType = message.type;
       this.hasMessage = MessageType.GovernanceMessage;
       return true;
     } catch (e) {
@@ -396,69 +457,11 @@ export class NomadMessage {
     }
   }
 
-  updateSender(sender: string) {
-    this.sender = sender;
-  }
 
   get originAndRoot(): string {
     return `${this.origin}${this.root}`;
   }
 
-  intoDB(): [
-    string,
-    number,
-    number,
-    number,
-    string,
-    string,
-    string,
-    number,
-    number,
-    number,
-    number,
-    number,
-    number,
-    string | undefined,
-    string | undefined,
-    string | undefined,
-    boolean | undefined,
-    string | undefined,
-    number | undefined,
-    string | undefined,
-    string | undefined,
-    string,
-    string,
-    number,
-    string | undefined
-  ] {
-    return [
-      this.hash.toLowerCase(),
-      this.origin,
-      this.destination,
-      this.nonce,
-      this.nomadSender.toLowerCase(),
-      this.nomadRecipient.toLowerCase(),
-      this.root.toLowerCase(),
-      this.state,
-      this.timings.dispatchedAt,
-      this.timings.updatedAt,
-      this.timings.relayedAt,
-      this.timings.receivedAt,
-      this.timings.processedAt,
-      this.bridgeMsgType?.toLowerCase(),
-      this.bridgeMsgTo?.toLowerCase(),
-      this.bridgeMsgAmount?.toString(),
-      this.bridgeMsgAllowFast,
-      this.bridgeMsgDetailsHash?.toLowerCase(),
-      this.bridgeMsgTokenDomain,
-      this.bridgeMsgTokenId?.toLowerCase(),
-      this.sender?.toLowerCase(),
-      this.raw,
-      this.leafIndex.toString(),
-      this.block,
-      this.evm?.toLowerCase(),
-    ];
-  }
 }
 
 class SenderLostAndFound {
@@ -493,10 +496,10 @@ class SenderLostAndFound {
       const some = this.dispatchEventsWithMessages.at(index);
       if (some) {
         const [_, msg] = some;
-        msg.updateSender(brSend.eventData.from!);
-        msg.evm = brSend.eventData.evmHash!;
+        msg.sender = brSend.eventData.from!;
+        msg.tx = brSend.eventData.evmHash!;
         this.dispatchEventsWithMessages.splice(index, 1);
-        return msg.hash;
+        return msg.messageHash;
       }
     }
     return undefined;
@@ -505,9 +508,9 @@ class SenderLostAndFound {
   match(dispatch: NomadEvent, brSend: NomadEvent, m: NomadMessage): boolean {
     return (
       brSend.eventData.toDomain! === m.destination && //brSend.eventData.token?.toLowerCase() === m.bridgeMsgTokenId?.toLowerCase() &&
-      bytes32ToAddress(brSend.eventData.toId!).toLowerCase() ===
-        m.bridgeMsgTo?.toLowerCase() &&
-      brSend.eventData.amount!.eq(m.bridgeMsgAmount!) &&
+      new Padded(brSend.eventData.toId!).toEVMAddress() ===
+        m.recipient()!.toEVMAddress() &&
+      brSend.eventData.amount!.eq(m.amount()!) &&
       brSend.block === dispatch.block //&&  // (dispatch.block - brSend.block <= 2 || brSend.block - dispatch.block <= 30)
     );
   }
@@ -522,8 +525,8 @@ class SenderLostAndFound {
     if (index >= 0) {
       const brSend = this.bridgeRouterSendEvents.at(index);
       if (brSend) {
-        m.updateSender(brSend.eventData.from!);
-        m.evm = brSend.eventData.evmHash!;
+        m.sender = brSend.eventData.from!;
+        m.tx = brSend.eventData.evmHash!;
       }
       this.bridgeRouterSendEvents.splice(index, 1);
       return true;
@@ -637,7 +640,6 @@ export class Processor extends Consumer {
       e.eventData.committedRoot!,
       e.eventData.messageHash!,
       e.eventData.leafIndex!,
-      // e.eventData.destinationAndNonce!,
       e.eventData.message!,
       e.ts,
       e.block
@@ -646,7 +648,7 @@ export class Processor extends Consumer {
     this.senderRegistry.dispatch(e, m);
 
     this.add(m);
-    this.addToSyncQueue(m.hash);
+    this.addToSyncQueue(m.messageHash);
 
     if (!this.domains.includes(e.domain)) this.domains.push(e.domain);
   }
@@ -658,7 +660,7 @@ export class Processor extends Consumer {
         if (m.state < MsgState.Updated) {
           m.state = MsgState.Updated;
           m.timings.updated(e.ts);
-          this.addToSyncQueue(m.hash);
+          this.addToSyncQueue(m.messageHash);
         }
       });
   }
@@ -673,7 +675,7 @@ export class Processor extends Consumer {
         if (m.state < MsgState.Relayed) {
           m.state = MsgState.Relayed;
           m.timings.relayed(e.ts);
-          this.addToSyncQueue(m.hash);
+          this.addToSyncQueue(m.messageHash);
         }
       });
   }
@@ -684,7 +686,7 @@ export class Processor extends Consumer {
       if (m.state < MsgState.Processed) {
         m.state = MsgState.Processed;
         m.timings.processed(e.ts);
-        this.addToSyncQueue(m.hash);
+        this.addToSyncQueue(m.messageHash);
       }
     }
   }
@@ -703,14 +705,14 @@ export class Processor extends Consumer {
       if (m.state < MsgState.Received) {
         m.state = MsgState.Received;
         m.timings.received(e.ts);
-        this.addToSyncQueue(m.hash);
+        this.addToSyncQueue(m.messageHash);
       }
     }
   }
 
   add(m: NomadMessage) {
     const index = this.messages.length;
-    this.msgToIndex.set(m.hash, index);
+    this.msgToIndex.set(m.messageHash, index);
     const msgByOriginAndRoot = this.msgByOriginAndRoot.get(m.originAndRoot);
     if (msgByOriginAndRoot) {
       msgByOriginAndRoot.push(index);

@@ -27,13 +27,14 @@ export async function run(db: DB, logger: Logger) {
   });
 
   app.get("/tx/:tx", log, async (req, res) => {
-    const message = await db.getMessageByEvm(req.params.tx);
-    return res.json(message.toObject());
+    const messages = await db.getMessageByEvm(req.params.tx);
+    return res.json(messages.map(m => m.serialize()));
   });
 
   app.get("/hash/:hash", log, async (req, res) => {
     const message = await db.getMessageByHash(req.params.hash);
-    return res.json(message.toObject());
+    if (!message) return res.status(404).json({});
+    return res.json(message.serialize());
   });
 
   app.get(
