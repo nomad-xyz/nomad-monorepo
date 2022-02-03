@@ -259,7 +259,11 @@ export class NomadContext extends MultiProvider {
     return this._blacklist;
   }
 
-  private async checkHome(nameOrDomain: string | number): Promise<void> {
+  async checkHomes(networks: (string | number)[]): Promise<void> {
+    networks.forEach(async (n) => await this.checkHome(n))
+  }
+
+  async checkHome(nameOrDomain: string | number): Promise<void> {
     const domain = this.resolveDomain(nameOrDomain);
     const home = this.mustGetCore(domain).home;
     const state = await home.state();
