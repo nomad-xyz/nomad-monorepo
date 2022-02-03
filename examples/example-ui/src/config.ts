@@ -1,10 +1,11 @@
 import wETHIcon from './assets/WETH.png'
 import USDTIcon from './assets/USDT.png'
 import DEVIcon from './assets/DEV.png'
+import wADAIcon from './assets/wADA.png'
 
 import { TokenIdentifier } from '@nomad-xyz/sdk/nomad'
 
-export type NetworkName = 'kovan' | 'moonbasealpha' | 'rinkeby'
+export type NetworkName = 'kovan' | 'moonbasealpha' | 'rinkeby' | 'milkomedatestnet'
 export type TokenName = 'WETH' | 'USDT' | 'ETH' | 'DEV'
 
 export type TokenMetadata = {
@@ -44,6 +45,11 @@ export const DEV: TokenIdentifier = {
 export const rWETH: TokenIdentifier= {
   domain: 'rinkeby',
   id: '0xc778417e063141139fce010982780140aa0cd5ab'
+}
+
+const wADA: TokenIdentifier = {
+  domain: 'milkomedatestnet',
+  id: '0x1a40217B16E7329E27FDC9cED672e1F264e07Cc2'
 }
 
 export const tokens: { [key: string]: TokenMetadata } = {
@@ -95,6 +101,22 @@ export const tokens: { [key: string]: TokenMetadata } = {
     tokenIdentifier: DEV,
     nativeOnly: true,
   },
+  milkADA: {
+    nativeNetwork: 'milkomedatestnet',
+    symbol: 'milkADA',
+    icon: wADAIcon,
+    decimals: 18,
+    tokenIdentifier: wADA,
+    nativeOnly: true,
+  },
+  wADA: {
+    nativeNetwork: 'milkomedatestnet',
+    symbol: 'wADA',
+    icon: wADAIcon,
+    decimals: 18,
+    tokenIdentifier: wADA,
+    nativeOnly: false,
+  }
 }
 
 export const networks: { [key: string]: NetworkMetadata } = {
@@ -124,6 +146,15 @@ export const networks: { [key: string]: NetworkMetadata } = {
     nativeToken: tokens.DEV,
     rpcUrl: process.env.VUE_APP_MOONBASEALPHA_RPC!,
     blockExplorer: 'https://moonbase-blockscout.testnet.moonbeam.network',
+    confirmationTimeInMinutes: 2,
+  },
+  milkomedatestnet: {
+    name: 'milkomedatestnet',
+    chainID: 200101,
+    domainID: 8000,
+    nativeToken: tokens.wADA,
+    rpcUrl: process.env.VUE_APP_MILKOMEDA_RPC!,
+    blockExplorer: 'http://use-util.cloud.milkomeda.com:4000',
     confirmationTimeInMinutes: 2,
   },
 }
