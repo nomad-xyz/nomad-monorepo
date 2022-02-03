@@ -252,10 +252,6 @@ class Timings {
   }
 }
 
-function bytes32ToAddress(s: string) {
-  return "0x" + s.slice(26);
-}
-
 enum MessageType {
   NoMessage,
   TransferMessage,
@@ -284,7 +280,7 @@ export type MinimumSerializedNomadMessage = {
 export type ExtendedSerializedNomadMessage = MinimumSerializedNomadMessage & {
   internalSender: string,// PADDED! // internalSender: this.internalSender,
   internalRecipient: string,// PADDED! // internalRecipient: this.internalRecipient,
-  hasMessage: MessageType | null,// hasMessage: this.hasMessage,
+  // hasMessage: MessageType | null,// hasMessage: this.hasMessage,
   // bridgeMsgType: this.transferMessage.action.type,
   recipient: string | null,// PADDED!// bridgeMsgTo: this.recipient(), // PADDED!
   amount: string | null,// bridgeMsgAmount: this.transferMessage.action.amount.toHexString(),
@@ -420,7 +416,7 @@ export class NomadMessage {
       dispatchBlock: this.dispatchBlock,
       internalSender: this.internalSender.valueOf(),
       internalRecipient: this.internalRecipient.valueOf(),
-      hasMessage: this.hasMessage,
+      // hasMessage: this.hasMessage,
       recipient: this.recipient()?.valueOf() || null,
       amount: this.amount()?.toHexString() || null,
       allowFast: this.allowFast() || null,
@@ -512,7 +508,7 @@ class SenderLostAndFound {
   match(dispatch: NomadEvent, brSend: NomadEvent, m: NomadMessage): boolean {
     return (
       brSend.eventData.toDomain! === m.destination && //brSend.eventData.token?.toLowerCase() === m.bridgeMsgTokenId?.toLowerCase() &&
-      bytes32ToAddress(brSend.eventData.toId!).toLowerCase() ===
+      new Padded(brSend.eventData.toId!).toEVMAddress() ===
         m.recipient()!.toEVMAddress() &&
       brSend.eventData.amount!.eq(m.amount()!) &&
       brSend.block === dispatch.block //&&  // (dispatch.block - brSend.block <= 2 || brSend.block - dispatch.block <= 30)

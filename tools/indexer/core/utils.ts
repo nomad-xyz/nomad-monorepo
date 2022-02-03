@@ -4,6 +4,7 @@ import fs from "fs";
 import { Mean } from "./types";
 import { DB } from "./db";
 import Logger from "bunyan";
+import pLimit from 'p-limit';
 
 export function sleep(ms: number) {
   return new Promise((resolve) => {
@@ -71,10 +72,12 @@ export function reviver(key: any, value: any): any {
 export class KVCache {
   name: string;
   db: DB;
+  limit: pLimit.Limit;
 
   constructor(name: string, db: DB) {
     this.db = db;
     this.name = name;
+    this.limit = pLimit(1);
   }
 
   async init() {
@@ -82,7 +85,7 @@ export class KVCache {
   }
 
   async set(k: string, v: string) {
-    await this.db.setKeyPair(this.name, k, v);
+    await this.limit(() => this.db.setKeyPair(this.name, k, v));
   }
 
   async get(k: string): Promise<string | undefined> {

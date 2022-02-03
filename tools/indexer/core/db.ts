@@ -187,5 +187,17 @@ export class DB {
       update,
       create,
     })
+
+    // const found = await this.getKeyPair(namespace, key);
+    // if (found) {
+    //   await this.client.kv_storage.update({
+    //     where,
+    //     data: update,
+    //   })
+    // } else {
+    //   await this.client.kv_storage.create({
+    //     data: create
+    //   })
+    // }
   }
 }

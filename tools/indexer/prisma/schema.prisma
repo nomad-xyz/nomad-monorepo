@@ -20,12 +20,12 @@ model kv_storage {
 
 model messages {
   id                      Int      @id @default(autoincrement())
-  messageHash                    String   @unique @db.VarChar(66)
+  messageHash                    String @map("message_hash")   @unique @db.VarChar(66)
   origin                  Int
   destination             Int
   nonce                   Int
-  internalSender          String   @map("internal_sender") @db.VarChar(42)
-  internalRecipient       String   @map("internal_recipient") @db.VarChar(42)
+  internalSender          String   @map("internal_sender") @db.VarChar(66)
+  internalRecipient       String   @map("internal_recipient") @db.VarChar(66)
   root                    String   @db.VarChar(66)
   state                   Int
   dispatchBlock                   Int
@@ -34,17 +34,17 @@ model messages {
   relayedAt               Int @map("relayed_at")
   receivedAt              Int @map("received_at")
   processedAt             Int @map("processed_at")
-  sender                  String?  @db.VarChar(42)
-  recipient               String?  @db.VarChar(42)
+  sender                  String?  @db.VarChar(66)
+  recipient               String?  @db.VarChar(66)
   amount       String?  @db.VarChar(256)
   allowFast    Boolean?  @map("allow_fast")
   detailsHash   String?  @map("details_hash") @db.VarChar(66)
   tokenDomain   Int? @map("token_domain")
-  tokenId      String? @map("token_id")  @db.VarChar(42)
+  tokenId      String? @map("token_id")  @db.VarChar(66)
   body                     String   @db.VarChar
-  leafIndex              String   @db.VarChar(256)
+  leafIndex              String @map("leaf_index")   @db.VarChar(256)
   tx                     String?  @db.VarChar(66)
-  createdAt               DateTime @default(now()) @db.Timestamp(6)
+  createdAt               DateTime @map("created_at") @default(now()) @db.Timestamp(6)
 
   @@index([id], map: "messages_id_index")
 }
