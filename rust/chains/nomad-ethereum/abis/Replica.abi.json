@@ -15,6 +15,11 @@
         "internalType": "uint256",
         "name": "_reserveGas",
         "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_maximumGas",
+        "type": "uint256"
       }
     ],
     "stateMutability": "nonpayable",
@@ -182,6 +187,19 @@
     ],
     "name": "Update",
     "type": "event"
+  },
+  {
+    "inputs": [],
+    "name": "MAXIMUM_GAS",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
   },
   {
     "inputs": [],

@@ -49,6 +49,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.IMessageRecipient__factory>;
     getContractFactory(
+      name: "IPreflight",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IPreflight__factory>;
+    getContractFactory(
       name: "IUpdaterManager",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.IUpdaterManager__factory>;

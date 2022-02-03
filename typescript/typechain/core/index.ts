@@ -37,6 +37,7 @@ export type { UpgradeBeaconProxy } from "./UpgradeBeaconProxy";
 export type { Version0 } from "./Version0";
 export type { XAppConnectionManager } from "./XAppConnectionManager";
 export type { IMessageRecipient } from "./IMessageRecipient";
+export type { IPreflight } from "./IPreflight";
 export type { IUpdaterManager } from "./IUpdaterManager";
 
 export { OwnableUpgradeable__factory } from "./factories/OwnableUpgradeable__factory";
@@ -75,4 +76,5 @@ export { UpgradeBeaconProxy__factory } from "./factories/UpgradeBeaconProxy__fac
 export { Version0__factory } from "./factories/Version0__factory";
 export { XAppConnectionManager__factory } from "./factories/XAppConnectionManager__factory";
 export { IMessageRecipient__factory } from "./factories/IMessageRecipient__factory";
+export { IPreflight__factory } from "./factories/IPreflight__factory";
 export { IUpdaterManager__factory } from "./factories/IUpdaterManager__factory";

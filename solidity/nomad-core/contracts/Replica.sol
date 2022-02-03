@@ -225,7 +225,7 @@ contract Replica is Version0, NomadBase {
             _m.body().clone()
         );
         (_preflightSuccess, _encodedGas) = _recipient.excessivelySafeStaticCall(
-            PROCESS_GAS,
+            50_000,
             32,
             _calldata
         );
@@ -240,10 +240,8 @@ contract Replica is Version0, NomadBase {
                 _reqGas = _ret;
             }
         }
-        // TODO: Reuse the calldata above
         require(gasleft() >= _reqGas + RESERVE_GAS, "!gas");
         // Now we make the call itself
-
         ExcessivelySafeCall.swapSelector(
             IMessageRecipient.handle.selector,
             _calldata

@@ -21,6 +21,7 @@ import { TypedEventFilter, TypedEvent, TypedListener } from "./commons";
 
 interface TestReplicaInterface extends ethers.utils.Interface {
   functions: {
+    "MAXIMUM_GAS()": FunctionFragment;
     "PROCESS_GAS()": FunctionFragment;
     "RESERVE_GAS()": FunctionFragment;
     "VERSION()": FunctionFragment;
@@ -56,6 +57,10 @@ interface TestReplicaInterface extends ethers.utils.Interface {
     "updater()": FunctionFragment;
   };
 
+  encodeFunctionData(
+    functionFragment: "MAXIMUM_GAS",
+    values?: undefined
+  ): string;
   encodeFunctionData(
     functionFragment: "PROCESS_GAS",
     values?: undefined
@@ -274,6 +279,10 @@ interface TestReplicaInterface extends ethers.utils.Interface {
   encodeFunctionData(functionFragment: "updater", values?: undefined): string;
 
   decodeFunctionResult(
+    functionFragment: "MAXIMUM_GAS",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "PROCESS_GAS",
     data: BytesLike
   ): Result;
@@ -430,6 +439,8 @@ export class TestReplica extends BaseContract {
   interface: TestReplicaInterface;
 
   functions: {
+    MAXIMUM_GAS(overrides?: CallOverrides): Promise<[BigNumber]>;
+
     PROCESS_GAS(overrides?: CallOverrides): Promise<[BigNumber]>;
 
     RESERVE_GAS(overrides?: CallOverrides): Promise<[BigNumber]>;
@@ -663,6 +674,8 @@ export class TestReplica extends BaseContract {
     updater(overrides?: CallOverrides): Promise<[string]>;
   };
 
+  MAXIMUM_GAS(overrides?: CallOverrides): Promise<BigNumber>;
+
   PROCESS_GAS(overrides?: CallOverrides): Promise<BigNumber>;
 
   RESERVE_GAS(overrides?: CallOverrides): Promise<BigNumber>;
@@ -893,6 +906,8 @@ export class TestReplica extends BaseContract {
   updater(overrides?: CallOverrides): Promise<string>;
 
   callStatic: {
+    MAXIMUM_GAS(overrides?: CallOverrides): Promise<BigNumber>;
+
     PROCESS_GAS(overrides?: CallOverrides): Promise<BigNumber>;
 
     RESERVE_GAS(overrides?: CallOverrides): Promise<BigNumber>;
@@ -1187,6 +1202,8 @@ export class TestReplica extends BaseContract {
   };
 
   estimateGas: {
+    MAXIMUM_GAS(overrides?: CallOverrides): Promise<BigNumber>;
+
     PROCESS_GAS(overrides?: CallOverrides): Promise<BigNumber>;
 
     RESERVE_GAS(overrides?: CallOverrides): Promise<BigNumber>;
@@ -1421,6 +1438,8 @@ export class TestReplica extends BaseContract {
   };
 
   populateTransaction: {
+    MAXIMUM_GAS(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
     PROCESS_GAS(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     RESERVE_GAS(overrides?: CallOverrides): Promise<PopulatedTransaction>;

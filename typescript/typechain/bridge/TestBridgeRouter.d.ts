@@ -21,7 +21,9 @@ import { TypedEventFilter, TypedEvent, TypedListener } from "./commons";
 
 interface TestBridgeRouterInterface extends ethers.utils.Interface {
   functions: {
+    "DEPLOY_GAS()": FunctionFragment;
     "DUST_AMOUNT()": FunctionFragment;
+    "MINT_GAS()": FunctionFragment;
     "PRE_FILL_FEE_DENOMINATOR()": FunctionFragment;
     "PRE_FILL_FEE_NUMERATOR()": FunctionFragment;
     "VERSION()": FunctionFragment;
@@ -35,6 +37,7 @@ interface TestBridgeRouterInterface extends ethers.utils.Interface {
     "migrate(address)": FunctionFragment;
     "owner()": FunctionFragment;
     "preFill(uint32,uint32,bytes)": FunctionFragment;
+    "preflight(uint32,uint32,bytes32,bytes)": FunctionFragment;
     "remotes(uint32)": FunctionFragment;
     "renounceOwnership()": FunctionFragment;
     "send(address,uint256,uint32,bytes32,bool)": FunctionFragment;
@@ -45,9 +48,14 @@ interface TestBridgeRouterInterface extends ethers.utils.Interface {
   };
 
   encodeFunctionData(
+    functionFragment: "DEPLOY_GAS",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
     functionFragment: "DUST_AMOUNT",
     values?: undefined
   ): string;
+  encodeFunctionData(functionFragment: "MINT_GAS", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "PRE_FILL_FEE_DENOMINATOR",
     values?: undefined
@@ -86,6 +94,10 @@ interface TestBridgeRouterInterface extends ethers.utils.Interface {
     values: [BigNumberish, BigNumberish, BytesLike]
   ): string;
   encodeFunctionData(
+    functionFragment: "preflight",
+    values: [BigNumberish, BigNumberish, BytesLike, BytesLike]
+  ): string;
+  encodeFunctionData(
     functionFragment: "remotes",
     values: [BigNumberish]
   ): string;
@@ -114,10 +126,12 @@ interface TestBridgeRouterInterface extends ethers.utils.Interface {
     values?: undefined
   ): string;
 
+  decodeFunctionResult(functionFragment: "DEPLOY_GAS", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "DUST_AMOUNT",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "MINT_GAS", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "PRE_FILL_FEE_DENOMINATOR",
     data: BytesLike
@@ -146,6 +160,7 @@ interface TestBridgeRouterInterface extends ethers.utils.Interface {
   decodeFunctionResult(functionFragment: "migrate", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "preFill", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "preflight", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "remotes", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "renounceOwnership",
@@ -224,7 +239,11 @@ export class TestBridgeRouter extends BaseContract {
   interface: TestBridgeRouterInterface;
 
   functions: {
+    DEPLOY_GAS(overrides?: CallOverrides): Promise<[BigNumber]>;
+
     DUST_AMOUNT(overrides?: CallOverrides): Promise<[BigNumber]>;
+
+    MINT_GAS(overrides?: CallOverrides): Promise<[BigNumber]>;
 
     PRE_FILL_FEE_DENOMINATOR(overrides?: CallOverrides): Promise<[BigNumber]>;
 
@@ -287,6 +306,14 @@ export class TestBridgeRouter extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
 
+    preflight(
+      arg0: BigNumberish,
+      arg1: BigNumberish,
+      arg2: BytesLike,
+      _message: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<[BigNumber]>;
+
     remotes(arg0: BigNumberish, overrides?: CallOverrides): Promise<[string]>;
 
     renounceOwnership(
@@ -317,7 +344,11 @@ export class TestBridgeRouter extends BaseContract {
     xAppConnectionManager(overrides?: CallOverrides): Promise<[string]>;
   };
 
+  DEPLOY_GAS(overrides?: CallOverrides): Promise<BigNumber>;
+
   DUST_AMOUNT(overrides?: CallOverrides): Promise<BigNumber>;
+
+  MINT_GAS(overrides?: CallOverrides): Promise<BigNumber>;
 
   PRE_FILL_FEE_DENOMINATOR(overrides?: CallOverrides): Promise<BigNumber>;
 
@@ -380,6 +411,14 @@ export class TestBridgeRouter extends BaseContract {
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
+  preflight(
+    arg0: BigNumberish,
+    arg1: BigNumberish,
+    arg2: BytesLike,
+    _message: BytesLike,
+    overrides?: CallOverrides
+  ): Promise<BigNumber>;
+
   remotes(arg0: BigNumberish, overrides?: CallOverrides): Promise<string>;
 
   renounceOwnership(
@@ -410,7 +449,11 @@ export class TestBridgeRouter extends BaseContract {
   xAppConnectionManager(overrides?: CallOverrides): Promise<string>;
 
   callStatic: {
+    DEPLOY_GAS(overrides?: CallOverrides): Promise<BigNumber>;
+
     DUST_AMOUNT(overrides?: CallOverrides): Promise<BigNumber>;
+
+    MINT_GAS(overrides?: CallOverrides): Promise<BigNumber>;
 
     PRE_FILL_FEE_DENOMINATOR(overrides?: CallOverrides): Promise<BigNumber>;
 
@@ -464,6 +507,14 @@ export class TestBridgeRouter extends BaseContract {
       _message: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>;
+
+    preflight(
+      arg0: BigNumberish,
+      arg1: BigNumberish,
+      arg2: BytesLike,
+      _message: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
 
     remotes(arg0: BigNumberish, overrides?: CallOverrides): Promise<string>;
 
@@ -540,7 +591,11 @@ export class TestBridgeRouter extends BaseContract {
   };
 
   estimateGas: {
+    DEPLOY_GAS(overrides?: CallOverrides): Promise<BigNumber>;
+
     DUST_AMOUNT(overrides?: CallOverrides): Promise<BigNumber>;
+
+    MINT_GAS(overrides?: CallOverrides): Promise<BigNumber>;
 
     PRE_FILL_FEE_DENOMINATOR(overrides?: CallOverrides): Promise<BigNumber>;
 
@@ -603,6 +658,14 @@ export class TestBridgeRouter extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
+    preflight(
+      arg0: BigNumberish,
+      arg1: BigNumberish,
+      arg2: BytesLike,
+      _message: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
     remotes(arg0: BigNumberish, overrides?: CallOverrides): Promise<BigNumber>;
 
     renounceOwnership(
@@ -634,7 +697,11 @@ export class TestBridgeRouter extends BaseContract {
   };
 
   populateTransaction: {
+    DEPLOY_GAS(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
     DUST_AMOUNT(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    MINT_GAS(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     PRE_FILL_FEE_DENOMINATOR(
       overrides?: CallOverrides
@@ -699,6 +766,14 @@ export class TestBridgeRouter extends BaseContract {
       _nonce: BigNumberish,
       _message: BytesLike,
       overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>;
+
+    preflight(
+      arg0: BigNumberish,
+      arg1: BigNumberish,
+      arg2: BytesLike,
+      _message: BytesLike,
+      overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
     remotes(
