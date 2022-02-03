@@ -26,7 +26,7 @@ export const moonbeam: NomadDomain = {
   id: 1650811245,
   paginate: {
     from: 171256,
-    blocks: 1000,
+    blocks: 500,
   },
   home: '0x8F184D6Aa1977fd2F9d9024317D0ea5cF5815b6f',
   replicas: [
