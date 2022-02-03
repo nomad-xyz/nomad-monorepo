@@ -921,7 +921,7 @@ export async function deployNewChain(
  *
  * @param dir - relative path to folder where partial configs will be written
  */
-export function writePartials(dir: string) {
+export function writePartials(dir: string, deploys: CoreDeploy[]) {
   // make folder if it doesn't exist already
   fs.mkdirSync(dir, { recursive: true });
   const defaultDir = '../../rust/config/default';
@@ -929,12 +929,37 @@ export function writePartials(dir: string) {
   // copy partial config from default directory to given directory
   for (let partialName of partialNames) {
     const filename = `${partialName}-partial.json`;
-    fs.copyFile(`${defaultDir}/${filename}`, `${dir}/${filename}`, (err) => {
-      if (err) {
-        console.error(err);
-      }
-    });
+    const defaultPath = `${defaultDir}/${filename}`;
+    if (partialName == 'watcher') {
+      let watcherPartialJson = getWatcherPartial(defaultPath, deploys);
+      fs.writeFileSync(`${dir}/${filename}`, watcherPartialJson);
+    } else {
+      fs.copyFile(defaultPath, `${dir}/${filename}`, (err) => {
+        if (err) {
+          console.error(err);
+        }
+      });
+    }
   }
+}
+
+function getWatcherPartial(defaultPath: string, deploys: CoreDeploy[]) {
+  let json = JSON.parse(fs.readFileSync(defaultPath, 'utf8'));
+  for (const deploy of deploys) {
+    json.managers[deploy.chain.name] = {
+      address: deploy.contracts.xAppConnectionManager!.address,
+      domain: deploy.chain.domain.toString(),
+      name: deploy.chain.name,
+      rpcStyle: 'ethereum', // TODO: not permanent
+      timelag: deploy.chain.config.timelag,
+      connection: {
+        type: 'http',
+        url: '',
+      },
+    };
+  }
+
+  return json;
 }
 
 function writeOutput(
@@ -981,7 +1006,7 @@ export function writeDeployOutput(deploys: CoreDeploy[]) {
 
     writeOutput(local, remotes, dir);
   }
-  writePartials(dir);
+  writePartials(dir, deploys);
 }
 
 /**
@@ -1011,5 +1036,6 @@ export function writeHubAndSpokeOutput(
   writeOutput(hub, [...newSpokes, ...oldSpokes], dir, isFreshDeploy);
 
   // write partials
-  writePartials(dir);
+  const deploys = [hub, ...newSpokes, ...oldSpokes];
+  writePartials(dir, deploys);
 }
