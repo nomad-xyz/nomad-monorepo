@@ -10,6 +10,7 @@
       "domain": "2000",
       "name": "rinkeby",
       "rpcStyle": "ethereum",
+      "timelag": 100,
       "connection": {
         "type": "http",
         "url": ""
@@ -20,6 +21,7 @@
       "domain": "3000",
       "name": "kovan",
       "rpcStyle": "ethereum",
+      "timelag": 5,
       "connection": {
         "type": "http",
         "url": ""
@@ -30,6 +32,7 @@
       "domain": "5000",
       "name": "moonbasealpha",
       "rpcStyle": "ethereum",
+      "timelag": 5,
       "connection": {
         "type": "http",
         "url": ""
@@ -40,6 +43,7 @@
       "domain": "8000",
       "name": "milkomedatestnet",
       "rpcStyle": "ethereum",
+      "timelag": 5,
       "connection": {
         "type": "http",
         "url": ""
