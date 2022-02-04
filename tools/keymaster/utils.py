@@ -78,7 +78,7 @@ def get_balance(address:str, endpoint:str):
 # dispatches a signed transaction from create_transaction
 @backoff.on_exception(backoff.expo,
                       ValueError,
-                      max_tries=8)
+                      max_tries=3)
 def dispatch_signed_transaction(signed_transaction, endpoint:str):
     # Set up w3 provider with network endpoint
     w3 = Web3(Web3.HTTPProvider(endpoint))
