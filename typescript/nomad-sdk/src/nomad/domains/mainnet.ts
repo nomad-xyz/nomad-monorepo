@@ -38,7 +38,7 @@ export const moonbeam: NomadDomain = {
   governanceRouter: '0x569D80f7FC17316B4C83f072b92EF37B72819DE0',
   xAppConnectionManager: '0xdB378579c2Af11817EEA21474A39F95B5b9DfD7e',
   bridgeRouter: '0xD3dfD3eDe74E0DCEBC1AA685e151332857efCe2d',
-  tokenRegistry: '0xa7E4Fea3c1468D6C1A3A77e21e6e43Daed855C1b',
+  tokenRegistry: '0x0A6f564C5c9BeBD66F1595f1B51D1F3de6Ef3b79',
   ethHelper: '0xB70588b1A51F847d13158ff18E9Cac861dF5Fb00',
 };
 
