@@ -932,7 +932,10 @@ export function writePartials(dir: string, deploys: CoreDeploy[]) {
     const defaultPath = `${defaultDir}/${filename}`;
     if (partialName == 'watcher') {
       let watcherPartialJson = getWatcherPartial(defaultPath, deploys);
-      fs.writeFileSync(`${dir}/${filename}`, watcherPartialJson);
+      fs.writeFileSync(
+        `${dir}/${filename}`,
+        JSON.stringify(watcherPartialJson, null, 2),
+      );
     } else {
       fs.copyFile(defaultPath, `${dir}/${filename}`, (err) => {
         if (err) {
