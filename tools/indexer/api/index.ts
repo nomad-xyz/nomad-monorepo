@@ -47,7 +47,7 @@ export async function run(db: DB, logger: Logger) {
 
       const messages = await db.getMessages(req.query);
 
-      return res.json(messages);
+      return res.json(messages.map(m => m.serialize()));
     }
   );
 
