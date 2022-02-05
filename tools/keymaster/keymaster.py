@@ -96,13 +96,22 @@ def monitor(ctx, metrics_port, pause_duration):
 
             # for each account
             for home_name, home in config["homes"].items():
+                # Skip processing on networks where there is no replica
+                if name not in home["replicas"]: 
+                    continue
+                
                 for role, account in home["addresses"].items():
-                    logging.info(f"Fetching metrics for {account} via {endpoint}")
+                    # Don't send funds to agents that don't need to make TXs on this Domain
+                    # If we're processing a local agent on a remote domain
+                    if name != home_name and role in ["kathy", "updater", "watcher"]: 
+                        logging.info(f"Not processing {home_name} {role} on {name}")
+                        continue 
+                    logging.info(f"Fetching metrics for {home_name} {role} ({account}) on {name} via {endpoint}")
                     # fetch balance
                     wallet_wei = get_balance(account, endpoint)
                     logging.info(f"Wallet Balance: {wallet_wei * 10**-18}")
                     if wallet_wei < threshold: 
-                        logging.warn(f"BALANCE IS LOW, MARKING FOR TOP-UP {wallet_wei} < {threshold}")
+                        logging.warning(f"BALANCE IS LOW, MARKING FOR TOP-UP {wallet_wei} < {threshold}")
                         should_top_up = True
                     # fetch tx count
                     tx_count = get_nonce(account, endpoint)
