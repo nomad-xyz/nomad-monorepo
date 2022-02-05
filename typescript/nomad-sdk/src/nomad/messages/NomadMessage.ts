@@ -250,11 +250,15 @@ export class NomadMessage {
       UpdateArgs
     >(this.context, this.origin, this.home, updateFilter);
 
-    if (updateLogs.length === 1) {
-      // if event is returned, store it to the object
-      this.cache.homeUpdate = updateLogs[0];
-    } else if (updateLogs.length > 1) {
-      throw new Error('multiple home updates for same root');
+    if (updateLogs.length > 0) {
+      // check for distinct (fraudulent) updates
+      const validUpdates = updateLogs.every(u => u === updateLogs[0]);
+      if (validUpdates) {
+        // if event is returned and valid, store it to the object
+        this.cache.homeUpdate = updateLogs[0];
+      } else {
+        throw new Error('multiple home updates for same root');
+      }
     }
     // return the event or undefined if it doesn't exist
     return this.cache.homeUpdate;
@@ -280,11 +284,16 @@ export class NomadMessage {
       UpdateTypes,
       UpdateArgs
     >(this.context, this.destination, this.replica, updateFilter);
-    if (updateLogs.length === 1) {
-      // if event is returned, store it to the object
-      this.cache.replicaUpdate = updateLogs[0];
-    } else if (updateLogs.length > 1) {
-      throw new Error('multiple replica updates for same root');
+
+    if (updateLogs.length > 0) {
+      // check for distinct (fraudulent) updates
+      const validUpdates = updateLogs.every(u => u === updateLogs[0]);
+      if (validUpdates) {
+        // if event is returned and valid, store it to the object
+        this.cache.replicaUpdate = updateLogs[0];
+      } else {
+        throw new Error('multiple home updates for same root');
+      }
     }
     // return the event or undefined if it wasn't found
     return this.cache.replicaUpdate;
