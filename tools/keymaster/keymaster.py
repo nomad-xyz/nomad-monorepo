@@ -15,6 +15,14 @@ import json
 import sys 
 import time
 
+# Set up prometheus metrics 
+metrics = {
+    "wallet_balance": Gauge("ethereum_wallet_balance", "ETH Wallet Balance", ["role", "home", "address", "network"]),
+    "transaction_count": Gauge("ethereum_transaction_count", "ETH Wallet Balance", ["role", "home", "address", "network"]),
+    "block_number": Gauge("ethereum_block_height", "Block Height", ["network"]),
+    "failed_tx_count": Counter("keymaster_failed_tx_count", "Number of Failed Keymaster Top-Ups", ["network", "to", "error"])
+}
+
 @click.group()
 @click.option('--debug/--no-debug', default=False)
 @click.option('--config-path', default="./config/keymaster.json")
@@ -48,13 +56,6 @@ def monitor(ctx, metrics_port, pause_duration):
     """Simple program that polls one or more ethereum accounts and reports metrics on them."""
     # Get config
     config = ctx.obj["CONFIG"]
-    
-    # Set up prometheus metrics 
-    metrics = {
-        "wallet_balance": Gauge("ethereum_wallet_balance", "ETH Wallet Balance", ["role", "home", "address", "network"]),
-        "transaction_count": Gauge("ethereum_transaction_count", "ETH Wallet Balance", ["role", "home", "address", "network"]),
-        "block_number": Gauge("ethereum_block_height", "Block Height", ["network"])
-    }
 
     # Set up logging
     logging.basicConfig(stream=sys.stdout, level=logging.INFO)
@@ -200,9 +201,16 @@ def _top_up(ctx, auto_approve=False):
             click.echo(f"Processing transactions for {network}")
             for transaction_tuple in transaction_queue[network]:
                 click.echo(f"Attempting to send transaction: {json.dumps(transaction_tuple[0], indent=2, default=str)}")
-                hash = dispatch_signed_transaction(transaction_tuple[1], config["networks"][network]["endpoint"])
-                click.echo(f"Dispatched Transaction: {hash}")
-                time.sleep(3)
+                try: 
+                    hash = dispatch_signed_transaction(transaction_tuple[1], config["networks"][network]["endpoint"])
+                    click.echo(f"Dispatched Transaction: {hash}")
+                    time.sleep(3)
+                # Catch ValueError when the transaction fails for some reason
+                except ValueError as e:
+                    metrics["failed_tx_count"].labels(network=network, to=transaction_tuple[0]["to"], error=str(e)).inc()
+                    pass
+                     
+                
         else: 
             click.echo(f"\t No transactions to process for {network}, continuing...")
 
