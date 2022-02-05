@@ -1,6 +1,8 @@
 from eth_account.account import Account
 from web3 import Web3
 import backoff 
+import logging
+import sys 
 
 # Takes a hexKey as input
 # returns the public key
@@ -86,3 +88,31 @@ def dispatch_signed_transaction(signed_transaction, endpoint:str):
     return hash
 
 
+def check_account(home_network: str, target_network: str, role: str, address: str, endpoint: str, threshold: int=150000000000000000, logger=logging.basicConfig(stream=sys.stdout, level=logging.INFO)):
+    should_top_up = False
+    logging.info(f"Fetching metrics for {home_network} {role} ({address}) on {target_network}")
+    # fetch balance
+    wallet_wei = get_balance(address, endpoint)
+    logging.info(f"Wallet Balance: {wallet_wei * 10**-18}")
+    # Only top-up when an agent wallet is at 25% of the threshold
+    if role != "bank" and wallet_wei < threshold / 4: 
+        logging.warning(f"Balance is low for {home_network} {role} ({address}) on {target_network} - {wallet_wei * 10**-18 } < {threshold * 10**-18 / 4}")
+        should_top_up = True
+    # Warn when the bank is ~4 top-ups from being empty
+    if role == "bank" and wallet_wei < threshold * 4:
+        logging.warning(f"Bank balance is low for {home_network} ({address}) - {wallet_wei * 10**-18} < {threshold * 4 * 10**-18}")
+        should_top_up = True
+    # fetch tx count
+    tx_count = get_nonce(address, endpoint)
+    logging.info(f"Transaction Count: {tx_count}")
+    status = {
+        "role": role,
+        "address": address,
+        "home": home_network,
+        "top_up_amount": threshold - wallet_wei if should_top_up else 0,
+        "target_network": target_network,
+        "wallet_balance": wallet_wei,
+        "should_top_up": should_top_up,
+        "transaction_count": tx_count
+    }
+    return status

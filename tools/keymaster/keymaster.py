@@ -3,11 +3,12 @@
 # Used to perform agent wallet maintenance like: 
 # top-up - ensures configured addresses have sufficient funds
 
+from asyncio.log import logger
 from utils import dispatch_signed_transaction, hexkey_info
 from web3 import Web3
 from prometheus_client import start_http_server, Counter, Gauge
 from config import load_config
-from utils import create_transaction, is_wallet_below_threshold, get_nonce, get_balance, get_block_height
+from utils import check_account, create_transaction, get_nonce, get_block_height
 
 import click
 import logging
@@ -67,63 +68,83 @@ def monitor(ctx, metrics_port, pause_duration):
     logging.info("Executing event loop, Ctrl+C to exit.")
     # main event loop
     while True:
-        # top-up if we see a low balance
-        should_top_up = False
-        threshold = 150000000000000000
-        # for each rpc
-        for name, network in config["networks"].items():
-            endpoint = network["endpoint"]
+        logger.info("== == Starting run! == ==")
+        # Collect statuses and batch-process at the end
+        statuses = []
+        # For each configured home
+        for home_name, home in config["homes"].items():
+            # Get status on Home for role
+            home_config = config["networks"][home_name] 
+            endpoint = home_config["endpoint"]
+            threshold = home_config["threshold"]
 
-            # Fetch block height
+            # Fetch block height for home network
             try:
                 block_height = get_block_height(endpoint)
-                metrics["block_number"].labels(network=name).set(block_height)
+                metrics["block_number"].labels(network=home_name).set(block_height)
             except ValueError:
                 continue
-            
-            # fetch bank balance
-            account = network["bank"]["address"]
-            logging.info(f"Fetching metrics for {account} via {endpoint}")
-            wallet_wei = get_balance(account, endpoint)
-            logging.info(f"Wallet Balance: {wallet_wei * 10**-18}")
-            # fetch tx count
-            tx_count = get_nonce(account, endpoint)
-            logging.info(f"Transaction Count: {tx_count}")
-            # report metrics 
-            metrics["wallet_balance"].labels(role="bank", home=name, address=account, network=name).set(wallet_wei)
-            metrics["transaction_count"].labels(role="bank", home=name, address=account, network=name).set(tx_count)
 
+            # Fetch Bank status for Home
+            address = home_config["bank"]["address"]
+            status = check_account(home_name, home_name, "bank", address, endpoint, threshold, logger)
+            statuses.append(status)
 
-            # for each account
-            for home_name, home in config["homes"].items():
-                # Skip processing on networks where there is no replica
-                if name not in home["replicas"]: 
-                    continue
+            # Get statuses, see if we need to top-up
+            for role, address in home["addresses"].items():
                 
-                for role, account in home["addresses"].items():
-                    # Don't send funds to agents that don't need to make TXs on this Domain
-                    # If we're processing a local agent on a remote domain
-                    if name != home_name and role in ["kathy", "updater", "watcher"]: 
-                        logging.info(f"Not processing {home_name} {role} on {name}")
-                        continue 
-                    logging.info(f"Fetching metrics for {home_name} {role} ({account}) on {name} via {endpoint}")
-                    # fetch balance
-                    wallet_wei = get_balance(account, endpoint)
-                    logging.info(f"Wallet Balance: {wallet_wei * 10**-18}")
-                    if wallet_wei < threshold: 
-                        logging.warning(f"BALANCE IS LOW, MARKING FOR TOP-UP {wallet_wei} < {threshold}")
-                        should_top_up = True
-                    # fetch tx count
-                    tx_count = get_nonce(account, endpoint)
-                    logging.info(f"Transaction Count: {tx_count}")
-                    # report metrics 
-                    metrics["wallet_balance"].labels(role=role, home=home_name, address=account, network=name).set(wallet_wei)
-                    metrics["transaction_count"].labels(role=role, home=home_name, address=account, network=name).set(tx_count)
+                # only process agents that act on the home
+                if role in ["updater", "kathy", "watcher"]:
+                    # Watcher only needs 1/4 the funds as the rest of the agents
+                    if role == "watcher": 
+                        threshold = threshold / 4
+                    status = check_account(home_name, home_name, role, address, endpoint, threshold, logger)
+                    statuses.append(status)
+
+                # only process agents that act on the replica
+                if role in ["relayer", "processor"]:
+                    # Get status on Home's replicas for role
+                    for replica_name in home["replicas"]:
+                        replica_config = config["networks"][replica_name] 
+                        endpoint = replica_config["endpoint"]
+                        threshold = replica_config["threshold"] / 4
+                        status = check_account(home_name, replica_name, role, address, endpoint, threshold, logger)
+                        statuses.append(status)
+            
+        logger.info("== == == == Done inspecting wallets, now processing top-ups. == == == ==")
+        # sort and process banks first
         
-        if should_top_up:
-            _top_up(ctx, auto_approve=True)
+        statuses = sorted(statuses, key = lambda s: s["role"])
+        for status in statuses:
+            # unpack status
+            role = status["role"]
+            home_network = status["home"]
+            address = status["address"]
+            target_network = status["target_network"]
+
+            # report metrics 
+            metrics["wallet_balance"].labels(role=role, home=home_network, address=address, network=target_network).set(status["wallet_balance"])
+            metrics["transaction_count"].labels(role=role, home=home_network, address=address, network=target_network).set(status["transaction_count"])
+            
+            # Should we top-up? 
+            if role != "bank" and status["should_top_up"]:
+                amount = status["top_up_amount"]
+                bank_endpoint = config["networks"][target_network]["endpoint"]
+                bank_address = config["networks"][target_network]["bank"]["address"]
+                bank_signer = config["networks"][target_network]["bank"]["signer"]
+                bank_nonce = get_nonce(bank_address, bank_endpoint)
+                transaction_tuple = create_transaction(bank_signer, address, amount, bank_nonce, bank_endpoint)
+                logging.info(f"Attempting to send transaction of {amount * 10**-18} {home_network} {role} ({address}) on {target_network}")
+                try: 
+                    hash = dispatch_signed_transaction(transaction_tuple[1], bank_endpoint)
+                    logging.info(f"Dispatched Transaction: {hash}")
+                    time.sleep(3)
+                # Catch ValueError when the transaction fails for some reason
+                except ValueError as e:
+                    metrics["failed_tx_count"].labels(network=target_network, to=address, error=str(e)).inc()
+                    pass
         
-        logging.info(f"Sleeping for {pause_duration} seconds.")
+        logging.info(f"== Done with run -- sleeping for {pause_duration} seconds ==")
         time.sleep(pause_duration)
 
 @cli.command()
@@ -132,97 +153,6 @@ def monitor(ctx, metrics_port, pause_duration):
 def hex_key(ctx, hex_key):
     address = hexkey_info(hex_key)
     logging.info(f"Address: {address}")
-
-@cli.command()
-@click.pass_context
-def top_up(ctx):
-    _top_up(ctx)
-
-def _top_up(ctx, auto_approve=False):
-    click.echo(f"Debug is {'on' if ctx.obj['DEBUG'] else 'off'}")
-    config = ctx.obj["CONFIG"]
-    transaction_queue = {}
-    # Init transaction queue for each network
-    for network in config["networks"]:
-        transaction_queue[network] = []
-
-    for home in config["homes"]:
-        
-        for role, address in config["homes"][home]["addresses"].items():
-            logging.info(f"Processing {role}-{address} on {home}")    
-            # fetch config params 
-            home_upper_bound = config["networks"][home]["threshold"]
-            # don't top up until balance has gone beneath lower bound
-            home_lower_bound = 150000000000000000
-            home_endpoint = config["networks"][home]["endpoint"]
-            home_bank_signer = config["networks"][home]["bank"]["signer"]
-            home_bank_address = config["networks"][home]["bank"]["address"]
-            
-            # check if balance is below threshold at home
-            threshold_difference = is_wallet_below_threshold(address, home_lower_bound, home_upper_bound, home_endpoint)
-            # get nonce
-            home_bank_nonce = get_nonce(home_bank_address, home_endpoint)
-            
-            if threshold_difference:
-                logging.info(f"Threshold difference is {threshold_difference} for {role}-{address} on {home}, enqueueing transaction.")
-                # if so, enqueue top up with (threshold - balance) ether
-                transaction = create_transaction(home_bank_signer, address, threshold_difference, home_bank_nonce + len(transaction_queue[home]), home_endpoint)
-                transaction_queue[home].append(transaction)
-            else: 
-                logging.info(f"Threshold difference is satisfactory for {role}-{address} on {home}, no action.")
-
-            for replica in config["homes"][home]["replicas"]:
-                 # fetch config params 
-                replica_upper_bound = config["networks"][replica]["threshold"] 
-                # don't top up until balance has gone beneath lower bound
-                replica_lower_bound = 150000000000000000
-                replica_endpoint = config["networks"][replica]["endpoint"]
-                replica_bank_signer = config["networks"][replica]["bank"]["signer"]
-                replica_bank_address = config["networks"][replica]["bank"]["address"]
-                # check if balance is below threshold at replica
-                threshold_difference = is_wallet_below_threshold(address, replica_lower_bound, replica_upper_bound, replica_endpoint)
-                # get nonce
-                replica_bank_nonce = get_nonce(replica_bank_address, replica_endpoint)
-                # if so, enqueue top up with (threshold - balance) ether
-                if threshold_difference:
-                    logging.info(f"Threshold difference is {threshold_difference} for {role}-{address} on {replica}, enqueueing transaction.")
-                    transaction = create_transaction(replica_bank_signer, address, threshold_difference, replica_bank_nonce + len(transaction_queue[replica]), replica_endpoint)
-                    transaction_queue[replica].append(transaction)
-                else: 
-                    logging.info(f"Threshold difference is satisfactory for {role}-{address} on {replica}, no action.")
-    
-    # compute analytics about enqueued transactions 
-    click.echo("\n Transaction Stats:")
-    for network in transaction_queue:
-        if len(transaction_queue[network]) > 0:
-            amount_sum = sum(tx[0]["value"] for tx in transaction_queue[network])
-            bank_balance = get_balance(config["networks"][network]["bank"]["address"], config["networks"][network]["endpoint"])
-            click.echo(f"\t {network} Bank has {Web3.fromWei(bank_balance, 'ether')} ETH")
-            click.echo(f"\t About to send {len(transaction_queue[network])} transactions on {network} - Total of {Web3.fromWei(amount_sum, 'ether')} ETH \n")
-
-            if not auto_approve:
-                click.confirm("Would you like to proceed with dispatching these transactions?", abort=True)
-            else: 
-                # Send it!!
-                click.echo("Auto-Approved. Dispatching.")
-
-            # Process enqueued transactions 
-            click.echo(f"Processing transactions for {network}")
-            for transaction_tuple in transaction_queue[network]:
-                click.echo(f"Attempting to send transaction: {json.dumps(transaction_tuple[0], indent=2, default=str)}")
-                try: 
-                    hash = dispatch_signed_transaction(transaction_tuple[1], config["networks"][network]["endpoint"])
-                    click.echo(f"Dispatched Transaction: {hash}")
-                    time.sleep(3)
-                # Catch ValueError when the transaction fails for some reason
-                except ValueError as e:
-                    metrics["failed_tx_count"].labels(network=network, to=transaction_tuple[0]["to"], error=str(e)).inc()
-                    pass
-                     
-                
-        else: 
-            click.echo(f"\t No transactions to process for {network}, continuing...")
-
     
 
 if __name__ == '__main__':
