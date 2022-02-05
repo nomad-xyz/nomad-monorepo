@@ -3,7 +3,6 @@
 # Used to perform agent wallet maintenance like: 
 # top-up - ensures configured addresses have sufficient funds
 
-from asyncio.log import logger
 from utils import dispatch_signed_transaction, hexkey_info
 from web3 import Web3
 from prometheus_client import start_http_server, Counter, Gauge
@@ -38,12 +37,9 @@ def cli(ctx, debug, config_path):
         ctx.obj['CONFIG'] = conf
     else: 
         # Failed to load config, barf 
-        click.echo(f"Failed to load config from {config_path}, check the file and try again.")
-        sys.exit(1)
-
-    
-    # Set up logging
-    logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+        logger = logging.getLogger("configuration")
+        logger.error(f"Failed to load config from {config_path}, check the file and try again.")
+        sys.exit(1)    
 
     if debug:
         click.echo(f"Loaded config from {config_path}")
@@ -58,15 +54,13 @@ def monitor(ctx, metrics_port, pause_duration):
     # Get config
     config = ctx.obj["CONFIG"]
     environment = config["environment"]
-
-    # Set up logging
-    logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+    logger = config["logger"]
 
     # run metrics endpoint
     start_http_server(metrics_port)
-    logging.info(f"Running Prometheus endpoint on port {metrics_port}")
+    logger.info(f"Running Prometheus endpoint on port {metrics_port}")
 
-    logging.info("Executing event loop, Ctrl+C to exit.")
+    logger.info("Executing event loop, Ctrl+C to exit.")
     # main event loop
     while True:
         logger.info("== == Starting run! == ==")
@@ -135,17 +129,22 @@ def monitor(ctx, metrics_port, pause_duration):
                 bank_signer = config["networks"][target_network]["bank"]["signer"]
                 bank_nonce = get_nonce(bank_address, bank_endpoint)
                 transaction_tuple = create_transaction(bank_signer, address, amount, bank_nonce, bank_endpoint)
-                logging.info(f"Attempting to send transaction of {amount * 10**-18} {home_network} {role} ({address}) on {target_network}")
+                logger.debug(f"Attempting to send transaction of {amount * 10**-18} {home_network} {role} ({address}) on {target_network}")
                 try: 
                     hash = dispatch_signed_transaction(transaction_tuple[1], bank_endpoint)
-                    logging.info(f"Dispatched Transaction: {hash}")
+                    logger.debug(f"Dispatched Transaction: {hash}")
                     time.sleep(3)
                 # Catch ValueError when the transaction fails for some reason
                 except ValueError as e:
+                    logger.error({
+                        "msg": "Transaction Failed", 
+                        "error": e, 
+                        "transaction": transaction_tuple[0]
+                    })
                     metrics["failed_tx_count"].labels(environment=environment, network=target_network, to=address, error=str(e)).inc()
                     pass
         
-        logging.info(f"== Done with run -- sleeping for {pause_duration} seconds ==")
+        logger.info(f"== Done with run -- sleeping for {pause_duration} seconds ==")
         time.sleep(pause_duration)
 
 @cli.command()
@@ -153,7 +152,7 @@ def monitor(ctx, metrics_port, pause_duration):
 @click.argument('hex-key')
 def hex_key(ctx, hex_key):
     address = hexkey_info(hex_key)
-    logging.info(f"Address: {address}")
+    ctx.obj["CONFIG"]["logger"].info(f"Address: {address}")
     
 
 if __name__ == '__main__':
