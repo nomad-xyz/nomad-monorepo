@@ -2,9 +2,11 @@
 # https://github.com/docker/metadata-action
 # https://github.com/docker/login-action#google-container-registry-gcr
 # https://github.com/docker/build-push-action
-name: Push to GCR GitHub Action
+name: Push Keymaster Image to GCR GitHub Action
 on: 
   push:
+    paths: 
+      - 'tools/keymaster/**'
     branches:
       - '**'
     tags:
@@ -44,26 +46,12 @@ jobs:
         with:
           # list of Docker images to use as base name for tags
           images: |
-            gcr.io/nomad-xyz/nomad-agent
+            gcr.io/nomad-xyz/keymaster
           # generate Docker tags based on the following events/attributes
           tags: |
             type=ref,event=branch
             type=ref,event=pr
             type=sha
-
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-      
-      - uses: Swatinem/rust-cache@v1
-        with:
-          working-directory: ./rust
-          # Added extra key to prevent rust cache collision with rust.yml workflows
-          key: 'release'
-      
-      - name: Building Rust Agents
-        run: cargo build --release
-        working-directory: ./rust
 
       - name: Login to GCR Docker repository
         uses: docker/login-action@v1
@@ -75,8 +63,8 @@ jobs:
       - name: Build and push container
         uses: docker/build-push-action@v2
         with:
-          context: ./rust
-          file: ./rust/DockerfileV2
+          context: ./tools/keymaster/
+          file: ./tools/keymaster/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
