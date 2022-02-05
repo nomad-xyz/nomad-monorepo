@@ -109,10 +109,12 @@ def check_account(home_network: str, target_network: str, role: str, address: st
         "role": role,
         "address": address,
         "home": home_network,
-        "top_up_amount": threshold - wallet_wei if should_top_up else 0,
+        "top_up_amount": int(threshold - wallet_wei) if should_top_up else 0,
         "target_network": target_network,
         "wallet_balance": wallet_wei,
         "should_top_up": should_top_up,
         "transaction_count": tx_count
     }
+    import json
+    print(json.dumps(status, indent=2))
     return status
