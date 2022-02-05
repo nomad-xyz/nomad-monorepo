@@ -12,6 +12,7 @@ def load_config(path: str):
         config = builder.parse_config(path)
         config.merge_with_env_variables(["KEYMASTER"])
         payload = config.to_dict()
+        payload.get("logging")["formatters"]["json"]["fields"]["environment"] = config.get("environment")
         # Set up logging
         logging.config.dictConfig(payload.get("logging"))
         payload["logger"] = logging.getLogger("keymaster")
