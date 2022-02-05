@@ -1,4 +1,5 @@
 {
+    "environment": "development",
     "networks": {
         "alfajores": {
             "endpoint": "https://alfajores-forno.celo-testnet.org",

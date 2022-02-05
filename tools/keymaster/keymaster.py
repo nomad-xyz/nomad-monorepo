@@ -18,10 +18,10 @@ import time
 
 # Set up prometheus metrics 
 metrics = {
-    "wallet_balance": Gauge("ethereum_wallet_balance", "ETH Wallet Balance", ["role", "home", "address", "network"]),
-    "transaction_count": Gauge("ethereum_transaction_count", "ETH Wallet Balance", ["role", "home", "address", "network"]),
-    "block_number": Gauge("ethereum_block_height", "Block Height", ["network"]),
-    "failed_tx_count": Counter("keymaster_failed_tx_count", "Number of Failed Keymaster Top-Ups", ["network", "to", "error"])
+    "wallet_balance": Gauge("ethereum_wallet_balance", "ETH Wallet Balance", ["role", "home", "address", "network", "environment"]),
+    "transaction_count": Gauge("ethereum_transaction_count", "ETH Wallet Balance", ["role", "home", "address", "network", "environment"]),
+    "block_number": Gauge("ethereum_block_height", "Block Height", ["network", "environment"]),
+    "failed_tx_count": Counter("keymaster_failed_tx_count", "Number of Failed Keymaster Top-Ups", ["network", "to", "error", "environment"])
 }
 
 @click.group()
@@ -57,6 +57,7 @@ def monitor(ctx, metrics_port, pause_duration):
     """Simple program that polls one or more ethereum accounts and reports metrics on them."""
     # Get config
     config = ctx.obj["CONFIG"]
+    environment = config["environment"]
 
     # Set up logging
     logging.basicConfig(stream=sys.stdout, level=logging.INFO)
@@ -81,7 +82,7 @@ def monitor(ctx, metrics_port, pause_duration):
             # Fetch block height for home network
             try:
                 block_height = get_block_height(endpoint)
-                metrics["block_number"].labels(network=home_name).set(block_height)
+                metrics["block_number"].labels(network=home_name, environment=environment).set(block_height)
             except ValueError:
                 continue
 
@@ -123,8 +124,8 @@ def monitor(ctx, metrics_port, pause_duration):
             target_network = status["target_network"]
 
             # report metrics 
-            metrics["wallet_balance"].labels(role=role, home=home_network, address=address, network=target_network).set(status["wallet_balance"])
-            metrics["transaction_count"].labels(role=role, home=home_network, address=address, network=target_network).set(status["transaction_count"])
+            metrics["wallet_balance"].labels(environment=environment, role=role, home=home_network, address=address, network=target_network).set(status["wallet_balance"])
+            metrics["transaction_count"].labels(environment=environment, role=role, home=home_network, address=address, network=target_network).set(status["transaction_count"])
             
             # Should we top-up? 
             if role != "bank" and status["should_top_up"]:
@@ -141,7 +142,7 @@ def monitor(ctx, metrics_port, pause_duration):
                     time.sleep(3)
                 # Catch ValueError when the transaction fails for some reason
                 except ValueError as e:
-                    metrics["failed_tx_count"].labels(network=target_network, to=address, error=str(e)).inc()
+                    metrics["failed_tx_count"].labels(environment=environment, network=target_network, to=address, error=str(e)).inc()
                     pass
         
         logging.info(f"== Done with run -- sleeping for {pause_duration} seconds ==")
