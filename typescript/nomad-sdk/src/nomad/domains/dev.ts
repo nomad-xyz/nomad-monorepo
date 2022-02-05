@@ -24,7 +24,7 @@ export const rinkeby: NomadDomain = {
   ],
   governanceRouter: '0xB1F0bB0d6a40d5003f2A62D9a146791A90270F1d',
   bridgeRouter: '0xeACafFb9fBCe3d4c4C5D07AF5DFa51CcF5a348b7',
-  tokenRegistry: '0xa6391c179beF326c42E0f1eaEb3764412d9CdccB',
+  tokenRegistry: '0x885A8bd4be130422AEB1Eb9Eeb9513a5D2102cad',
   ethHelper: '0x074cd4d8629445Fda3b17574FCB848eda767058b',
   xAppConnectionManager: '0x7e365A910383cE8Dfa6860B080a9D4cd58d2BD13',
 };
