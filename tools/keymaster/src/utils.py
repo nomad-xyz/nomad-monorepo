@@ -90,6 +90,7 @@ def dispatch_signed_transaction(signed_transaction, endpoint:str):
 
 def check_account(home_network: str, target_network: str, role: str, address: str, endpoint: str, threshold: int=150000000000000000, logger=logging.basicConfig(stream=sys.stdout, level=logging.INFO)):
     should_top_up = False
+    top_up_amount = 0
     logger.debug(f"Fetching metrics for {home_network} {role} ({address}) on {target_network}")
     # fetch balance
     wallet_wei = get_balance(address, endpoint)
@@ -98,6 +99,7 @@ def check_account(home_network: str, target_network: str, role: str, address: st
     if role != "bank" and wallet_wei < (threshold / 4): 
         logger.debug(f"Balance is low for {home_network} {role} ({address}) on {target_network} - {wallet_wei * 10**-18 } < {threshold * 10**-18 / 4}")
         should_top_up = True
+        top_up_amount = threshold - wallet_wei
     # Warn when the bank is ~4 top-ups from being empty
     if role == "bank" and wallet_wei < threshold * 4:
         logger.warning(f"Bank balance is low for {home_network} ({address}) - {wallet_wei * 10**-18} < {threshold * 4 * 10**-18}")
@@ -108,7 +110,7 @@ def check_account(home_network: str, target_network: str, role: str, address: st
         "role": role,
         "address": address,
         "home": home_network,
-        "top_up_amount": int(threshold - wallet_wei) if should_top_up else 0,
+        "top_up_amount": top_up_amount,
         "target_network": target_network,
         "wallet_balance": wallet_wei,
         "should_top_up": should_top_up,
