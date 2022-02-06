@@ -9,7 +9,8 @@ type GasPolicy = Box<dyn Fn(U256) -> U256 + Send + Sync>;
 /// Middleware used for adjusting gas using predefined policy
 pub struct GasAdjusterMiddleware<M> {
     inner: M,
-    policy: GasPolicy,
+    gas_estimate_policy: GasPolicy,
+    gas_price_policy: GasPolicy,
 }
 
 impl<M> fmt::Debug for GasAdjusterMiddleware<M>
@@ -29,13 +30,21 @@ where
 {
     /// Instantiates the gas multiplier middleware. Policy takes gas
     /// estimate to calculates new gas which will be used for transaction
-    pub fn new(inner: M, policy: GasPolicy) -> Self {
-        Self { inner, policy }
+    pub fn new(inner: M, gas_estimate_policy: GasPolicy, gas_price_policy: GasPolicy) -> Self {
+        Self {
+            inner,
+            gas_estimate_policy,
+            gas_price_policy,
+        }
     }
 
     pub fn with_default_policy(inner: M, chain_id: u64) -> Self {
+        // triple gas estimate
+        let gas_estimate_policy = move |gas| gas * 3;
+
+        // 1.5x gas price for ethereum, 2x elsewhere
         let is_ethereum = chain_id == 1;
-        let policy = move |price| {
+        let gas_price_policy = move |price| {
             if is_ethereum {
                 price + price / 2
             } else {
@@ -43,7 +52,11 @@ where
             }
         };
 
-        Self::new(inner, Box::new(policy))
+        Self::new(
+            inner,
+            Box::new(gas_estimate_policy),
+            Box::new(gas_price_policy),
+        )
     }
 }
 
@@ -85,7 +98,10 @@ where
             .await
             .map_err(FromErr::from)?;
 
+        let adjusted_gas = self.estimate_gas(tx).await?;
         let adjusted_price = self.get_gas_price().await?;
+
+        tx.set_gas(adjusted_gas);
         tx.set_gas_price(adjusted_price);
 
         Ok(())
@@ -95,7 +111,15 @@ where
         self.inner()
             .get_gas_price()
             .await
-            .map(&self.policy)
+            .map(&self.gas_price_policy)
+            .map_err(FromErr::from)
+    }
+
+    async fn estimate_gas(&self, tx: &TypedTransaction) -> Result<U256, Self::Error> {
+        self.inner()
+            .estimate_gas(tx)
+            .await
+            .map(&self.gas_estimate_policy)
             .map_err(FromErr::from)
     }
 }
