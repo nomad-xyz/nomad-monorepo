@@ -94,7 +94,8 @@ def check_account(home_network: str, target_network: str, role: str, address: st
     # fetch balance
     wallet_wei = get_balance(address, endpoint)
     # Only top-up when an agent wallet is at 25% of the threshold
-    if role != "bank" and wallet_wei < threshold / 4: 
+    logger.info(f"{wallet_wei} is less then {int(threshold / 4)}: {wallet_wei < int(threshold / 4)}")
+    if role != "bank" and wallet_wei < (threshold / 4): 
         logger.debug(f"Balance is low for {home_network} {role} ({address}) on {target_network} - {wallet_wei * 10**-18 } < {threshold * 10**-18 / 4}")
         should_top_up = True
     # Warn when the bank is ~4 top-ups from being empty

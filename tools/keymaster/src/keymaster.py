@@ -71,7 +71,7 @@ def monitor(ctx, metrics_port, pause_duration):
             # Get status on Home for role
             home_config = config["networks"][home_name] 
             endpoint = home_config["endpoint"]
-            threshold = home_config["threshold"]
+            home_threshold = home_config["threshold"]
 
             # Fetch block height for home network
             try:
@@ -82,7 +82,7 @@ def monitor(ctx, metrics_port, pause_duration):
 
             # Fetch Bank status for Home
             address = home_config["bank"]["address"]
-            status = check_account(home_name, home_name, "bank", address, endpoint, threshold, logger)
+            status = check_account(home_name, home_name, "bank", address, endpoint, home_threshold, logger)
             statuses.append(status)
 
             # Get statuses, see if we need to top-up
@@ -92,8 +92,9 @@ def monitor(ctx, metrics_port, pause_duration):
                 if role in ["updater", "kathy", "watcher"]:
                     # Watcher only needs 1/4 the funds as the rest of the agents
                     if role == "watcher": 
-                        threshold = threshold / 4
-                    status = check_account(home_name, home_name, role, address, endpoint, threshold, logger)
+                        status = check_account(home_name, home_name, role, address, endpoint, home_threshold / 4, logger=logger)
+                    else:
+                        status = check_account(home_name, home_name, role, address, endpoint, home_threshold, logger=logger)
                     statuses.append(status)
 
                 # only process agents that act on the replica
@@ -101,9 +102,9 @@ def monitor(ctx, metrics_port, pause_duration):
                     # Get status on Home's replicas for role
                     for replica_name in home["replicas"]:
                         replica_config = config["networks"][replica_name] 
+                        replica_threshold = replica_config["threshold"]
                         endpoint = replica_config["endpoint"]
-                        threshold = replica_config["threshold"] / 4
-                        status = check_account(home_name, replica_name, role, address, endpoint, threshold, logger)
+                        status = check_account(home_name, replica_name, role, address, endpoint, replica_threshold, logger)
                         statuses.append(status)
             
         logger.info("== == == == Done inspecting wallets, now processing top-ups. == == == ==")
