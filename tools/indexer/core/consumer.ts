@@ -228,11 +228,11 @@ class Timings {
 
   serialize() {
     return {
-      dispatchedAt: this.dispatchedAt,
-      updatedAt: this.updatedAt,
-      relayedAt: this.relayedAt,
-      processedAt: this.processedAt,
-      receivedAt: this.receivedAt,
+      dispatchedAt: this.dispatchedAt/1000,
+      updatedAt: this.updatedAt/1000,
+      relayedAt: this.relayedAt/1000,
+      processedAt: this.processedAt/1000,
+      receivedAt: this.receivedAt/1000,
     }
   }
 
@@ -243,11 +243,11 @@ class Timings {
     processedAt: number;
     receivedAt: number;
 }): Timings {
-    const t = new Timings(s.dispatchedAt);
-    t.updatedAt = s.updatedAt;
-    t.relayedAt = s.relayedAt;
-    t.processedAt = s.processedAt;
-    t.receivedAt = s.receivedAt;
+    const t = new Timings(Number(s.dispatchedAt)*1000);
+    t.updatedAt = Number(s.updatedAt)*1000;
+    t.relayedAt = Number(s.relayedAt)*1000;
+    t.processedAt = Number(s.processedAt)*1000;
+    t.receivedAt = Number(s.receivedAt)*1000;
     return t;
   }
 }
