@@ -39,6 +39,8 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=nomad-indexer
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
     logging:
       options:
         max-size: 100m

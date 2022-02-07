@@ -152,8 +152,9 @@ export class Indexer {
     let batchTo = from + batchSize;
 
     while (true) {
+      const done = Math.floor((batchTo-from)/(to-from) * 100);
       this.orchestrator.logger.debug(
-        `Fetching batch of events for domain ${this.domain} from: ${batchFrom}, to: ${batchTo}`
+        `Fetching batch of events for domain ${this.domain} from: ${batchFrom}, to: ${batchTo}, [${done}%]`
       );
       const events = await fetchEvents(batchFrom, batchTo);
       if (!events) throw new Error(`KEk`);
