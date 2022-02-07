@@ -167,13 +167,38 @@ impl NomadAgent for Relayer {
             }
             let replica = replica_opt.unwrap();
 
-            let update_poller = UpdatePoller::new(
-                home.clone(),
-                replica.clone(),
-                duration,
-                updates_relayed_count.with_label_values(&[home.name(), &name, Self::AGENT_NAME]),
-            );
-            update_poller.spawn().await?
+            let mut retries = 3;
+
+            loop {
+                let update_poller = UpdatePoller::new(
+                    home.clone(),
+                    replica.clone(),
+                    duration,
+                    updates_relayed_count.with_label_values(&[
+                        home.name(),
+                        &name,
+                        Self::AGENT_NAME,
+                    ]),
+                );
+
+                match update_poller.spawn().await? {
+                    Ok(ok) => break Ok(ok),
+                    Err(e) => {
+                        retries -= 1;
+                        if retries <= 0 {
+                            break Err(e);
+                        }
+                    }
+                }
+            }
+
+            // let update_poller = UpdatePoller::new(
+            //     home.clone(),
+            //     replica.clone(),
+            //     duration,
+            //     updates_relayed_count.with_label_values(&[home.name(), &name, Self::AGENT_NAME]),
+            // );
+            // update_poller.spawn().await?
         })
         .in_current_span()
     }

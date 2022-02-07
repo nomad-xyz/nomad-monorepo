@@ -5,14 +5,46 @@ use crate::{
     BaseError, CachingHome, CachingReplica, ContractSyncMetrics, IndexDataTypes,
 };
 use async_trait::async_trait;
-use color_eyre::{eyre::WrapErr, Result};
+use color_eyre::{
+    eyre::{bail, WrapErr},
+    Report, Result,
+};
 use futures_util::future::select_all;
+use futures_util::future::{join_all, select_ok};
 use nomad_core::db::DB;
-use tracing::instrument::Instrumented;
+use tracing::error;
 use tracing::{info_span, Instrument};
+use tracing::{instrument::Instrumented, warn};
 
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::{task::JoinHandle, time::sleep};
+
+pub async fn await_channel_tasks(
+    handles: Vec<Instrumented<JoinHandle<Result<(), Report>>>>,
+) -> Result<()> {
+    let mut rest_all = handles;
+    loop {
+        let (res, _, rest) = select_all(rest_all).await;
+        match res {
+            Ok(result) => {
+                if let Err(report) = result {
+                    error!("One of the channels dropped: {}", report);
+                }
+                if rest.len() == 0 {
+                    bail!("All of the channels are down: {}");
+                } else {
+                    rest_all = rest;
+                }
+            }
+            Err(join_error) => {
+                for task in rest.into_iter() {
+                    cancel_task!(task);
+                }
+                bail!("One of the join handles failed: {}", join_error);
+            }
+        }
+    }
+}
 
 /// Properties shared across all agents
 #[derive(Debug)]
@@ -97,17 +129,7 @@ pub trait NomadAgent: Send + Sync + std::fmt::Debug + AsRef<AgentCore> {
             .map(|replica| self.run_report_error(replica))
             .collect();
 
-        tokio::spawn(async move {
-            // This gets the first future to resolve.
-            let (res, _, remaining) = select_all(handles).await;
-
-            for task in remaining.into_iter() {
-                cancel_task!(task);
-            }
-
-            res?
-        })
-        .instrument(span)
+        tokio::spawn(async move { await_channel_tasks(handles).await }).instrument(span)
     }
 
     /// Run several agents

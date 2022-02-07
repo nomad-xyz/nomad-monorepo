@@ -14,8 +14,8 @@ use tokio::{
 use tracing::{error, info, info_span, instrument::Instrumented, Instrument};
 
 use nomad_base::{
-    cancel_task, AgentCore, BaseError, CachingHome, ConnectionManagers, ContractSyncMetrics,
-    IndexDataTypes, NomadAgent, NomadDB,
+    await_channel_tasks, cancel_task, AgentCore, BaseError, CachingHome, ConnectionManagers,
+    ContractSyncMetrics, IndexDataTypes, NomadAgent, NomadDB,
 };
 use nomad_core::{
     ChainCommunicationError, Common, CommonEvents, ConnectionManager, DoubleUpdate,
@@ -520,11 +520,32 @@ impl NomadAgent for Watcher {
                 .sync(Self::AGENT_NAME.to_owned(), indexer.from(), indexer.chunk_size(), sync_metrics.clone(), IndexDataTypes::Updates);
 
             let replica_sync_tasks: Vec<Instrumented<JoinHandle<Result<()>>>> = self.replicas().values().map(|replica| {
-                replica.sync(Self::AGENT_NAME.to_owned(), indexer.from(), indexer.chunk_size(), sync_metrics.clone())
+                let metrics = sync_metrics.clone();
+                let replica = replica.clone();
+                let from = indexer.from();
+                let chunk_size = indexer.chunk_size();
+                tokio::spawn(async move {
+                    let mut retries = 3;
+                    loop {
+                        let task = replica.sync(Self::AGENT_NAME.to_owned(), from, chunk_size, metrics.clone());
+                        match task.await? {
+                            Ok(ok) => break Ok(ok),
+                            Err(e) => {
+                                retries -= 1;
+                                if retries <= 0 {
+                                    break Err(e);
+                                }
+                            }
+                        }
+                    }
+                }).in_current_span()
             }).collect();
 
             let mut sync_tasks = vec![home_sync_task];
-            sync_tasks.extend(replica_sync_tasks);
+
+            let replica_task = tokio::spawn(async move {await_channel_tasks(replica_sync_tasks).await}).in_current_span();
+            sync_tasks.push(replica_task);
+
             let sync_task_unified = select_all(sync_tasks);
 
             let double_update_watch_task = self.watch_double_update();

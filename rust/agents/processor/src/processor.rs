@@ -371,17 +371,28 @@ impl NomadAgent for Processor {
         tokio::spawn(async move {
             let replica = replica_opt.ok_or_else(|| eyre!("No replica named {}", name))?;
 
-            Replica {
-                interval,
-                replica,
-                home,
-                db,
-                allowed,
-                denied,
-                next_message_nonce,
+            let mut retries = 3;
+
+            loop {
+                let r = Replica {
+                    interval,
+                    replica: replica.clone(),
+                    home: home.clone(),
+                    db: db.clone(),
+                    allowed: allowed.clone(),
+                    denied: denied.clone(),
+                    next_message_nonce: next_message_nonce.clone(),
+                };
+                match r.main().await? {
+                    Ok(ok) => break Ok(ok),
+                    Err(e) => {
+                        retries -= 1;
+                        if retries <= 0 {
+                            break Err(e);
+                        }
+                    }
+                }
             }
-            .main()
-            .await?
         })
         .in_current_span()
     }
