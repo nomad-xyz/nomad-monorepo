@@ -292,7 +292,7 @@ export class NomadMessage {
         // if event is returned and valid, store it to the object
         this.cache.replicaUpdate = updateLogs[0];
       } else {
-        throw new Error('multiple home updates for same root');
+        throw new Error('multiple replica updates for same root');
       }
     }
     // return the event or undefined if it wasn't found
