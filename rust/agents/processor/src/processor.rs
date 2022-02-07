@@ -275,7 +275,10 @@ impl Replica {
 
         if let Some(tx_outcome) = possible_tx_outcome {
             if !tx_outcome.executed {
-                bail!("Process transaction {:?} was reverted", tx_outcome.txid);
+                return Err(ProcessorError::ProcessTransactionReverted {
+                    tx: tx_outcome.txid,
+                }
+                .into());
             }
         }
 
