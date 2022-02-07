@@ -58,7 +58,7 @@ pub enum ProcessorError {
         /// Prover leaf
         proof_leaf: H256,
     },
-    /// Processor stored leaf conflicts with the message for the same index
+    /// Transaction reverted
     #[error("Process transaction {tx:?} was reverted.")]
     ProcessTransactionReverted {
         /// Hash of transaction that got reverted

@@ -252,7 +252,7 @@ impl Replica {
         use nomad_core::Replica;
         let status = self.replica.message_status(message.to_leaf()).await?;
 
-        let possible_tx_outcome = match status {
+        let opt_tx_outcome = match status {
             MessageStatus::None => Some(
                 self.replica
                     .prove_and_process(message.as_ref(), &proof)
@@ -273,7 +273,7 @@ impl Replica {
             }
         };
 
-        if let Some(tx_outcome) = possible_tx_outcome {
+        if let Some(tx_outcome) = opt_tx_outcome {
             if !tx_outcome.executed {
                 return Err(ProcessorError::ProcessTransactionReverted {
                     tx: tx_outcome.txid,
