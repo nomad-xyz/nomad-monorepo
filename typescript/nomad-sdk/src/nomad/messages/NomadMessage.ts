@@ -72,13 +72,13 @@ export function parseMessage(message: string): ParsedMessage {
 }
 
 /**
- * Checks for distinct (fraudulent) updates in update logs 
- * array
+ * Checks for distinct updates in update logs array. If updates are
+ * not equal, this indicates a flaw in our event query logic.
  *
  * @param updates
- * @returns True if valid, false if array contains double update
+ * @returns True if valid
  */
-function validateMultipleUpdates(updates: AnnotatedUpdate[]): boolean {
+function checkDistinctUpdates(updates: AnnotatedUpdate[]): boolean {
   return updates.every(update => {
     return update.domain === updates[0].domain
       && update.event.transactionHash === updates[0].event.transactionHash
@@ -269,7 +269,7 @@ export class NomadMessage {
       this.cache.homeUpdate = updateLogs[0];
     } else if (updateLogs.length > 1) {
       // check for distinct (fraudulent) updates
-      const validUpdates = validateMultipleUpdates(updateLogs);
+      const validUpdates = checkDistinctUpdates(updateLogs);
       if (validUpdates) {
         // if event is returned and valid, store it to the object
         this.cache.homeUpdate = updateLogs[0];
@@ -306,7 +306,7 @@ export class NomadMessage {
       this.cache.replicaUpdate = updateLogs[0];
     } else if (updateLogs.length > 1) {
       // check for distinct (fraudulent) updates
-      const validUpdates = validateMultipleUpdates(updateLogs);
+      const validUpdates = checkDistinctUpdates(updateLogs);
       if (validUpdates) {
         // if event is returned and valid, store it to the object
         this.cache.replicaUpdate = updateLogs[0];
