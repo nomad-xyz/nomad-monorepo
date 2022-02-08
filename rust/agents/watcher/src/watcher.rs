@@ -451,6 +451,8 @@ impl NomadAgent for Watcher {
 
     type Settings = Settings;
 
+    type Channel = ();
+
     #[tracing::instrument(err)]
     async fn from_settings(settings: Self::Settings) -> Result<Self>
     where
@@ -496,8 +498,12 @@ impl NomadAgent for Watcher {
         ))
     }
 
+    fn build_channel(&self, _replica: &str) -> Self::Channel {
+        panic!("Watcher::build_channel should not be called")
+    }
+
     #[tracing::instrument]
-    fn run(&self, _name: &str) -> Instrumented<tokio::task::JoinHandle<Result<()>>> {
+    fn run(_channel: Self::Channel) -> Instrumented<tokio::task::JoinHandle<Result<()>>> {
         panic!("Watcher::run should not be called. Always call run_all")
     }
 
@@ -564,7 +570,6 @@ impl NomadAgent for Watcher {
                     self.shutdown().await;
                 },
                 improper_res = improper_update_watch_task => {
-
                     if let Err(e) = improper_res? {
                         let some_base_error = e.downcast::<BaseError>()?;
                         if let BaseError::FailedHome = some_base_error {

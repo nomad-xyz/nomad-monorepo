@@ -2,20 +2,20 @@ use crate::{
     cancel_task,
     metrics::CoreMetrics,
     settings::{IndexSettings, Settings},
-    BaseError, CachingHome, CachingReplica, ContractSyncMetrics, IndexDataTypes,
+    BaseError, CachingHome, CachingReplica, ContractSyncMetrics, IndexDataTypes, NomadDB,
 };
 use async_trait::async_trait;
 use color_eyre::{eyre::WrapErr, Result};
 use futures_util::future::select_all;
-use nomad_core::db::DB;
+use nomad_core::{db::DB, Common};
 use tracing::instrument::Instrumented;
-use tracing::{info_span, Instrument};
+use tracing::{error, info_span, Instrument};
 
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::{task::JoinHandle, time::sleep};
 
 /// Properties shared across all agents
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct AgentCore {
     /// A boxed Home
     pub home: Arc<CachingHome>,
@@ -31,22 +31,48 @@ pub struct AgentCore {
     pub settings: crate::settings::Settings,
 }
 
+/// Data shared across all agent run tasks
+#[derive(Debug, Clone)]
+pub struct ChannelBase {
+    /// Home
+    pub home: Arc<CachingHome>,
+    /// Replica
+    pub replica: Arc<CachingReplica>,
+    /// NomadDB keyed by home
+    pub db: NomadDB,
+}
+
 /// A trait for an application:
 ///      that runs on a replica
 /// and:
 ///     a reference to a home.
 #[async_trait]
-pub trait NomadAgent: Send + Sync + std::fmt::Debug + AsRef<AgentCore> {
+pub trait NomadAgent: Send + Sync + Sized + std::fmt::Debug + AsRef<AgentCore> {
     /// The agent's name
     const AGENT_NAME: &'static str;
 
     /// The settings object for this agent
     type Settings: AsRef<Settings>;
 
+    /// The data needed for a single channel's run task
+    type Channel: 'static + Send + Sync + Clone;
+
     /// Instantiate the agent from the standard settings object
     async fn from_settings(settings: Self::Settings) -> Result<Self>
     where
         Self: Sized;
+
+    /// Build a channel struct for a given home <> replica channel
+    fn build_channel(&self, replica: &str) -> Self::Channel;
+
+    /// Build channel base for replica's channel
+    fn channel_base(&self, replica: &str) -> ChannelBase {
+        ChannelBase {
+            home: self.home(),
+            replica: self.replica_by_name(replica).expect("!replica exist"),
+            db: NomadDB::new(self.home().name(), self.db()),
+        }
+    }
 
     /// Return a handle to the metrics registry
     fn metrics(&self) -> Arc<CoreMetrics> {
@@ -74,18 +100,29 @@ pub trait NomadAgent: Send + Sync + std::fmt::Debug + AsRef<AgentCore> {
     }
 
     /// Run the agent with the given home and replica
-    fn run(&self, replica: &str) -> Instrumented<JoinHandle<Result<()>>>;
+    fn run(channel: Self::Channel) -> Instrumented<JoinHandle<Result<()>>>;
 
     /// Run the Agent, and tag errors with the domain ID of the replica
     #[allow(clippy::unit_arg)]
     #[tracing::instrument]
-    fn run_report_error(&self, replica: &str) -> Instrumented<JoinHandle<Result<()>>> {
-        let m = format!("Task for replica named {} failed", replica);
-        let handle = self.run(replica).in_current_span();
+    fn run_report_error(&self, replica: String) -> Instrumented<JoinHandle<Result<()>>> {
+        let channel = self.build_channel(&replica);
 
-        let fut = async move { handle.await?.wrap_err(m) };
-
-        tokio::spawn(fut).in_current_span()
+        tokio::spawn(async move {
+            loop {
+                let handle = Self::run(channel.clone()).in_current_span();
+                let res = handle
+                    .await?
+                    .wrap_err(format!("Task for replica named {} failed", replica));
+                match res {
+                    Ok(_) => return Ok(()),
+                    Err(e) => {
+                        error!("Channel errored out! Error: {:?}", e);
+                    }
+                }
+            }
+        })
+        .in_current_span()
     }
 
     /// Run several agents by replica name
@@ -94,7 +131,7 @@ pub trait NomadAgent: Send + Sync + std::fmt::Debug + AsRef<AgentCore> {
         let span = info_span!("run_many");
         let handles: Vec<_> = replicas
             .iter()
-            .map(|replica| self.run_report_error(replica))
+            .map(|replica| self.run_report_error(replica.to_string()))
             .collect();
 
         tokio::spawn(async move {
@@ -159,7 +196,6 @@ pub trait NomadAgent: Send + Sync + std::fmt::Debug + AsRef<AgentCore> {
     /// `Reported` flag turns `Ok(())` into `Err(Report)` on failed home.
     #[allow(clippy::unit_arg)]
     fn watch_home_fail(&self, interval: u64) -> Instrumented<JoinHandle<Result<()>>> {
-        use nomad_core::Common;
         let span = info_span!("home_watch");
         let home = self.home();
         tokio::spawn(async move {

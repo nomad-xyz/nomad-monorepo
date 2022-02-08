@@ -1,8 +1,5 @@
 use async_trait::async_trait;
-use color_eyre::{
-    eyre::{bail, eyre},
-    Result,
-};
+use color_eyre::{eyre::bail, Result};
 use ethers::prelude::H256;
 use futures_util::future::select_all;
 use std::{
@@ -14,8 +11,8 @@ use tokio::{sync::RwLock, task::JoinHandle, time::sleep};
 use tracing::{debug, error, info, info_span, instrument, instrument::Instrumented, Instrument};
 
 use nomad_base::{
-    cancel_task, decl_agent, AgentCore, CachingHome, CachingReplica, ContractSyncMetrics,
-    IndexDataTypes, NomadAgent, NomadDB, ProcessorError,
+    cancel_task, decl_agent, AgentCore, CachingHome, CachingReplica, ChannelBase,
+    ContractSyncMetrics, IndexDataTypes, NomadAgent, NomadDB, ProcessorError,
 };
 use nomad_core::{
     accumulator::merkle::Proof, CommittedMessage, Common, Home, HomeEvents, MessageStatus,
@@ -343,12 +340,23 @@ impl Processor {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct ProcessorChannel {
+    base: ChannelBase,
+    next_message_nonce: Arc<prometheus::IntGaugeVec>,
+    allowed: Option<Arc<HashSet<H256>>>,
+    denied: Option<Arc<HashSet<H256>>>,
+    interval: u64,
+}
+
 #[async_trait]
 #[allow(clippy::unit_arg)]
 impl NomadAgent for Processor {
     const AGENT_NAME: &'static str = AGENT_NAME;
 
     type Settings = Settings;
+
+    type Channel = ProcessorChannel;
 
     async fn from_settings(settings: Self::Settings) -> Result<Self>
     where
@@ -364,29 +372,26 @@ impl NomadAgent for Processor {
         ))
     }
 
-    fn run(&self, name: &str) -> Instrumented<JoinHandle<Result<()>>> {
-        let home = self.home();
-        let next_message_nonce = self.next_message_nonce.clone();
-        let interval = self.interval;
-        let db = NomadDB::new(home.name(), self.db());
+    fn build_channel(&self, replica: &str) -> Self::Channel {
+        Self::Channel {
+            base: self.channel_base(replica),
+            next_message_nonce: self.next_message_nonce.clone(),
+            allowed: self.allowed.clone(),
+            denied: self.denied.clone(),
+            interval: self.interval,
+        }
+    }
 
-        let replica_opt = self.replica_by_name(name);
-        let name = name.to_owned();
-
-        let allowed = self.allowed.clone();
-        let denied = self.denied.clone();
-
+    fn run(channel: Self::Channel) -> Instrumented<JoinHandle<Result<()>>> {
         tokio::spawn(async move {
-            let replica = replica_opt.ok_or_else(|| eyre!("No replica named {}", name))?;
-
             Replica {
-                interval,
-                replica,
-                home,
-                db,
-                allowed,
-                denied,
-                next_message_nonce,
+                interval: channel.interval,
+                replica: channel.base.replica,
+                home: channel.base.home,
+                db: channel.base.db,
+                allowed: channel.allowed,
+                denied: channel.denied,
+                next_message_nonce: channel.next_message_nonce,
             }
             .main()
             .await?

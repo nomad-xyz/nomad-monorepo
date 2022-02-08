@@ -1,17 +1,17 @@
 use async_trait::async_trait;
-use color_eyre::{eyre::bail, Result};
+use color_eyre::Result;
 use std::{sync::Arc, time::Duration};
 use tokio::{sync::Mutex, task::JoinHandle, time::sleep};
 use tracing::{info, instrument::Instrumented, Instrument};
 
-use nomad_base::{AgentCore, CachingHome, CachingReplica, NomadAgent};
+use nomad_base::{AgentCore, CachingHome, CachingReplica, ChannelBase, NomadAgent};
 use nomad_core::{Common, CommonEvents};
 
 use crate::settings::RelayerSettings as Settings;
 
 #[derive(Debug)]
 struct UpdatePoller {
-    duration: Duration,
+    interval: u64,
     home: Arc<CachingHome>,
     replica: Arc<CachingReplica>,
     semaphore: Mutex<()>,
@@ -32,13 +32,13 @@ impl UpdatePoller {
     fn new(
         home: Arc<CachingHome>,
         replica: Arc<CachingReplica>,
-        duration: u64,
+        interval: u64,
         updates_relayed_count: prometheus::IntCounter,
     ) -> Self {
         Self {
             home,
             replica,
-            duration: Duration::from_secs(duration),
+            interval,
             semaphore: Mutex::new(()),
             updates_relayed_count,
         }
@@ -94,7 +94,7 @@ impl UpdatePoller {
         tokio::spawn(async move {
             loop {
                 self.poll_and_relay_update().await?;
-                sleep(self.duration).await;
+                sleep(Duration::from_secs(self.interval)).await;
             }
         })
     }
@@ -103,7 +103,7 @@ impl UpdatePoller {
 /// A relayer agent
 #[derive(Debug)]
 pub struct Relayer {
-    duration: u64,
+    interval: u64,
     core: AgentCore,
     updates_relayed_count: prometheus::IntCounterVec,
 }
@@ -117,7 +117,7 @@ impl AsRef<AgentCore> for Relayer {
 #[allow(clippy::unit_arg)]
 impl Relayer {
     /// Instantiate a new relayer
-    pub fn new(duration: u64, core: AgentCore) -> Self {
+    pub fn new(interval: u64, core: AgentCore) -> Self {
         let updates_relayed_count = core
             .metrics
             .new_int_counter(
@@ -128,11 +128,18 @@ impl Relayer {
             .expect("processor metric already registered -- should have be a singleton");
 
         Self {
-            duration,
+            interval,
             core,
             updates_relayed_count,
         }
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct RelayerChannel {
+    base: ChannelBase,
+    updates_relayed_count: prometheus::IntCounterVec,
+    interval: u64,
 }
 
 #[async_trait]
@@ -141,6 +148,8 @@ impl NomadAgent for Relayer {
     const AGENT_NAME: &'static str = "relayer";
 
     type Settings = Settings;
+
+    type Channel = RelayerChannel;
 
     async fn from_settings(settings: Self::Settings) -> Result<Self>
     where
@@ -152,26 +161,29 @@ impl NomadAgent for Relayer {
         ))
     }
 
-    #[tracing::instrument]
-    fn run(&self, name: &str) -> Instrumented<JoinHandle<Result<()>>> {
-        let replica_opt = self.replica_by_name(name);
-        let home = self.home();
-        let updates_relayed_count = self.updates_relayed_count.clone();
+    fn build_channel(&self, replica: &str) -> Self::Channel {
+        Self::Channel {
+            base: self.channel_base(replica),
+            updates_relayed_count: self.updates_relayed_count.clone(),
+            interval: self.interval,
+        }
+    }
 
-        let name = name.to_owned();
-        let duration = self.duration;
+    #[tracing::instrument]
+    fn run(channel: Self::Channel) -> Instrumented<JoinHandle<Result<()>>> {
+        let home = channel.base.home;
+        let replica = channel.base.replica;
 
         tokio::spawn(async move {
-            if replica_opt.is_none() {
-                bail!("No replica named {}", name);
-            }
-            let replica = replica_opt.unwrap();
-
             let update_poller = UpdatePoller::new(
                 home.clone(),
                 replica.clone(),
-                duration,
-                updates_relayed_count.with_label_values(&[home.name(), &name, Self::AGENT_NAME]),
+                channel.interval,
+                channel.updates_relayed_count.with_label_values(&[
+                    home.name(),
+                    replica.name(),
+                    Self::AGENT_NAME,
+                ]),
             );
             update_poller.spawn().await?
         })

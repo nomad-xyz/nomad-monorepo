@@ -64,14 +64,16 @@ impl Updater {
     }
 }
 
-#[async_trait]
 // This is a bit of a kludge to make from_settings work.
 // Ideally this hould be generic across all signers.
 // Right now we only have one
+#[async_trait]
 impl NomadAgent for Updater {
     const AGENT_NAME: &'static str = "updater";
 
     type Settings = Settings;
+
+    type Channel = ();
 
     async fn from_settings(settings: Self::Settings) -> Result<Self>
     where
@@ -83,7 +85,22 @@ impl NomadAgent for Updater {
         Ok(Self::new(signer, interval_seconds, core))
     }
 
-    fn run(&self, _replica: &str) -> Instrumented<JoinHandle<Result<()>>> {
+    fn build_channel(&self, _replica: &str) -> Self::Channel {
+        panic!("Updater::build_channel should not be called")
+    }
+
+    fn run(_channel: Self::Channel) -> Instrumented<JoinHandle<Result<()>>> {
+        panic!("Updater::run(channel) should not be called. Always call run_all")
+    }
+
+    fn run_many(&self, _replicas: &[&str]) -> Instrumented<JoinHandle<Result<()>>> {
+        panic!("Updater::run_many should not be called. Always call run_all")
+    }
+
+    fn run_all(self) -> Instrumented<JoinHandle<Result<()>>>
+    where
+        Self: Sized + 'static,
+    {
         // First we check that we have the correct key to sign with.
         let home = self.home();
         let address = self.signer.address();

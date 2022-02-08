@@ -1,6 +1,6 @@
 use std::{sync::Arc, time::Duration};
 
-use color_eyre::{eyre::bail, Result};
+use color_eyre::Result;
 
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
@@ -10,20 +10,20 @@ use tracing::{info, Instrument};
 
 use ethers::core::types::H256;
 
-use nomad_base::{decl_agent, AgentCore, NomadAgent};
+use nomad_base::{decl_agent, AgentCore, ChannelBase, NomadAgent};
 use nomad_core::{Common, Home, Message, Replica};
 
 use crate::settings::KathySettings as Settings;
 
 decl_agent!(Kathy {
-    duration: u64,
+    interval: u64,
     generator: ChatGenerator,
     home_lock: Arc<Mutex<()>>,
     messages_dispatched: prometheus::IntCounterVec,
 });
 
 impl Kathy {
-    pub fn new(duration: u64, generator: ChatGenerator, core: AgentCore) -> Self {
+    pub fn new(interval: u64, generator: ChatGenerator, core: AgentCore) -> Self {
         let messages_dispatched = core
             .metrics
             .new_int_counter(
@@ -34,7 +34,7 @@ impl Kathy {
             .expect("failed to register messages_dispatched_count metric");
 
         Self {
-            duration,
+            interval,
             generator,
             core,
             home_lock: Arc::new(Mutex::new(())),
@@ -43,11 +43,22 @@ impl Kathy {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct KathyChannel {
+    base: ChannelBase,
+    home_lock: Arc<Mutex<()>>,
+    generator: ChatGenerator,
+    messages_dispatched: prometheus::IntCounter,
+    interval: u64,
+}
+
 #[async_trait::async_trait]
 impl NomadAgent for Kathy {
     const AGENT_NAME: &'static str = "kathy";
 
     type Settings = Settings;
+
+    type Channel = KathyChannel;
 
     async fn from_settings(settings: Settings) -> Result<Self> {
         Ok(Self::new(
@@ -57,26 +68,31 @@ impl NomadAgent for Kathy {
         ))
     }
 
+    fn build_channel(&self, replica: &str) -> Self::Channel {
+        let base = self.channel_base(replica);
+
+        Self::Channel {
+            base: base.clone(),
+            home_lock: self.home_lock.clone(),
+            generator: self.generator.clone(),
+            messages_dispatched: self.messages_dispatched.with_label_values(&[
+                base.home.name(),
+                base.replica.name(),
+                Self::AGENT_NAME,
+            ]),
+            interval: self.interval,
+        }
+    }
+
     #[tracing::instrument]
-    fn run(&self, name: &str) -> Instrumented<JoinHandle<Result<()>>> {
-        let replica_opt = self.replica_by_name(name);
-        let name = name.to_owned();
-        let home = self.home();
-        let home_lock = self.home_lock.clone();
-
-        let mut generator = self.generator.clone();
-        let duration = Duration::from_secs(self.duration);
-
-        let messages_dispatched =
-            self.messages_dispatched
-                .with_label_values(&[home.name(), &name, Self::AGENT_NAME]);
-
+    fn run(channel: Self::Channel) -> Instrumented<JoinHandle<Result<()>>> {
         tokio::spawn(async move {
-            if replica_opt.is_none() {
-                bail!("No replica named {}", name);
-            }
-            let replica = replica_opt.unwrap();
-            let destination = replica.local_domain();
+            let home = channel.base.home;
+            let destination = channel.base.replica.local_domain();
+            let mut generator = channel.generator;
+            let home_lock = channel.home_lock;
+            let messages_dispatched = channel.messages_dispatched;
+            let interval = channel.interval;
 
             loop {
                 let msg = generator.gen_chat();
@@ -110,7 +126,7 @@ impl NomadAgent for Kathy {
                     }
                 }
 
-                sleep(duration).await;
+                sleep(Duration::from_secs(interval)).await;
             }
         })
         .in_current_span()
