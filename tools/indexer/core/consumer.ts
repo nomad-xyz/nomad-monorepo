@@ -388,13 +388,13 @@ export class NomadMessage {
           s.messageHash,
           BigNumber.from(s.leafIndex),
           s.body,
-          s.dispatchedAt,
+          s.dispatchedAt*1000,
           s.dispatchBlock
         );
-        m.timings.updated(s.updatedAt);
-        m.timings.relayed(s.relayedAt);
-        m.timings.received(s.receivedAt);
-        m.timings.processed(s.processedAt);
+        m.timings.updated(s.updatedAt*1000);
+        m.timings.relayed(s.relayedAt*1000);
+        m.timings.received(s.receivedAt*1000);
+        m.timings.processed(s.processedAt*1000);
         m.sender = s.sender || undefined;
         m.tx = s.tx || undefined;
         m.state = s.state;
@@ -758,7 +758,7 @@ export class Processor extends Consumer {
       collector.contributeToCount(m);
     });
 
-    this.messages.slice(this.messages.length - 50).forEach((m) => {
+    this.messages.slice(this.messages.length - 50).forEach((m) => { // Use last 50 message for statistics
       collector.contributeToTime(m);
     });
 

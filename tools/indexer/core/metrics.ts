@@ -4,6 +4,20 @@ import Logger from "bunyan";
 import { register } from "prom-client";
 import express, { Response } from "express";
 
+const buckets = [
+  1 * 60, // 1 min
+  5 * 60, // 5 min
+  10 * 60, // 10 min
+  20 * 60, // 20 min
+  30 * 60, // 30 min
+  60 * 60, // 1 hr
+  120 * 60, // 2 hrs
+  240 * 60, // 4 hrs
+  480 * 60, // 8 hrs
+  960 * 60, // 16 hrs
+  1920 * 60, // 32 hrs
+];
+
 export class MetricsCollector {
   readonly environment: string;
   private readonly logger: Logger;
@@ -118,24 +132,28 @@ export class IndexerCollector extends MetricsCollector {
       name: prefix + "_update_latency",
       help: "Histogram that tracks latency of how long does it take to move from dispatched to updated.",
       labelNames: ["home", "replica", "environment"],
+      buckets,
     });
 
     this.relayLatency = new Histogram({
       name: prefix + "_relay_latency",
       help: "Histogram that tracks latency of how long does it take to move from updated to relayed.",
       labelNames: ["home", "replica", "environment"],
+      buckets,
     });
 
     this.processLatency = new Histogram({
       name: prefix + "_process_latency",
       help: "Histogram that tracks latency of how long does it take to move from relayed to processed.",
       labelNames: ["home", "replica", "environment"],
+      buckets,
     });
 
     this.end2EndLatency = new Histogram({
       name: prefix + "_end2end_latency",
       help: "Histogram that tracks latency of how long does it take to move from dispatched to processed.",
       labelNames: ["home", "replica", "environment"],
+      buckets,
     });
 
 
