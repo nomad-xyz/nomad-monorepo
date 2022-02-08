@@ -1,4 +1,4 @@
-import { Gauge } from "prom-client";
+import { Gauge, Histogram } from "prom-client";
 import Logger from "bunyan";
 
 import { register } from "prom-client";
@@ -49,6 +49,11 @@ export class IndexerCollector extends MetricsCollector {
   private meanProcessTimeGauge: Gauge<string>;
   private meanEndToEndTimeGauge: Gauge<string>;
 
+  private updateLatency: Histogram<string>;
+  private relayLatency: Histogram<string>;
+  private processLatency: Histogram<string>;
+  private end2EndLatency: Histogram<string>;
+
   private homeFailedGauge: Gauge<string>;
 
   constructor(environment: string, logger: Logger) {
@@ -80,7 +85,7 @@ export class IndexerCollector extends MetricsCollector {
       labelNames: ["network", "environment"],
     });
 
-    // Time
+    // Time Gauges
 
     this.meanUpdateTimeGauge = new Gauge({
       name: prefix + "_mean_update_time",
@@ -105,6 +110,36 @@ export class IndexerCollector extends MetricsCollector {
       help: "Gauge that indicates how long does it take to move from dispatched to processed.",
       labelNames: ["network", "environment"],
     });
+
+
+    // Time Histograms
+
+    this.updateLatency = new Histogram({
+      name: prefix + "_update_latency",
+      help: "Histogram that tracks latency of how long does it take to move from dispatched to updated.",
+      labelNames: ["home", "replica", "environment"],
+    });
+
+    this.relayLatency = new Histogram({
+      name: prefix + "_relay_latency",
+      help: "Histogram that tracks latency of how long does it take to move from updated to relayed.",
+      labelNames: ["home", "replica", "environment"],
+    });
+
+    this.processLatency = new Histogram({
+      name: prefix + "_process_latency",
+      help: "Histogram that tracks latency of how long does it take to move from relayed to processed.",
+      labelNames: ["home", "replica", "environment"],
+    });
+
+    this.end2EndLatency = new Histogram({
+      name: prefix + "_end2end_latency",
+      help: "Histogram that tracks latency of how long does it take to move from dispatched to processed.",
+      labelNames: ["home", "replica", "environment"],
+    });
+
+
+    // Home Health
 
     this.homeFailedGauge = new Gauge({
       name: "nomad_monitor_home_failed",
@@ -172,5 +207,18 @@ export class IndexerCollector extends MetricsCollector {
       { network, environment: this.environment },
       homeFailed ? 1 : 0
     );
+  }
+
+  observeUpdate(home: string, replica: string, ms: number) {
+    this.updateLatency.labels(home, replica, this.environment).observe(ms)
+  }
+  observeRelayed(home: string, replica: string, ms: number) {
+    this.relayLatency.labels(home, replica, this.environment).observe(ms)
+  }
+  observeProcessed(home: string, replica: string, ms: number) {
+    this.processLatency.labels(home, replica, this.environment).observe(ms)
+  }
+  observeE2E(home: string, replica: string, ms: number) {
+    this.end2EndLatency.labels(home, replica, this.environment).observe(ms)
   }
 }

@@ -48,7 +48,7 @@ export class Orchestrator {
   healthCheckers: Map<number, HomeHealth>;
   gov: number;
   done: boolean;
-  freshStart: boolean;
+  chaseMode: boolean;
   metrics: IndexerCollector;
   logger: Logger;
   db: DB;
@@ -67,7 +67,7 @@ export class Orchestrator {
     this.healthCheckers = new Map();
     this.gov = gov;
     this.done = false;
-    this.freshStart = true;
+    this.chaseMode = true;
     this.metrics = metrics;
     this.logger = logger;
     this.db = db;
@@ -137,11 +137,37 @@ export class Orchestrator {
     }
   }
 
+  subscribeStatisticEvents() {
+    this.consumer.on('updated', (home: number, replica: number ,ms: number) => {
+      const homeName = this.domain2name(home);
+      const replicaName = this.domain2name(replica);
+      this.metrics.observeUpdate(homeName, replicaName, ms)
+    })
+
+    this.consumer.on('relayed', (home: number, replica: number ,ms: number) => {
+      const homeName = this.domain2name(home);
+      const replicaName = this.domain2name(replica);
+      this.metrics.observeRelayed(homeName, replicaName, ms)
+    })
+
+    this.consumer.on('processed', (home: number, replica: number ,ms: number, e2e: number) => {
+      const homeName = this.domain2name(home);
+      const replicaName = this.domain2name(replica);
+      this.metrics.observeProcessed(homeName, replicaName, ms)
+      this.metrics.observeE2E(homeName, replicaName, e2e)
+    })
+  }
+
   async startConsuming() {
     while (!this.done) {
       this.logger.info(`Started to reindex`);
       const start = new Date().valueOf();
       await Promise.all([this.indexAll(), this.checkAllHealth()]);
+      if (this.chaseMode) {
+        this.chaseMode = false;
+        this.subscribeStatisticEvents()
+      }
+      
       this.logger.info(
         `Finished reindexing after ${
           (new Date().valueOf() - start) / 1000
@@ -163,6 +189,10 @@ export class Orchestrator {
     }
   }
 
+  domain2name(domain: number): string {
+    return this.sdk.getDomain(domain)!.name
+  }
+
   reportMetrics(domain: number, statistics: Statistics) {
     const {
       counts: { dispatched, updated, relayed, processed },
@@ -171,7 +201,7 @@ export class Orchestrator {
 
     const homeFailed = this.healthCheckers.get(domain)!.failed;
     this.metrics.setNetworkState(
-      this.sdk.getDomain(domain)!.name,
+      this.domain2name(domain),
       dispatched,
       updated,
       relayed,

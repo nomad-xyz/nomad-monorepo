@@ -7,6 +7,7 @@ import { parseAction } from "@nomad-xyz/sdk/dist/nomad/messages/GovernanceMessag
 import { DB } from "./db";
 import Logger from "bunyan";
 import { Padded } from "./utils";
+import EventEmitter from "events";
 
 class StatisticsCollector {
   s: Statistics;
@@ -132,7 +133,7 @@ class StatisticsCollector {
   }
 }
 
-export abstract class Consumer {
+export abstract class Consumer extends EventEmitter {
   abstract consume(...evens: NomadEvent[]): Promise<void>;
   abstract stats(): Statistics;
 }
@@ -243,11 +244,11 @@ class Timings {
     processedAt: number;
     receivedAt: number;
 }): Timings {
-    const t = new Timings(Number(s.dispatchedAt)*1000);
-    t.updatedAt = Number(s.updatedAt)*1000;
-    t.relayedAt = Number(s.relayedAt)*1000;
-    t.processedAt = Number(s.processedAt)*1000;
-    t.receivedAt = Number(s.receivedAt)*1000;
+    const t = new Timings(s.dispatchedAt*1000);
+    t.updatedAt = s.updatedAt*1000;
+    t.relayedAt = s.relayedAt*1000;
+    t.processedAt = s.processedAt*1000;
+    t.receivedAt = s.receivedAt*1000;
     return t;
   }
 }
@@ -661,6 +662,7 @@ export class Processor extends Consumer {
           m.state = MsgState.Updated;
           m.timings.updated(e.ts);
           this.addToSyncQueue(m.messageHash);
+          this.emit(`updated`, m.origin, m.destination, m.timings.inUpdated())
         }
       });
   }
@@ -676,6 +678,7 @@ export class Processor extends Consumer {
           m.state = MsgState.Relayed;
           m.timings.relayed(e.ts);
           this.addToSyncQueue(m.messageHash);
+          this.emit(`relayed`, m.origin, m.destination, m.timings.inRelayed())
         }
       });
   }
@@ -687,6 +690,7 @@ export class Processor extends Consumer {
         m.state = MsgState.Processed;
         m.timings.processed(e.ts);
         this.addToSyncQueue(m.messageHash);
+        this.emit(`processed`, m.origin, m.destination, m.timings.inProcessed(), m.timings.e2e())
       }
     }
   }
