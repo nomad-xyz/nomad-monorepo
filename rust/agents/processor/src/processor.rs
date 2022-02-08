@@ -42,7 +42,7 @@ pub(crate) struct Replica {
     db: NomadDB,
     allowed: Option<Arc<HashSet<H256>>>,
     denied: Option<Arc<HashSet<H256>>>,
-    next_message_nonce: Arc<prometheus::IntGaugeVec>,
+    next_message_nonce: prometheus::IntGauge,
 }
 
 impl std::fmt::Display for Replica {
@@ -78,9 +78,7 @@ impl Replica {
                     .map(|n: u32| n + 1)
                     .unwrap_or_default();
 
-                self.next_message_nonce
-                    .with_label_values(&[self.home.name(), self.replica.name(), AGENT_NAME])
-                    .set(next_message_nonce as i64);
+                self.next_message_nonce.set(next_message_nonce as i64);
 
                 info!(
                     replica_domain,
@@ -111,13 +109,7 @@ impl Replica {
                             .store_keyed_encodable(CURRENT_NONCE, &replica_domain, &next_message_nonce)?;
 
                             next_message_nonce += 1;
-                            self.next_message_nonce
-                                .with_label_values(&[
-                                    self.home.name(),
-                                    self.replica.name(),
-                                    AGENT_NAME,
-                                ])
-                                .set(next_message_nonce as i64);
+                            self.next_message_nonce.set(next_message_nonce as i64);
                         }
                         Ok(Flow::Repeat) => {
                             // there was some fault, let's wait and then try again later when state may have moved
@@ -302,7 +294,7 @@ decl_agent!(
         allowed: Option<Arc<HashSet<H256>>>,
         denied: Option<Arc<HashSet<H256>>>,
         index_only: bool,
-        next_message_nonce: Arc<prometheus::IntGaugeVec>,
+        next_message_nonces: prometheus::IntGaugeVec,
         config: Option<S3Config>,
     }
 );
@@ -317,15 +309,14 @@ impl Processor {
         index_only: bool,
         config: Option<S3Config>,
     ) -> Self {
-        let next_message_nonce = Arc::new(
-            core.metrics
-                .new_int_gauge(
-                    "next_message_nonce",
-                    "Index of the next message to inspect",
-                    &["home", "replica", "agent"],
-                )
-                .expect("processor metric already registered -- should have be a singleton"),
-        );
+        let next_message_nonces = core
+            .metrics
+            .new_int_gauge(
+                "next_message_nonce",
+                "Index of the next message to inspect",
+                &["home", "replica", "agent"],
+            )
+            .expect("processor metric already registered -- should have be a singleton");
 
         Self {
             interval,
@@ -333,7 +324,7 @@ impl Processor {
             replica_tasks: Default::default(),
             allowed: allowed.map(Arc::new),
             denied: denied.map(Arc::new),
-            next_message_nonce,
+            next_message_nonces,
             index_only,
             config,
         }
@@ -343,7 +334,7 @@ impl Processor {
 #[derive(Debug, Clone)]
 pub struct ProcessorChannel {
     base: ChannelBase,
-    next_message_nonce: Arc<prometheus::IntGaugeVec>,
+    next_message_nonce: prometheus::IntGauge,
     allowed: Option<Arc<HashSet<H256>>>,
     denied: Option<Arc<HashSet<H256>>>,
     interval: u64,
@@ -375,7 +366,11 @@ impl NomadAgent for Processor {
     fn build_channel(&self, replica: &str) -> Self::Channel {
         Self::Channel {
             base: self.channel_base(replica),
-            next_message_nonce: self.next_message_nonce.clone(),
+            next_message_nonce: self.next_message_nonces.with_label_values(&[
+                self.home().name(),
+                replica,
+                Self::AGENT_NAME,
+            ]),
             allowed: self.allowed.clone(),
             denied: self.denied.clone(),
             interval: self.interval,

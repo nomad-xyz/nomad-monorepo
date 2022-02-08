@@ -105,7 +105,7 @@ impl UpdatePoller {
 pub struct Relayer {
     interval: u64,
     core: AgentCore,
-    updates_relayed_count: prometheus::IntCounterVec,
+    updates_relayed_counts: prometheus::IntCounterVec,
 }
 
 impl AsRef<AgentCore> for Relayer {
@@ -118,7 +118,7 @@ impl AsRef<AgentCore> for Relayer {
 impl Relayer {
     /// Instantiate a new relayer
     pub fn new(interval: u64, core: AgentCore) -> Self {
-        let updates_relayed_count = core
+        let updates_relayed_counts = core
             .metrics
             .new_int_counter(
                 "updates_relayed_count",
@@ -130,7 +130,7 @@ impl Relayer {
         Self {
             interval,
             core,
-            updates_relayed_count,
+            updates_relayed_counts,
         }
     }
 }
@@ -138,7 +138,7 @@ impl Relayer {
 #[derive(Debug, Clone)]
 pub struct RelayerChannel {
     base: ChannelBase,
-    updates_relayed_count: prometheus::IntCounterVec,
+    updates_relayed_count: prometheus::IntCounter,
     interval: u64,
 }
 
@@ -164,7 +164,11 @@ impl NomadAgent for Relayer {
     fn build_channel(&self, replica: &str) -> Self::Channel {
         Self::Channel {
             base: self.channel_base(replica),
-            updates_relayed_count: self.updates_relayed_count.clone(),
+            updates_relayed_count: self.updates_relayed_counts.with_label_values(&[
+                self.home().name(),
+                replica,
+                Self::AGENT_NAME,
+            ]),
             interval: self.interval,
         }
     }
@@ -179,11 +183,7 @@ impl NomadAgent for Relayer {
                 home.clone(),
                 replica.clone(),
                 channel.interval,
-                channel.updates_relayed_count.with_label_values(&[
-                    home.name(),
-                    replica.name(),
-                    Self::AGENT_NAME,
-                ]),
+                channel.updates_relayed_count,
             );
             update_poller.spawn().await?
         })

@@ -65,7 +65,7 @@ pub trait NomadAgent: Send + Sync + Sized + std::fmt::Debug + AsRef<AgentCore> {
     /// Build a channel struct for a given home <> replica channel
     fn build_channel(&self, replica: &str) -> Self::Channel;
 
-    /// Build channel base for replica's channel
+    /// Build channel base for home <> replica channel
     fn channel_base(&self, replica: &str) -> ChannelBase {
         ChannelBase {
             home: self.home(),
