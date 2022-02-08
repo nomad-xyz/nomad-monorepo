@@ -2,14 +2,15 @@ use crate::{
     cancel_task,
     metrics::CoreMetrics,
     settings::{IndexSettings, Settings},
-    BaseError, CachingHome, CachingReplica, ContractSyncMetrics, IndexDataTypes, NomadDB,
+    BaseError, CachingHome, CachingReplica, ChannelBase, ContractSyncMetrics, IndexDataTypes,
+    NomadDB,
 };
 use async_trait::async_trait;
 use color_eyre::{eyre::WrapErr, Result};
 use futures_util::future::select_all;
 use nomad_core::{db::DB, Common};
 use tracing::instrument::Instrumented;
-use tracing::{error, info_span, Instrument};
+use tracing::{error, info, info_span, Instrument};
 
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::{task::JoinHandle, time::sleep};
@@ -29,17 +30,6 @@ pub struct AgentCore {
     pub indexer: IndexSettings,
     /// Settings this agent was created with
     pub settings: crate::settings::Settings,
-}
-
-/// Data shared across all agent run tasks
-#[derive(Debug, Clone)]
-pub struct ChannelBase {
-    /// Home
-    pub home: Arc<CachingHome>,
-    /// Replica
-    pub replica: Arc<CachingReplica>,
-    /// NomadDB keyed by home
-    pub db: NomadDB,
 }
 
 /// A trait for an application:
@@ -113,11 +103,16 @@ pub trait NomadAgent: Send + Sync + Sized + std::fmt::Debug + AsRef<AgentCore> {
                 let handle = Self::run(channel.clone()).in_current_span();
                 let res = handle
                     .await?
-                    .wrap_err(format!("Task for replica named {} failed", replica));
+                    .wrap_err(format!("Task for replica named {} failed", &replica));
+
                 match res {
                     Ok(_) => return Ok(()),
                     Err(e) => {
-                        error!("Channel errored out! Error: {:?}", e);
+                        error!(
+                            "Channel for replica {} errored out! Error: {:?}",
+                            &replica, e
+                        );
+                        info!("Restarting channel to {}", &replica);
                     }
                 }
             }

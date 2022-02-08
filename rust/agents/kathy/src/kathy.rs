@@ -10,7 +10,7 @@ use tracing::{info, Instrument};
 
 use ethers::core::types::H256;
 
-use nomad_base::{decl_agent, AgentCore, ChannelBase, NomadAgent};
+use nomad_base::{decl_agent, decl_channel, AgentCore, CachingHome, CachingReplica, NomadAgent};
 use nomad_core::{Common, Home, Message, Replica};
 
 use crate::settings::KathySettings as Settings;
@@ -43,14 +43,12 @@ impl Kathy {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct KathyChannel {
-    base: ChannelBase,
+decl_channel!(Kathy {
     home_lock: Arc<Mutex<()>>,
     generator: ChatGenerator,
     messages_dispatched: prometheus::IntCounter,
     interval: u64,
-}
+});
 
 #[async_trait::async_trait]
 impl NomadAgent for Kathy {
@@ -69,15 +67,13 @@ impl NomadAgent for Kathy {
     }
 
     fn build_channel(&self, replica: &str) -> Self::Channel {
-        let base = self.channel_base(replica);
-
         Self::Channel {
-            base: base.clone(),
+            base: self.channel_base(replica),
             home_lock: self.home_lock.clone(),
             generator: self.generator.clone(),
             messages_dispatched: self.messages_dispatched.with_label_values(&[
-                base.home.name(),
-                base.replica.name(),
+                self.home().name(),
+                replica,
                 Self::AGENT_NAME,
             ]),
             interval: self.interval,
@@ -87,8 +83,8 @@ impl NomadAgent for Kathy {
     #[tracing::instrument]
     fn run(channel: Self::Channel) -> Instrumented<JoinHandle<Result<()>>> {
         tokio::spawn(async move {
-            let home = channel.base.home;
-            let destination = channel.base.replica.local_domain();
+            let home = channel.home();
+            let destination = channel.replica().local_domain();
             let mut generator = channel.generator;
             let home_lock = channel.home_lock;
             let messages_dispatched = channel.messages_dispatched;

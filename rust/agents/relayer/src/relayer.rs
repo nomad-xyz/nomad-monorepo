@@ -4,7 +4,7 @@ use std::{sync::Arc, time::Duration};
 use tokio::{sync::Mutex, task::JoinHandle, time::sleep};
 use tracing::{info, instrument::Instrumented, Instrument};
 
-use nomad_base::{AgentCore, CachingHome, CachingReplica, ChannelBase, NomadAgent};
+use nomad_base::{decl_agent, decl_channel, AgentCore, CachingHome, CachingReplica, NomadAgent};
 use nomad_core::{Common, CommonEvents};
 
 use crate::settings::RelayerSettings as Settings;
@@ -100,19 +100,10 @@ impl UpdatePoller {
     }
 }
 
-/// A relayer agent
-#[derive(Debug)]
-pub struct Relayer {
-    interval: u64,
-    core: AgentCore,
+decl_agent!(Relayer {
     updates_relayed_counts: prometheus::IntCounterVec,
-}
-
-impl AsRef<AgentCore> for Relayer {
-    fn as_ref(&self) -> &AgentCore {
-        &self.core
-    }
-}
+    interval: u64,
+});
 
 #[allow(clippy::unit_arg)]
 impl Relayer {
@@ -135,12 +126,10 @@ impl Relayer {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct RelayerChannel {
-    base: ChannelBase,
+decl_channel!(Relayer {
     updates_relayed_count: prometheus::IntCounter,
     interval: u64,
-}
+});
 
 #[async_trait]
 #[allow(clippy::unit_arg)]
@@ -175,13 +164,10 @@ impl NomadAgent for Relayer {
 
     #[tracing::instrument]
     fn run(channel: Self::Channel) -> Instrumented<JoinHandle<Result<()>>> {
-        let home = channel.base.home;
-        let replica = channel.base.replica;
-
         tokio::spawn(async move {
             let update_poller = UpdatePoller::new(
-                home.clone(),
-                replica.clone(),
+                channel.home(),
+                channel.replica(),
                 channel.interval,
                 channel.updates_relayed_count,
             );

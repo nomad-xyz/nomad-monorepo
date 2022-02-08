@@ -11,7 +11,7 @@ use tokio::{sync::RwLock, task::JoinHandle, time::sleep};
 use tracing::{debug, error, info, info_span, instrument, instrument::Instrumented, Instrument};
 
 use nomad_base::{
-    cancel_task, decl_agent, AgentCore, CachingHome, CachingReplica, ChannelBase,
+    cancel_task, decl_agent, decl_channel, AgentCore, CachingHome, CachingReplica,
     ContractSyncMetrics, IndexDataTypes, NomadAgent, NomadDB, ProcessorError,
 };
 use nomad_core::{
@@ -331,14 +331,12 @@ impl Processor {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct ProcessorChannel {
-    base: ChannelBase,
+decl_channel!(Processor {
     next_message_nonce: prometheus::IntGauge,
     allowed: Option<Arc<HashSet<H256>>>,
     denied: Option<Arc<HashSet<H256>>>,
     interval: u64,
-}
+});
 
 #[async_trait]
 #[allow(clippy::unit_arg)]
@@ -381,9 +379,9 @@ impl NomadAgent for Processor {
         tokio::spawn(async move {
             Replica {
                 interval: channel.interval,
-                replica: channel.base.replica,
-                home: channel.base.home,
-                db: channel.base.db,
+                replica: channel.replica(),
+                home: channel.home(),
+                db: channel.db(),
                 allowed: channel.allowed,
                 denied: channel.denied,
                 next_message_nonce: channel.next_message_nonce,
