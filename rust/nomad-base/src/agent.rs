@@ -12,7 +12,11 @@ use nomad_core::{db::DB, Common};
 use tracing::instrument::Instrumented;
 use tracing::{error, info, info_span, Instrument};
 
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use std::{
+    collections::HashMap,
+    sync::Arc,
+    time::{Duration, SystemTime},
+};
 use tokio::{task::JoinHandle, time::sleep};
 
 /// Properties shared across all agents
@@ -92,14 +96,22 @@ pub trait NomadAgent: Send + Sync + Sized + std::fmt::Debug + AsRef<AgentCore> {
     /// Run the agent with the given home and replica
     fn run(channel: Self::Channel) -> Instrumented<JoinHandle<Result<()>>>;
 
-    /// Run the Agent, and tag errors with the domain ID of the replica
+    /// Run the agent for a given channel. If the channel dies, exponentially
+    /// retry. If failures are more than 5 minutes apart, reset exponential
+    /// backoff (likely unrelated after that point).
     #[allow(clippy::unit_arg)]
     #[tracing::instrument]
     fn run_report_error(&self, replica: String) -> Instrumented<JoinHandle<Result<()>>> {
         let channel = self.build_channel(&replica);
+        let channel_faults_gauge = self
+            .metrics()
+            .channel_specific_gauge(self.home().name(), &replica);
 
         tokio::spawn(async move {
+            let mut exponential = 0;
             loop {
+                let running_time = SystemTime::now();
+
                 let handle = Self::run(channel.clone()).in_current_span();
                 let res = handle
                     .await?
@@ -112,7 +124,23 @@ pub trait NomadAgent: Send + Sync + Sized + std::fmt::Debug + AsRef<AgentCore> {
                             "Channel for replica {} errored out! Error: {:?}",
                             &replica, e
                         );
-                        info!("Restarting channel to {}", &replica);
+                        channel_faults_gauge.inc();
+
+                        // If running time >= 5 minutes, current failure likely
+                        // unrelated to previous
+                        if running_time.elapsed().unwrap().as_secs() >= 300 {
+                            exponential = 0;
+                        } else {
+                            exponential += 1;
+                        }
+
+                        let sleep_time = 2u64.pow(exponential);
+                        info!(
+                            "Restarting channel to {} in {} seconds",
+                            &replica, sleep_time
+                        );
+
+                        sleep(Duration::from_secs(sleep_time)).await;
                     }
                 }
             }

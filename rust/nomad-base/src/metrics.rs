@@ -2,7 +2,7 @@
 
 use color_eyre::Result;
 use prometheus::{
-    Encoder, HistogramOpts, HistogramVec, IntCounterVec, IntGaugeVec, Opts, Registry,
+    Encoder, HistogramOpts, HistogramVec, IntCounterVec, IntGauge, IntGaugeVec, Opts, Registry,
 };
 use std::sync::Arc;
 use tokio::task::JoinHandle;
@@ -13,6 +13,7 @@ pub struct CoreMetrics {
     agent_name: String,
     transactions: Box<IntGaugeVec>,
     wallet_balance: Box<IntGaugeVec>,
+    channel_faults: Box<IntGaugeVec>,
     rpc_latencies: Box<HistogramVec>,
     span_durations: Box<HistogramVec>,
     listen_port: Option<u16>,
@@ -46,6 +47,15 @@ impl CoreMetrics {
                 .namespace("nomad")
                 .const_label("VERSION", env!("CARGO_PKG_VERSION")),
                 &["chain", "wallet", "agent"],
+            )?),
+            channel_faults: Box::new(IntGaugeVec::new(
+                Opts::new(
+                    "channel_faults",
+                    "Number of per home <> replica channel faults (errors)",
+                )
+                .namespace("nomad")
+                .const_label("VERSION", env!("CARGO_PKG_VERSION")),
+                &["home", "replica", "agent"],
             )?),
             rpc_latencies: Box::new(HistogramVec::new(
                 HistogramOpts::new(
@@ -147,6 +157,12 @@ impl CoreMetrics {
         self.wallet_balance
             .with_label_values(&[chain, &format!("{:x}", address), &self.agent_name])
             .set(current_balance.as_u64() as i64) // XXX: truncated data
+    }
+
+    /// Return single gauge for one home <> replica channel
+    pub fn channel_specific_gauge(&self, home: &str, replica: &str) -> IntGauge {
+        self.channel_faults
+            .with_label_values(&[home, replica, &self.agent_name])
     }
 
     /// Call with RPC duration after it is complete
