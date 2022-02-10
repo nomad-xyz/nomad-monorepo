@@ -8,6 +8,69 @@ import { ethers } from "ethers";
 import { KVCache, replacer, retry, reviver } from "./utils";
 import { BridgeRouter } from "@nomad-xyz/contract-interfaces/bridge";
 import pLimit from 'p-limit';
+import { TypedEvent } from "@nomad-xyz/contract-interfaces/core/commons";
+import { Result } from "ethers/lib/utils";
+
+type ShortTx = {
+  gasPrice?: ethers.BigNumber,
+  timestamp: number,
+  from: string,
+  to?: string,
+  gasLimit: ethers.BigNumber,
+};
+
+function txEncode(tx: ShortTx): string  {
+  const {
+    gasPrice, // ?
+    timestamp,
+    from,
+    to, // ?
+    gasLimit, 
+  } = tx as ShortTx;
+  return JSON.stringify({
+    gasPrice, // ?
+    timestamp,
+    from,
+    to, // ?
+    gasLimit, 
+  }, replacer)
+}
+
+function txDecode(encoded: string): ShortTx {
+  return JSON.parse(encoded, reviver)
+}
+
+type ShortTxReceipt = {
+  effectiveGasPrice: ethers.BigNumber,
+  cumulativeGasUsed: ethers.BigNumber,
+  gasUsed: ethers.BigNumber,
+  from: string,
+  to: string,
+  status?: number,
+};
+
+function txReceiptEncode(receipt: ethers.providers.TransactionReceipt): string  {
+  const {
+    effectiveGasPrice,
+    cumulativeGasUsed,
+    from,
+    to,
+    gasUsed,
+    status,
+  } = receipt as ShortTxReceipt;
+  return JSON.stringify({
+    effectiveGasPrice,
+    cumulativeGasUsed,
+    from,
+    to,
+    gasUsed,
+    status, 
+  }, replacer)
+}
+
+function txReceiptDecode(encoded: string): ShortTxReceipt {
+  return JSON.parse(encoded, reviver)
+}
 
 
 const BATCH_SIZE = process.env.BATCH_SIZE ? parseInt(process.env.BATCH_SIZE) : 2000;
@@ -20,6 +83,9 @@ export class Indexer {
   orchestrator: Orchestrator;
   persistance: Persistance;
   blockCache: KVCache;
+  blockTimestampCache: KVCache;
+  txCache: KVCache;
+  txReceiptCache: KVCache;
   limit: pLimit.Limit;
 
   eventCallback: undefined | ((event: NomadEvent) => void);
@@ -31,7 +97,10 @@ export class Indexer {
     this.persistance = new RamPersistance(
       `/tmp/persistance_${this.domain}.json`
     );
-    this.blockCache = new KVCache(String(this.domain), this.orchestrator.db);
+    this.blockCache = new KVCache('b_' + String(this.domain), this.orchestrator.db);
+    this.blockTimestampCache = new KVCache('bts_' + String(this.domain), this.orchestrator.db);
+    this.txCache = new KVCache('tx_' + String(this.domain), this.orchestrator.db);
+    this.txReceiptCache = new KVCache('txr_' + String(this.domain), this.orchestrator.db);
     // 20 concurrent requests per indexer
     this.limit = pLimit(100);
   }
@@ -40,7 +109,7 @@ export class Indexer {
     return this.sdk.getProvider(this.domain)!;
   }
 
-  async getBlockInfo(
+  async getBlockInfoLegacy(
     blockNumber: number
   ): Promise<[number, Map<string, string>]> {
     const possibleBlock = await this.blockCache.get(String(blockNumber));
@@ -81,6 +150,145 @@ export class Indexer {
     );
     // await this.block2timeCache.set(String(blockNumber), String(block.transactions.map(tx => tx.from).join(',')));
     return [time, senders2hashes];
+  }
+
+  async getBlockTimestamp(blockNumber: number): Promise<number> {
+    const possible = await this.blockTimestampCache.get(String(blockNumber));
+    if (possible) {
+      // this.orchestrator.logger.debug(`Gound transaction receipt in DB: ${hash}`);
+      return parseInt(possible)
+    }
+
+    const [block, error] = await retry(
+      async () => {
+        return await this.limit(() => this.provider.getBlock(blockNumber))
+      },
+      RETRIES,
+      (error: any) =>
+        this.orchestrator.logger.warn(
+          `Retrying after RPC Error... Block number: ${blockNumber}, Domain: ${this.domain}, Error: ${error.code}`
+        )
+    );
+    if (!block) {
+      throw new Error(
+        `An RPC foo error occured, retried exhausted. Block number: ${blockNumber} Domain: ${this.domain}, Error: ${error}`
+      );
+    }
+
+    const timestamp = block.timestamp * 1000;
+
+    await this.blockTimestampCache.set(
+      String(blockNumber),
+      String(timestamp)
+    );
+
+    // this.orchestrator.logger.debug(`Finished transaction receipt fetch: ${hash}`);
+
+    return timestamp
+  }
+
+  
+
+  async getTransaction(hash: string, forceTimestamp=false): Promise<ShortTx> {
+    const possible = await this.txCache.get(hash);
+    if (possible) {
+      // this.orchestrator.logger.debug(`Gound transaction in DB: ${hash}`);
+      return txDecode(possible)
+    }
+
+    const [tx, error] = await retry(
+      async () => {
+        return await this.limit(() => this.provider.getTransaction(hash))
+      },
+      RETRIES,
+      (error: any) =>
+        this.orchestrator.logger.warn(
+          `Retrying after RPC Error... TX hash: ${hash}, Domain: ${this.domain}, Error: ${error.code}`
+        )
+    );
+    if (!tx) {
+      throw new Error(
+        `An RPC foo error occured, retried exhausted. TX hash: ${hash} Domain: ${this.domain}, Error: ${error}`
+      );
+    }
+
+    let timestamp: number;
+
+    if (forceTimestamp) {
+      this.orchestrator.logger.debug(`Using real time timestamp for: ${hash}, ${forceTimestamp} || ${tx.timestamp}`);
+
+      timestamp = new Date().valueOf()
+    } else if (!tx.timestamp) {
+
+      if (!tx.blockNumber) throw new Error(
+        `An RPC foo error occured. TX hash: ${hash} has no blockNumber. WTF?`
+      );
+
+      timestamp = await this.getBlockTimestamp(tx.blockNumber!)
+    } else {
+      timestamp = tx.timestamp! * 1000;
+    }
+
+    let shortTx = {
+      gasPrice: tx.gasPrice,
+      timestamp,
+      from: tx.from,
+      to: tx.to,
+      gasLimit: tx.gasLimit,
+    };
+
+
+    await this.txCache.set(
+      hash,
+      txEncode(shortTx)
+    );
+
+    // this.orchestrator.logger.debug(`Finished transaction fetch: ${hash}`);
+
+    return shortTx;
+  }
+
+  async getTransactionReceipt(hash: string): Promise<ShortTxReceipt> {
+    const possible = await this.txReceiptCache.get(hash);
+    if (possible) {
+      // this.orchestrator.logger.debug(`Gound transaction receipt in DB: ${hash}`);
+      return txReceiptDecode(possible)
+    }
+
+    const [receipt, error] = await retry(
+      async () => {
+        return await this.limit(() => this.provider.getTransactionReceipt(hash))
+      },
+      RETRIES,
+      (error: any) =>
+        this.orchestrator.logger.warn(
+          `Retrying after RPC Error... TX hash: ${hash}, Domain: ${this.domain}, Error: ${error.code}`
+        )
+    );
+    if (!receipt) {
+      throw new Error(
+        `An RPC foo error occured, retried exhausted. TX hash: ${hash} Domain: ${this.domain}, Error: ${error}`
+      );
+    }
+
+    await this.txReceiptCache.set(
+      hash,
+      txReceiptEncode(receipt)
+    );
+
+    // this.orchestrator.logger.debug(`Finished transaction receipt fetch: ${hash}`);
+
+    return receipt
+  }
+
+  async getAdditionalInfo(hash: string): Promise<{timestamp: number, gasUsed: ethers.BigNumber, from: string}> {
+    const {timestamp} = await this.getTransaction(hash, !this.orchestrator.chaseMode);
+
+    const {gasUsed, from} = await this.getTransactionReceipt(hash);
+
+    // this.orchestrator.logger.debug(`Done with TX: ${hash}`);
+
+    return {timestamp, gasUsed, from}
   }
 
   async init() {
@@ -168,7 +376,7 @@ export class Indexer {
         const pastTo = batchTo;
         batchFrom = batchFrom - batchSize/2;
         batchTo = batchFrom + batchSize;
-        this.orchestrator.logger.warn(`Integrity test not passed for ${this.domain} between ${pastFrom} and ${pastTo}, recollecting between ${batchFrom} and ${batchTo},: ${e}`);
+        this.orchestrator.logger.warn(`Integrity test not passed for ${this.domain} between ${pastFrom} and ${pastTo}, recollecting between ${batchFrom} and ${batchTo}: ${e}`);
         continue;
       }
       allEvents.push(...events.filter(newEvent => allEvents.every(oldEvent => newEvent.uniqueHash() !== oldEvent.uniqueHash())));
@@ -191,7 +399,7 @@ export class Indexer {
     let allEvents = this.persistance.allEvents();
     if (blockTo) allEvents = allEvents.filter(e => e.block <= blockTo);
     if (allEvents.length === 0) {
-      this.orchestrator.logger.warn(`No events to test integrity!!!`);
+      this.orchestrator.logger.debug(`No events to test integrity!!!`);
       return ;
     }
 
@@ -284,15 +492,14 @@ export class Indexer {
       }
       const parsedEvents = await Promise.all(
         events.map(async (event) => {
-          const [ts, senders2hashes] = await this.getBlockInfo(
-            event.blockNumber
-          );
+
+          let {timestamp, gasUsed} = await this.getAdditionalInfo(event.transactionHash);
           return new NomadEvent(
             this.domain,
             EventType.BridgeRouterSend,
             ContractType.BridgeRouter,
             0,
-            ts,
+            timestamp,
             {
               token: event.args[0],
               from: event.args[1],
@@ -300,10 +507,12 @@ export class Indexer {
               toId: event.args[3],
               amount: event.args[4],
               fastLiquidityEnabled: event.args[5],
-              evmHash: senders2hashes.get(event.args[1])!,
+              evmHash: event.transactionHash,
             },
             event.blockNumber,
-            EventSource.Fetch
+            EventSource.Fetch,
+            gasUsed,
+            event.transactionHash
           );
         })
       );
@@ -333,14 +542,14 @@ export class Indexer {
       const parsedEvents = await Promise.all(
         events.map(
           async (event) => 
-            new NomadEvent(
+            {
+              let {timestamp, gasUsed, } = await this.getAdditionalInfo(event.transactionHash);
+              return new NomadEvent(
               this.domain,
               EventType.BridgeRouterReceive,
               ContractType.BridgeRouter,
               0,
-              (
-                await this.getBlockInfo(event.blockNumber)
-              )[0],
+              timestamp,
               {
                 originAndNonce: event.args[0],
                 token: event.args[1],
@@ -349,8 +558,10 @@ export class Indexer {
                 amount: event.args[4],
               },
               event.blockNumber,
-              EventSource.Fetch
-            ))
+              EventSource.Fetch,
+              gasUsed,
+              event.transactionHash,
+            )})
         )
       ;
       allEvents.push(...parsedEvents);
@@ -358,6 +569,8 @@ export class Indexer {
 
     return allEvents;
   }
+
+  
 
   async fetchHome(from: number, to: number) {
     let fetchedEvents: NomadEvent[] = [];
@@ -386,26 +599,31 @@ export class Indexer {
       const parsedEvents = await Promise.all(
         events.map(
           async (event) => 
-            new NomadEvent(
-              this.domain,
-              EventType.HomeDispatch,
-              ContractType.Home,
-              0,
-              (
-                await this.getBlockInfo(event.blockNumber)
-              )[0],
-              {
-                messageHash: event.args[0],
-                leafIndex: event.args[1],
-                destinationAndNonce: event.args[2],
-                committedRoot: event.args[3],
-                message: event.args[4],
-              },
-              event.blockNumber,
-              EventSource.Fetch
-            ))
-        )
-      ;
+            {
+              
+              let {timestamp, gasUsed} = await this.getAdditionalInfo(event.transactionHash);
+              
+              return new NomadEvent(
+                this.domain,
+                EventType.HomeDispatch,
+                ContractType.Home,
+                0,
+                timestamp,
+                {
+                  messageHash: event.args[0],
+                  leafIndex: event.args[1],
+                  destinationAndNonce: event.args[2],
+                  committedRoot: event.args[3],
+                  message: event.args[4],
+                },
+                event.blockNumber,
+                EventSource.Fetch,
+                gasUsed,
+                event.transactionHash
+              )
+            })
+        );
+      
       fetchedEvents.push(...parsedEvents);
     }
 
@@ -432,14 +650,14 @@ export class Indexer {
       const parsedEvents = await Promise.all(
         events.map(
           async (event) =>  
-            new NomadEvent(
+            {
+              let {timestamp, gasUsed} = await this.getAdditionalInfo(event.transactionHash);
+              return new NomadEvent(
               this.domain,
               EventType.HomeUpdate,
               ContractType.Home,
               0,
-              (
-                await this.getBlockInfo(event.blockNumber)
-              )[0],
+              timestamp,
               {
                 homeDomain: event.args[0],
                 oldRoot: event.args[1],
@@ -447,8 +665,10 @@ export class Indexer {
                 signature: event.args[3],
               },
               event.blockNumber,
-              EventSource.Fetch
-            ))
+              EventSource.Fetch,
+              gasUsed,
+              event.transactionHash
+            )})
         )
       ;
       fetchedEvents.push(...parsedEvents);
@@ -488,14 +708,14 @@ export class Indexer {
       const parsedEvents = await Promise.all(
         events.map(
           async (event) => 
-            new NomadEvent(
+            {
+              let {timestamp, gasUsed} = await this.getAdditionalInfo(event.transactionHash);
+              return new NomadEvent(
               this.domain,
               EventType.ReplicaUpdate,
               ContractType.Replica,
               domain,
-              (
-                await this.getBlockInfo(event.blockNumber)
-              )[0],
+              timestamp,
               {
                 homeDomain: event.args[0],
                 oldRoot: event.args[1],
@@ -503,8 +723,10 @@ export class Indexer {
                 signature: event.args[3],
               },
               event.blockNumber,
-              EventSource.Fetch
-            ))
+              EventSource.Fetch,
+              gasUsed,
+              event.transactionHash
+            )})
         )
       ;
       fetchedEvents.push(...parsedEvents);
@@ -537,22 +759,24 @@ export class Indexer {
       const parsedEvents = await Promise.all(
         events.map(
           async (event) => 
-            new NomadEvent(
+            {
+              let {timestamp, gasUsed} = await this.getAdditionalInfo(event.transactionHash);
+              return new NomadEvent(
               this.domain,
               EventType.ReplicaProcess,
               ContractType.Replica,
               domain,
-              (
-                await this.getBlockInfo(event.blockNumber)
-              )[0],
+              timestamp,
               {
                 messageHash: event.args[0],
                 success: event.args[1],
                 returnData: event.args[2],
               },
               event.blockNumber,
-              EventSource.Fetch
-            ))
+              EventSource.Fetch,
+              gasUsed,
+              event.transactionHash
+            )})
         )
       ;
       fetchedEvents.push(...parsedEvents);

@@ -146,6 +146,51 @@ enum MsgState {
   Processed,
 }
 
+
+class GasUsed {
+  dispatch: ethers.BigNumber;
+  update: ethers.BigNumber;
+  relay: ethers.BigNumber;
+  receive: ethers.BigNumber;
+  process: ethers.BigNumber;
+
+  constructor() {
+    this.dispatch = ethers.BigNumber.from(0);
+    this.update = ethers.BigNumber.from(0);
+    this.relay = ethers.BigNumber.from(0);
+    this.receive = ethers.BigNumber.from(0);
+    this.process = ethers.BigNumber.from(0);
+  }
+
+  serialize() {
+    return {
+      gasAtDispatch: this.dispatch.toHexString(),
+      gasAtUpdate: this.update.toHexString(),
+      gasAtRelay: this.relay.toHexString(),
+      gasAtReceive: this.receive.toHexString(),
+      gasAtProcess: this.process.toHexString(),
+    }
+  }
+
+  static deserialize(o: {
+    gasAtDispatch: string,
+    gasAtUpdate: string,
+    gasAtRelay: string,
+    gasAtReceive: string,
+    gasAtProcess: string,
+  }): GasUsed {
+    let g =  new GasUsed();
+    g.dispatch = ethers.BigNumber.from(o.gasAtDispatch);
+    g.update = ethers.BigNumber.from(o.gasAtUpdate);
+    g.relay = ethers.BigNumber.from(o.gasAtRelay);
+    g.receive = ethers.BigNumber.from(o.gasAtReceive);
+    g.process = ethers.BigNumber.from(o.gasAtProcess);
+    return g
+  }
+
+}
+
+
 class Timings {
   dispatchedAt: number;
   updatedAt: number;
@@ -276,6 +321,11 @@ export type MinimumSerializedNomadMessage = {
   sender: string | null,//   m.sender || '',
   tx: string | null,//   m.evm || ''
   state: MsgState,
+  gasAtDispatch: string | null,
+  gasAtUpdate: string | null,
+  gasAtRelay: string | null,
+  gasAtReceive: string | null,
+  gasAtProcess: string | null,
 }
 
 export type ExtendedSerializedNomadMessage = MinimumSerializedNomadMessage & {
@@ -311,6 +361,7 @@ export class NomadMessage {
   tx?: string;
 
   timings: Timings;
+  gasUsed: GasUsed;
 
   constructor(
     origin: number,
@@ -342,6 +393,7 @@ export class NomadMessage {
     this.state = MsgState.Dispatched;
     this.timings = new Timings(dispatchedAt);
     this.dispatchBlock = dispatchBlock;
+    this.gasUsed = new GasUsed();
   }
 
   // PADDED!
@@ -395,6 +447,13 @@ export class NomadMessage {
         m.timings.relayed(s.relayedAt*1000);
         m.timings.received(s.receivedAt*1000);
         m.timings.processed(s.processedAt*1000);
+
+        m.gasUsed.dispatch = (ethers.BigNumber.from(s.gasAtDispatch));
+        m.gasUsed.update = (ethers.BigNumber.from(s.gasAtUpdate));
+        m.gasUsed.relay = (ethers.BigNumber.from(s.gasAtRelay));
+        m.gasUsed.receive = (ethers.BigNumber.from(s.gasAtReceive));
+        m.gasUsed.process = (ethers.BigNumber.from(s.gasAtProcess));
+
         m.sender = s.sender || undefined;
         m.tx = s.tx || undefined;
         m.state = s.state;
@@ -424,6 +483,7 @@ export class NomadMessage {
       detailsHash: this.detailsHash() || null,
       tokenDomain: this.tokenDomain() || null,
       tokenId: this.tokenId()?.valueOf() || null,
+      ...this.gasUsed.serialize()
     };
   }
 
@@ -645,11 +705,13 @@ export class Processor extends Consumer {
       e.ts,
       e.block
     );
+    m.gasUsed.dispatch = e.gasUsed;
 
     this.senderRegistry.dispatch(e, m);
 
     this.add(m);
     this.addToSyncQueue(m.messageHash);
+    this.emit(`dispatched`, m.origin, m.destination, e.gasUsed)
 
     if (!this.domains.includes(e.domain)) this.domains.push(e.domain);
   }
@@ -661,8 +723,9 @@ export class Processor extends Consumer {
         if (m.state < MsgState.Updated) {
           m.state = MsgState.Updated;
           m.timings.updated(e.ts);
+          m.gasUsed.update = e.gasUsed;
           this.addToSyncQueue(m.messageHash);
-          this.emit(`updated`, m.origin, m.destination, m.timings.inUpdated())
+          this.emit(`updated`, m.origin, m.destination, m.timings.inUpdated(), e.gasUsed)
         }
       });
   }
@@ -677,8 +740,9 @@ export class Processor extends Consumer {
         if (m.state < MsgState.Relayed) {
           m.state = MsgState.Relayed;
           m.timings.relayed(e.ts);
+          m.gasUsed.relay = e.gasUsed;
           this.addToSyncQueue(m.messageHash);
-          this.emit(`relayed`, m.origin, m.destination, m.timings.inRelayed())
+          this.emit(`relayed`, m.origin, m.destination, m.timings.inRelayed(), e.gasUsed)
         }
       });
   }
@@ -689,8 +753,9 @@ export class Processor extends Consumer {
       if (m.state < MsgState.Processed) {
         m.state = MsgState.Processed;
         m.timings.processed(e.ts);
+        m.gasUsed.process = e.gasUsed;
         this.addToSyncQueue(m.messageHash);
-        this.emit(`processed`, m.origin, m.destination, m.timings.inProcessed(), m.timings.e2e())
+        this.emit(`processed`, m.origin, m.destination, m.timings.inProcessed(), m.timings.e2e(), e.gasUsed)
       }
     }
   }
@@ -709,7 +774,9 @@ export class Processor extends Consumer {
       if (m.state < MsgState.Received) {
         m.state = MsgState.Received;
         m.timings.received(e.ts);
+        m.gasUsed.receive = e.gasUsed;
         this.addToSyncQueue(m.messageHash);
+        this.emit(`received`, e.gasUsed)
       }
     }
   }
