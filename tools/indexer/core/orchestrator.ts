@@ -138,23 +138,39 @@ export class Orchestrator {
   }
 
   subscribeStatisticEvents() {
-    this.consumer.on('updated', (home: number, replica: number ,ms: number) => {
+
+    this.consumer.on('dispatched', (home: number, replica: number, gas: number) => {
       const homeName = this.domain2name(home);
       const replicaName = this.domain2name(replica);
-      this.metrics.observeUpdate(homeName, replicaName, ms)
+      this.metrics.observeDispatchGasUsage(homeName, replicaName, gas);
     })
 
-    this.consumer.on('relayed', (home: number, replica: number ,ms: number) => {
+    this.consumer.on('updated', (home: number, replica: number ,ms: number, gas: number) => {
       const homeName = this.domain2name(home);
       const replicaName = this.domain2name(replica);
-      this.metrics.observeRelayed(homeName, replicaName, ms)
+      this.metrics.observeUpdateLatency(homeName, replicaName, ms)
+      this.metrics.observeUpdateGasUsage(homeName, replicaName, gas);
     })
 
-    this.consumer.on('processed', (home: number, replica: number ,ms: number, e2e: number) => {
+    this.consumer.on('relayed', (home: number, replica: number ,ms: number, gas: number) => {
       const homeName = this.domain2name(home);
       const replicaName = this.domain2name(replica);
-      this.metrics.observeProcessed(homeName, replicaName, ms)
-      this.metrics.observeE2E(homeName, replicaName, e2e)
+      this.metrics.observeRelayLatency(homeName, replicaName, ms)
+      this.metrics.observeRelayGasUsage(homeName, replicaName, gas);
+    })
+
+    this.consumer.on('received', (home: number, replica: number, gas: number) => {
+      const homeName = this.domain2name(home);
+      const replicaName = this.domain2name(replica);
+      this.metrics.observeReceiveGasUsage(homeName, replicaName, gas);
+    })
+
+    this.consumer.on('processed', (home: number, replica: number ,ms: number, e2e: number, gas: number) => {
+      const homeName = this.domain2name(home);
+      const replicaName = this.domain2name(replica);
+      this.metrics.observeProcessLatency(homeName, replicaName, ms)
+      this.metrics.observeE2ELatency(homeName, replicaName, e2e)
+      this.metrics.observeProcessGasUsage(homeName, replicaName, gas);
     })
   }
 

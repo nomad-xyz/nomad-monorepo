@@ -68,6 +68,12 @@ export class IndexerCollector extends MetricsCollector {
   private processLatency: Histogram<string>;
   private end2EndLatency: Histogram<string>;
 
+  private dispatchGasUsage: Histogram<string>;
+  private updateGasUsage: Histogram<string>;
+  private relayGasUsage: Histogram<string>;
+  private receiveGasUsage: Histogram<string>;
+  private processGasUsage: Histogram<string>;
+
   private homeFailedGauge: Gauge<string>;
 
   constructor(environment: string, logger: Logger) {
@@ -156,6 +162,42 @@ export class IndexerCollector extends MetricsCollector {
       buckets,
     });
 
+    // Gas
+
+    this.dispatchGasUsage = new Histogram({
+      name: prefix + "_dispatch_gas_usage",
+      help: "Histogram that tracks gas usage of a transaction that initiated dispatch stage.",
+      labelNames: ["home", "replica", "environment"],
+      buckets,
+    });
+
+    this.updateGasUsage = new Histogram({
+      name: prefix + "_update_gas_usage",
+      help: "Histogram that tracks gas usage of a transaction that initiated update stage.",
+      labelNames: ["home", "replica", "environment"],
+      buckets,
+    });
+
+    this.relayGasUsage = new Histogram({
+      name: prefix + "_relay_gas_usage",
+      help: "Histogram that tracks gas usage of a transaction that initiated relay stage.",
+      labelNames: ["home", "replica", "environment"],
+      buckets,
+    });
+
+    this.receiveGasUsage = new Histogram({
+      name: prefix + "_receive_gas_usage",
+      help: "Histogram that tracks gas usage of a transaction that initiated receive stage.",
+      labelNames: ["home", "replica", "environment"],
+      buckets,
+    });
+
+    this.processGasUsage = new Histogram({
+      name: prefix + "_process_gas_usage",
+      help: "Histogram that tracks gas usage of a transaction that initiated process stage.",
+      labelNames: ["home", "replica", "environment"],
+      buckets,
+    });
 
     // Home Health
 
@@ -227,16 +269,33 @@ export class IndexerCollector extends MetricsCollector {
     );
   }
 
-  observeUpdate(home: string, replica: string, ms: number) {
+  observeUpdateLatency(home: string, replica: string, ms: number) {
     this.updateLatency.labels(home, replica, this.environment).observe(ms)
   }
-  observeRelayed(home: string, replica: string, ms: number) {
+  observeRelayLatency(home: string, replica: string, ms: number) {
     this.relayLatency.labels(home, replica, this.environment).observe(ms)
   }
-  observeProcessed(home: string, replica: string, ms: number) {
+  observeProcessLatency(home: string, replica: string, ms: number) {
     this.processLatency.labels(home, replica, this.environment).observe(ms)
   }
-  observeE2E(home: string, replica: string, ms: number) {
+  observeE2ELatency(home: string, replica: string, ms: number) {
     this.end2EndLatency.labels(home, replica, this.environment).observe(ms)
   }
+
+  observeDispatchGasUsage(home: string, replica: string, gas: number) {
+    this.dispatchGasUsage.labels(home, replica, this.environment).observe(gas)
+  }
+  observeUpdateGasUsage(home: string, replica: string, gas: number) {
+    this.updateGasUsage.labels(home, replica, this.environment).observe(gas)
+  }
+  observeRelayGasUsage(home: string, replica: string, gas: number) {
+    this.relayGasUsage.labels(home, replica, this.environment).observe(gas)
+  }
+  observeReceiveGasUsage(home: string, replica: string, gas: number) {
+    this.receiveGasUsage.labels(home, replica, this.environment).observe(gas)
+  }
+  observeProcessGasUsage(home: string, replica: string, gas: number) {
+    this.processGasUsage.labels(home, replica, this.environment).observe(gas)
+  }
+
 }

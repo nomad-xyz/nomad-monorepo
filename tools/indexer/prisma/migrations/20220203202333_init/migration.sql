@@ -36,6 +36,11 @@ CREATE TABLE "messages" (
     "body" VARCHAR NOT NULL,
     "leaf_index" VARCHAR(256) NOT NULL,
     "tx" VARCHAR(66),
+    "gas_at_dispatch" VARCHAR(256),
+    "gas_at_update" VARCHAR(256),
+    "gas_at_relay" VARCHAR(256),
+    "gas_at_receive" VARCHAR(256),
+    "gas_at_process" VARCHAR(256),
     "created_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "messages_pkey" PRIMARY KEY ("id")

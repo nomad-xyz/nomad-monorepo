@@ -81,6 +81,8 @@ export class NomadEvent {
   eventData: EventData;
   block: number;
   source: EventSource;
+  gasUsed: ethers.BigNumber;
+  tx: string;
 
   constructor(
     domain: number,
@@ -90,7 +92,9 @@ export class NomadEvent {
     ts: number,
     eventData: EventData,
     block: number,
-    source: EventSource
+    source: EventSource,
+    gasUsed: ethers.BigNumber,
+    tx: string,
   ) {
     this.domain = domain;
     this.eventType = eventType;
@@ -104,6 +108,8 @@ export class NomadEvent {
     this.eventData = eventData;
     this.block = block;
     this.source = source;
+    this.gasUsed = gasUsed;
+    this.tx = tx;
   }
 
   destinationAndNonce(): [number, number] {
@@ -140,6 +146,8 @@ export class NomadEvent {
       eventData: this.eventData,
       block: this.block,
       source: EventSource.Storage,
+      gasUsed: this.gasUsed,
+      tx: this.tx,
     };
   }
 
@@ -152,6 +160,8 @@ export class NomadEvent {
       ts: number;
       eventData: EventData;
       block: number;
+      gasUsed: ethers.BigNumber;
+      tx: string;
     };
     return new NomadEvent(
       e.domain,
@@ -161,12 +171,14 @@ export class NomadEvent {
       e.ts,
       e.eventData,
       e.block,
-      EventSource.Storage
+      EventSource.Storage,
+      e.gasUsed,
+      e.tx,
     );
   }
 
   uniqueHash(): string {
-    return hash(this.domain.toString(), this.eventType, this.replicaOrigin.toString(), this.block.toString(), uniqueHash(this.eventData))
+    return hash(this.domain.toString(), this.eventType, this.replicaOrigin.toString(), this.block.toString(), uniqueHash(this.eventData), this.gasUsed.toString(), this.tx)
   }
 }
 
