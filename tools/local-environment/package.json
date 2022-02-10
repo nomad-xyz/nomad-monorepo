@@ -21,7 +21,8 @@
     "test-tokens": "npx ts-node tests/sendTokensCase.ts",
     "test-double-update": "npx ts-node tests/watcherDoubleUpdate.ts",
     "test-improper-update": "npx ts-node tests/watcherImproperUpdate.ts",
-    "test-sdk-failed-home": "npx ts-node tests/sdkFailedHome.ts"
+    "test-sdk-failed-home": "npx ts-node tests/sdkFailedHome.ts",
+    "test-agents-die": "npx ts-node tests/agentsDieOnImproperUpdate.ts"
   },
   "author": "",
   "license": "ISC",

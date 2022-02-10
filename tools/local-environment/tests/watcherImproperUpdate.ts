@@ -85,13 +85,15 @@ async function improperUpdateCase(homeOrReplica: string) {
       2_000
     );
 
-    [, success] = await waiter.wait();
+    const something = await waiter.wait();
 
-    if (!success) throw new Error(`Fraud was not prevented in time!`);
+    if (something === null) throw new Error(`Fraud was not prevented in time!`);
 
     console.log(
       `Identified in ${(new Date().valueOf() - start) / 1000} seconds`
     );
+
+    success = true;
   } catch (e) {
     console.log(`Faced an error:`, e);
   }

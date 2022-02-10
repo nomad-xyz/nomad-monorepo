@@ -100,9 +100,10 @@ import { setupTwo } from "./common";
       2_000
     );
 
-    [, success] = await waiter.wait();
+    const something = await waiter.wait();
 
-    if (!success) throw new Error(`Fraud was not prevented in time!`);
+    if (something === null) throw new Error(`Fraud was not prevented in time!`);
+    success = true;
   } catch (e) {
     console.log(`Faced an error:`, e);
   }

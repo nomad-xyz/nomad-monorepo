@@ -42,8 +42,8 @@ export function randomTillPoint(n: number): number {
 export class Waiter<T> {
   interval: NodeJS.Timeout;
   timeout: NodeJS.Timeout;
-  promise: Promise<[T | undefined, boolean]>;
-  resolve: ((result: [T | undefined, boolean]) => void) | undefined;
+  promise: Promise<T | null>;
+  resolve: ((result: T | null) => void) | undefined;
   reject: ((error: any) => void) | undefined;
 
   constructor(
@@ -77,12 +77,12 @@ export class Waiter<T> {
   }
 
   succeed(value: T) {
-    if (this.resolve) this.resolve([value, true]);
+    if (this.resolve) this.resolve(value);
     this.stop();
   }
 
   doTimeout() {
-    if (this.resolve) this.resolve([undefined, false]);
+    if (this.resolve) this.resolve(null);
     this.stop();
   }
 
@@ -91,7 +91,7 @@ export class Waiter<T> {
     clearTimeout(this.timeout);
   }
 
-  async wait(): Promise<[T | undefined, boolean]> {
+  async wait(): Promise<T | null> {
     return await this.promise;
   }
 }

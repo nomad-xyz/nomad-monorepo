@@ -84,8 +84,8 @@ export async function sendTokensAndConfirm(
     2_000
   );
 
-  const [tokenContract, tokenCreated] = await waiter.wait();
-  if (!tokenCreated) throw new Error(`Timedout token creation at destination`);
+  const tokenContract = await waiter.wait();
+  if (tokenContract === null) throw new Error(`Timedout token creation at destination`);
 
   if (!tokenContract) throw new Error(`no token contract`);
 
@@ -110,9 +110,9 @@ export async function sendTokensAndConfirm(
     2_000
   );
 
-  const [, success] = await waiter2.wait();
+  const something = await waiter2.wait();
 
-  if (!success)
+  if (something === null)
     throw new Error(`Tokens transfer from ${from.name} to ${to.name} failed`);
 
   return tokenContract!;

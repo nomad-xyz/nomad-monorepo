@@ -55,22 +55,22 @@ import { setupTwo, waitAgentFailure } from "./common";
 
     console.log(`Submitted fraud update!`);
 
-    let testControlValue: true | undefined, testTimedOut: boolean;
-    [testControlValue, testTimedOut] = await updaterWaiter.wait();
+    let testControlValue: true | null;
+    testControlValue = await updaterWaiter.wait();
 
-    if (!testTimedOut)
+    if (testControlValue === null)
       throw new Error(`Updater test reached timeout without success`);
     if (!testControlValue)
       throw new Error(`Updater test didn't return success`);
 
-    [testControlValue, testTimedOut] = await processorWaiter.wait();
+      testControlValue = await processorWaiter.wait();
 
-    if (!testTimedOut)
+    if (testControlValue === null)
       throw new Error(`Processor test reached timeout without success`);
     if (!testControlValue)
       throw new Error(`Processor test didn't return success`);
 
-    success = testTimedOut && testControlValue;
+    success = true;
   } catch (e) {
     console.log(`Faced an error:`, e);
   }
