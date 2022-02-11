@@ -11,29 +11,31 @@ import { replacer, sleep } from "./utils";
 class HomeHealth {
   home: Home;
   domain: number;
-  healthy: boolean;
   logger: Logger;
+  metrics: IndexerCollector;
 
-  constructor(domain: number, ctx: NomadContext, logger: Logger) {
+  constructor(domain: number, ctx: NomadContext, logger: Logger, metrics: IndexerCollector) {
     this.domain = domain;
     this.home = ctx.mustGetCore(domain).home;
-    this.healthy = true;
     this.logger = logger;
+    this.metrics = metrics;
   }
 
-  async updateHealth(): Promise<void> {
+  async healthy(): Promise<boolean> {
     try {
       const state = await this.home.state();
       if (state !== 1) {
-        this.healthy = false;
+        return false;
       } else {
-        this.healthy = true;
+        return true;
       }
     } catch (e: any) {
       this.logger.warn(
         `Couldn't collect home state for ${this.domain} domain. Error: ${e.message}`
       );
+      // TODO! something
     }
+    return true; // BAD!!!
   }
 
   get failed(): boolean {
@@ -103,14 +105,25 @@ export class Orchestrator {
     return await indexer.updateAll(replicas);
   }
 
-  async checkAllHealth() {
+  async collectStatistics() {
+    const stats = this.consumer.stats();
+
     await Promise.all(
-      this.sdk.domainNumbers.map((domain: number) => this.checkHealth(domain))
+      this.sdk.domainNumbers.map(async (domain: number) => {
+        await this.checkHealth(domain);
+        const network = this.domain2name(domain);
+        const s = stats.forDomain(domain).counts;
+        this.metrics.setNumMessages('dispatched', network, s.dispatched);
+        this.metrics.setNumMessages('updated', network, s.updated);
+        this.metrics.setNumMessages('relayed', network, s.relayed);
+        this.metrics.setNumMessages('received', network, s.received);
+        this.metrics.setNumMessages('processed', network, s.processed);
+      })
     );
   }
 
   async checkHealth(domain: number) {
-    await this.healthCheckers.get(domain)!.updateHealth();
+    this.metrics.setHomeState(this.domain2name(domain), await this.healthCheckers.get(domain)!.healthy() !== true)
   }
 
   async initalFeedConsumer() {
@@ -131,8 +144,7 @@ export class Orchestrator {
 
   async initHealthCheckers() {
     for (const domain of this.sdk.domainNumbers) {
-      const checker = new HomeHealth(domain, this.sdk, this.logger);
-      await checker.updateHealth();
+      const checker = new HomeHealth(domain, this.sdk, this.logger, this.metrics);
       this.healthCheckers.set(domain, checker);
     }
   }
@@ -142,35 +154,35 @@ export class Orchestrator {
     this.consumer.on('dispatched', (home: number, replica: number, gas: number) => {
       const homeName = this.domain2name(home);
       const replicaName = this.domain2name(replica);
-      this.metrics.observeDispatchGasUsage(homeName, replicaName, gas);
+      this.metrics.observeGasUsage('dispatched', homeName, replicaName, gas);
     })
 
     this.consumer.on('updated', (home: number, replica: number ,ms: number, gas: number) => {
       const homeName = this.domain2name(home);
       const replicaName = this.domain2name(replica);
-      this.metrics.observeUpdateLatency(homeName, replicaName, ms)
-      this.metrics.observeUpdateGasUsage(homeName, replicaName, gas);
+      this.metrics.observeLatency('updated', homeName, replicaName, ms)
+      this.metrics.observeGasUsage('updated', homeName, replicaName, gas);
     })
 
     this.consumer.on('relayed', (home: number, replica: number ,ms: number, gas: number) => {
       const homeName = this.domain2name(home);
       const replicaName = this.domain2name(replica);
-      this.metrics.observeRelayLatency(homeName, replicaName, ms)
-      this.metrics.observeRelayGasUsage(homeName, replicaName, gas);
+      this.metrics.observeLatency('relayed', homeName, replicaName, ms)
+      this.metrics.observeGasUsage('relayed', homeName, replicaName, gas);
     })
 
-    this.consumer.on('received', (home: number, replica: number, gas: number) => {
+    this.consumer.on('received', (home: number, replica: number, ms: number,  gas: number) => {
       const homeName = this.domain2name(home);
       const replicaName = this.domain2name(replica);
-      this.metrics.observeReceiveGasUsage(homeName, replicaName, gas);
+      this.metrics.observeGasUsage('received', homeName, replicaName, gas);
+      this.metrics.observeLatency('received', homeName, replicaName, ms)
     })
 
     this.consumer.on('processed', (home: number, replica: number ,ms: number, e2e: number, gas: number) => {
       const homeName = this.domain2name(home);
       const replicaName = this.domain2name(replica);
-      this.metrics.observeProcessLatency(homeName, replicaName, ms)
-      this.metrics.observeE2ELatency(homeName, replicaName, e2e)
-      this.metrics.observeProcessGasUsage(homeName, replicaName, gas);
+      this.metrics.observeLatency('processed', homeName, replicaName, e2e)
+      this.metrics.observeGasUsage('processed', homeName, replicaName, gas);
     })
   }
 
@@ -178,7 +190,8 @@ export class Orchestrator {
     while (!this.done) {
       this.logger.info(`Started to reindex`);
       const start = new Date().valueOf();
-      await Promise.all([this.indexAll(), this.checkAllHealth()]);
+      await this.indexAll();
+      await this.collectStatistics();
       if (this.chaseMode) {
         this.chaseMode = false;
         this.subscribeStatisticEvents()
@@ -190,44 +203,21 @@ export class Orchestrator {
         } seconds`
       );
 
-      const stats = this.consumer.stats();
-      this.logger.debug(JSON.stringify(stats, replacer));
-
-      this.reportAllMetrics(stats);
+      this.reportAllMetrics();
 
       await sleep(30000);
     }
   }
 
-  reportAllMetrics(statistics: Statistics) {
+  reportAllMetrics() {
     for (const domain of this.sdk.domainNumbers) {
-      this.reportMetrics(domain, statistics);
+      const network = this.domain2name(domain);
+      this.metrics.setHomeState(network, this.healthCheckers.get(domain)!.failed);
     }
   }
 
   domain2name(domain: number): string {
     return this.sdk.getDomain(domain)!.name
-  }
-
-  reportMetrics(domain: number, statistics: Statistics) {
-    const {
-      counts: { dispatched, updated, relayed, processed },
-      timings: { meanUpdate, meanRelay, meanProcess, meanE2E },
-    } = statistics.forDomain(domain);
-
-    const homeFailed = this.healthCheckers.get(domain)!.failed;
-    this.metrics.setNetworkState(
-      this.domain2name(domain),
-      dispatched,
-      updated,
-      relayed,
-      processed,
-      meanUpdate,
-      meanRelay,
-      meanProcess,
-      meanE2E,
-      homeFailed
-    );
   }
 
   stop() {

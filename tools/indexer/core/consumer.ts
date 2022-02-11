@@ -40,52 +40,6 @@ class StatisticsCollector {
     this.s.counts.domainStatistics.get(domain)!.processed += 1;
   }
 
-  contributeUpdateTimings(m: NomadMessage) {
-    const inUpdateStat = m.timings.inUpdated();
-    if (inUpdateStat) {
-      this.s.timings.total.meanUpdate.add(inUpdateStat);
-      this.s.timings.domainStatistics
-        .get(m.origin)!
-        .meanUpdate.add(inUpdateStat);
-    }
-  }
-
-  contributeRelayTimings(m: NomadMessage) {
-    this.contributeUpdateTimings(m);
-    const inRelayStat = m.timings.inRelayed();
-    if (inRelayStat) {
-      this.s.timings.total.meanRelay.add(inRelayStat);
-      this.s.timings.domainStatistics.get(m.origin)!.meanRelay.add(inRelayStat);
-    }
-  }
-
-  contributeReceiveTimings(m: NomadMessage) {
-    this.contributeRelayTimings(m);
-    const inReceiveStat = m.timings.inReceived();
-    if (inReceiveStat) {
-      this.s.timings.total.meanReceive.add(inReceiveStat);
-      this.s.timings.domainStatistics
-        .get(m.origin)!
-        .meanReceive.add(inReceiveStat);
-    }
-  }
-
-  contributeProcessTimings(m: NomadMessage) {
-    this.contributeReceiveTimings(m);
-    const inProcessStat = m.timings.inProcessed();
-    if (inProcessStat) {
-      this.s.timings.total.meanProcess.add(inProcessStat);
-      this.s.timings.domainStatistics
-        .get(m.origin)!
-        .meanProcess.add(inProcessStat);
-    }
-
-    const e2e = m.timings.e2e();
-    if (e2e) {
-      this.s.timings.total.meanE2E.add(e2e);
-      this.s.timings.domainStatistics.get(m.origin)!.meanE2E.add(e2e);
-    }
-  }
 
   contributeToCount(m: NomadMessage) {
     switch (m.state) {
@@ -109,25 +63,6 @@ class StatisticsCollector {
     }
   }
 
-  contributeToTime(m: NomadMessage) {
-    switch (m.state) {
-      case MsgState.Updated:
-        this.contributeUpdateTimings(m);
-        break;
-      case MsgState.Relayed:
-        this.contributeRelayTimings(m);
-        break;
-      case MsgState.Received:
-        this.contributeReceiveTimings(m);
-        break;
-      case MsgState.Processed:
-        this.contributeProcessTimings(m);
-        break;
-      default:
-        break;
-    }
-  }
-
   stats(): Statistics {
     return this.s;
   }
@@ -145,7 +80,6 @@ enum MsgState {
   Received,
   Processed,
 }
-
 
 class GasUsed {
   dispatch: ethers.BigNumber;
@@ -222,21 +156,21 @@ class Timings {
     this.processedAt = ts;
   }
 
-  inUpdated(): number | undefined {
+  toUpdate(): number | undefined {
     if (this.updatedAt) {
       return this.updatedAt - this.dispatchedAt;
     }
     return undefined;
   }
 
-  inRelayed(): number | undefined {
+  toRelay(): number | undefined {
     if (this.relayedAt) {
       return this.relayedAt - (this.updatedAt || this.dispatchedAt); // because of the problem with time that it is not ideal from RPC we could have skipped some stages. we take the last available
     }
     return undefined;
   }
 
-  inReceived(): number | undefined {
+  toReceive(): number | undefined {
     if (this.receivedAt) {
       return (
         this.receivedAt -
@@ -246,11 +180,11 @@ class Timings {
     return undefined;
   }
 
-  inProcessed(): number | undefined {
+  toProcess(): number | undefined {
     if (this.processedAt) {
       return (
         this.processedAt -
-        (this.receivedAt ||
+        ( // Attention:   this.receivedAt is not what we are interested here 
           this.relayedAt ||
           this.updatedAt ||
           this.dispatchedAt)
@@ -259,26 +193,13 @@ class Timings {
     return undefined;
   }
 
-  e2e(): number | undefined {
-    if (this.processedAt) {
-      return (
-        this.processedAt -
-        (this.dispatchedAt ||
-          this.updatedAt ||
-          this.relayedAt ||
-          this.receivedAt)
-      ); // same as for .inRelayed() and .inProcessed() but opposit order
-    }
-    return undefined;
-  }
-
   serialize() {
     return {
-      dispatchedAt: this.dispatchedAt/1000,
-      updatedAt: this.updatedAt/1000,
-      relayedAt: this.relayedAt/1000,
-      processedAt: this.processedAt/1000,
-      receivedAt: this.receivedAt/1000,
+      dispatchedAt: Math.floor(this.dispatchedAt/1000),
+      updatedAt: Math.floor(this.updatedAt/1000),
+      relayedAt: Math.floor(this.relayedAt/1000),
+      processedAt: Math.floor(this.processedAt/1000),
+      receivedAt: Math.floor(this.receivedAt/1000),
     }
   }
 
@@ -373,7 +294,8 @@ export class NomadMessage {
     // destinationAndNonce: ethers.BigNumber,
     body: string,
     dispatchedAt: number,
-    dispatchBlock: number
+    dispatchBlock: number,
+    gasUsed?: GasUsed,
   ) {
     this.origin = origin;
     this.destination = destination;
@@ -393,7 +315,7 @@ export class NomadMessage {
     this.state = MsgState.Dispatched;
     this.timings = new Timings(dispatchedAt);
     this.dispatchBlock = dispatchBlock;
-    this.gasUsed = new GasUsed();
+    this.gasUsed = gasUsed || new GasUsed();
   }
 
   // PADDED!
@@ -673,24 +595,18 @@ export class Processor extends Consumer {
 
   async getMsgForSync(): Promise<[NomadMessage[], NomadMessage[]]> {
     let existingHashes = await this.db.getExistingHashes();
-
-    const insert: string[] = [];
-    const update: string[] = [];
-
-    this.syncQueue.forEach((hash) => {
-      if (existingHashes.indexOf(hash) < 0) {
-        insert.push(hash);
-      } else {
-        update.push(hash);
-      }
-    });
+    
+    const msgsForSync = this.syncQueue.reduce((acc: [string[], string[]], hash, i) => {
+      existingHashes.indexOf(hash) < 0 ? acc[0].push(hash) : acc[1].push(hash);
+      return acc;
+    }, [[],[]]).map(this.hash2msg.bind(this)) as [NomadMessage[], NomadMessage[]];
 
     this.syncQueue = [];
 
-    return [this.mapHashesToMessages(insert), this.mapHashesToMessages(update)];
+    return msgsForSync;
   }
 
-  mapHashesToMessages(hashes: string[]): NomadMessage[] {
+  hash2msg(hashes: string[]): NomadMessage[] {
     return hashes.map((hash) => this.getMsg(hash)!).filter((m) => !!m);
   }
 
@@ -711,7 +627,7 @@ export class Processor extends Consumer {
 
     this.add(m);
     this.addToSyncQueue(m.messageHash);
-    this.emit(`dispatched`, m.origin, m.destination, e.gasUsed)
+    this.emit(`dispatched`, m.origin, m.destination, e.gasUsed.toNumber())
 
     if (!this.domains.includes(e.domain)) this.domains.push(e.domain);
   }
@@ -725,7 +641,7 @@ export class Processor extends Consumer {
           m.timings.updated(e.ts);
           m.gasUsed.update = e.gasUsed;
           this.addToSyncQueue(m.messageHash);
-          this.emit(`updated`, m.origin, m.destination, m.timings.inUpdated(), e.gasUsed)
+          this.emit(`updated`, m.origin, m.destination, m.timings.toUpdate(), e.gasUsed.toNumber());
         }
       });
   }
@@ -742,7 +658,7 @@ export class Processor extends Consumer {
           m.timings.relayed(e.ts);
           m.gasUsed.relay = e.gasUsed;
           this.addToSyncQueue(m.messageHash);
-          this.emit(`relayed`, m.origin, m.destination, m.timings.inRelayed(), e.gasUsed)
+          this.emit(`relayed`, m.origin, m.destination, m.timings.toRelay(), e.gasUsed.toNumber());
         }
       });
   }
@@ -755,7 +671,7 @@ export class Processor extends Consumer {
         m.timings.processed(e.ts);
         m.gasUsed.process = e.gasUsed;
         this.addToSyncQueue(m.messageHash);
-        this.emit(`processed`, m.origin, m.destination, m.timings.inProcessed(), m.timings.e2e(), e.gasUsed)
+        this.emit(`processed`, m.origin, m.destination, m.timings.toProcess(), e.gasUsed.toNumber())
       }
     }
   }
@@ -776,7 +692,7 @@ export class Processor extends Consumer {
         m.timings.received(e.ts);
         m.gasUsed.receive = e.gasUsed;
         this.addToSyncQueue(m.messageHash);
-        this.emit(`received`, e.gasUsed)
+        this.emit(`received`, m.timings.toReceive(), e.gasUsed.toNumber());
       }
     }
   }
@@ -823,10 +739,6 @@ export class Processor extends Consumer {
 
     this.messages.forEach((m) => {
       collector.contributeToCount(m);
-    });
-
-    this.messages.slice(this.messages.length - 50).forEach((m) => { // Use last 50 message for statistics
-      collector.contributeToTime(m);
     });
 
     return collector.stats();
