@@ -3,7 +3,7 @@ import { Key, utils } from "../src";
 import { setupTwo } from "./common";
 
 (async () => {
-  let success = false;
+  let success: boolean | null = false;
 
   const { tom, jerry, n } = await setupTwo();
 
@@ -100,9 +100,10 @@ import { setupTwo } from "./common";
       2_000
     );
 
-    [, success] = await waiter.wait();
+    success = await waiter.wait();
 
-    if (!success) throw new Error(`Fraud was not prevented in time!`);
+    if (success === null) throw new Error(`Fraud was not prevented in time!`);
+    success = true;
   } catch (e) {
     console.log(`Faced an error:`, e);
   }
