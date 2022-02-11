@@ -87,6 +87,7 @@ export class Indexer {
   txCache: KVCache;
   txReceiptCache: KVCache;
   limit: pLimit.Limit;
+  lastBlock: number;
 
   eventCallback: undefined | ((event: NomadEvent) => void);
 
@@ -103,6 +104,7 @@ export class Indexer {
     this.txReceiptCache = new KVCache('txr_' + String(this.domain), this.orchestrator.db);
     // 20 concurrent requests per indexer
     this.limit = pLimit(100);
+    this.lastBlock = 0;
   }
 
   get provider(): ethers.providers.Provider {
@@ -318,6 +320,7 @@ export class Indexer {
 
   async updateAll(replicas: number[]) {
     let from = Math.max(
+      this.lastBlock,
       this.persistance.height,
       this.sdk.getDomain(this.domain)?.paginate?.from || 0
     );
@@ -357,7 +360,7 @@ export class Indexer {
 
     const batchSize = BATCH_SIZE;
     let batchFrom = from;
-    let batchTo = from + batchSize;
+    let batchTo = Math.min(to, from + batchSize);
 
     while (true) {
       const done = Math.floor((batchTo-from)/(to-from) * 100);
@@ -391,6 +394,7 @@ export class Indexer {
 
     this.dummyTestEventsIntegrity();
     this.orchestrator.logger.info(`Fetched all for domain ${this.domain}`);
+    this.lastBlock = to;
 
     return allEvents;
   }

@@ -174,8 +174,8 @@ export class Orchestrator {
     this.consumer.on('received', (home: number, replica: number, ms: number,  gas: number) => {
       const homeName = this.domain2name(home);
       const replicaName = this.domain2name(replica);
-      this.metrics.observeGasUsage('received', homeName, replicaName, gas);
       this.metrics.observeLatency('received', homeName, replicaName, ms)
+      this.metrics.observeGasUsage('received', homeName, replicaName, gas);
     })
 
     this.consumer.on('processed', (home: number, replica: number ,ms: number, e2e: number, gas: number) => {
