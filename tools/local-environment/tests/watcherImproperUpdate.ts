@@ -4,7 +4,7 @@ import { Key, utils } from "../src";
 import { setupTwo } from "./common";
 
 async function improperUpdateCase(homeOrReplica: string) {
-  let success = false;
+  let success: boolean | null = false;
 
   const { tom, jerry, n } = await setupTwo();
 
@@ -85,9 +85,9 @@ async function improperUpdateCase(homeOrReplica: string) {
       2_000
     );
 
-    const something = await waiter.wait();
+    success = await waiter.wait();
 
-    if (something === null) throw new Error(`Fraud was not prevented in time!`);
+    if (success === null) throw new Error(`Fraud was not prevented in time!`);
 
     console.log(
       `Identified in ${(new Date().valueOf() - start) / 1000} seconds`

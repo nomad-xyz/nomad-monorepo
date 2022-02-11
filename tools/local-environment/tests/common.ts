@@ -110,9 +110,9 @@ export async function sendTokensAndConfirm(
     2_000
   );
 
-  const something = await waiter2.wait();
+  const success = await waiter2.wait();
 
-  if (something === null)
+  if (success === null)
     throw new Error(`Tokens transfer from ${from.name} to ${to.name} failed`);
 
   return tokenContract!;
