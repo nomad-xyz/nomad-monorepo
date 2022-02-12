@@ -17,7 +17,7 @@ import {
 import { BytesLike } from "@ethersproject/bytes";
 import { Listener, Provider } from "@ethersproject/providers";
 import { FunctionFragment, EventFragment, Result } from "@ethersproject/abi";
-import { TypedEventFilter, TypedEvent, TypedListener } from "./commons";
+import type { TypedEventFilter, TypedEvent, TypedListener } from "./common";
 
 interface HomeInterface extends ethers.utils.Interface {
   functions: {
@@ -210,6 +210,58 @@ interface HomeInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: "Update"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "UpdaterSlashed"): EventFragment;
 }
+
+export type DispatchEvent = TypedEvent<
+  [string, BigNumber, BigNumber, string, string] & {
+    messageHash: string;
+    leafIndex: BigNumber;
+    destinationAndNonce: BigNumber;
+    committedRoot: string;
+    message: string;
+  }
+>;
+
+export type DoubleUpdateEvent = TypedEvent<
+  [string, [string, string], string, string] & {
+    oldRoot: string;
+    newRoot: [string, string];
+    signature: string;
+    signature2: string;
+  }
+>;
+
+export type ImproperUpdateEvent = TypedEvent<
+  [string, string, string] & {
+    oldRoot: string;
+    newRoot: string;
+    signature: string;
+  }
+>;
+
+export type NewUpdaterEvent = TypedEvent<
+  [string, string] & { oldUpdater: string; newUpdater: string }
+>;
+
+export type NewUpdaterManagerEvent = TypedEvent<
+  [string] & { updaterManager: string }
+>;
+
+export type OwnershipTransferredEvent = TypedEvent<
+  [string, string] & { previousOwner: string; newOwner: string }
+>;
+
+export type UpdateEvent = TypedEvent<
+  [number, string, string, string] & {
+    homeDomain: number;
+    oldRoot: string;
+    newRoot: string;
+    signature: string;
+  }
+>;
+
+export type UpdaterSlashedEvent = TypedEvent<
+  [string, string] & { updater: string; reporter: string }
+>;
 
 export class Home extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this;
@@ -529,6 +581,23 @@ export class Home extends BaseContract {
   };
 
   filters: {
+    "Dispatch(bytes32,uint256,uint64,bytes32,bytes)"(
+      messageHash?: BytesLike | null,
+      leafIndex?: BigNumberish | null,
+      destinationAndNonce?: BigNumberish | null,
+      committedRoot?: null,
+      message?: null
+    ): TypedEventFilter<
+      [string, BigNumber, BigNumber, string, string],
+      {
+        messageHash: string;
+        leafIndex: BigNumber;
+        destinationAndNonce: BigNumber;
+        committedRoot: string;
+        message: string;
+      }
+    >;
+
     Dispatch(
       messageHash?: BytesLike | null,
       leafIndex?: BigNumberish | null,
@@ -543,6 +612,21 @@ export class Home extends BaseContract {
         destinationAndNonce: BigNumber;
         committedRoot: string;
         message: string;
+      }
+    >;
+
+    "DoubleUpdate(bytes32,bytes32[2],bytes,bytes)"(
+      oldRoot?: null,
+      newRoot?: null,
+      signature?: null,
+      signature2?: null
+    ): TypedEventFilter<
+      [string, [string, string], string, string],
+      {
+        oldRoot: string;
+        newRoot: [string, string];
+        signature: string;
+        signature2: string;
       }
     >;
 
@@ -561,6 +645,15 @@ export class Home extends BaseContract {
       }
     >;
 
+    "ImproperUpdate(bytes32,bytes32,bytes)"(
+      oldRoot?: null,
+      newRoot?: null,
+      signature?: null
+    ): TypedEventFilter<
+      [string, string, string],
+      { oldRoot: string; newRoot: string; signature: string }
+    >;
+
     ImproperUpdate(
       oldRoot?: null,
       newRoot?: null,
@@ -568,6 +661,14 @@ export class Home extends BaseContract {
     ): TypedEventFilter<
       [string, string, string],
       { oldRoot: string; newRoot: string; signature: string }
+    >;
+
+    "NewUpdater(address,address)"(
+      oldUpdater?: null,
+      newUpdater?: null
+    ): TypedEventFilter<
+      [string, string],
+      { oldUpdater: string; newUpdater: string }
     >;
 
     NewUpdater(
@@ -578,9 +679,21 @@ export class Home extends BaseContract {
       { oldUpdater: string; newUpdater: string }
     >;
 
+    "NewUpdaterManager(address)"(
+      updaterManager?: null
+    ): TypedEventFilter<[string], { updaterManager: string }>;
+
     NewUpdaterManager(
       updaterManager?: null
     ): TypedEventFilter<[string], { updaterManager: string }>;
+
+    "OwnershipTransferred(address,address)"(
+      previousOwner?: string | null,
+      newOwner?: string | null
+    ): TypedEventFilter<
+      [string, string],
+      { previousOwner: string; newOwner: string }
+    >;
 
     OwnershipTransferred(
       previousOwner?: string | null,
@@ -588,6 +701,21 @@ export class Home extends BaseContract {
     ): TypedEventFilter<
       [string, string],
       { previousOwner: string; newOwner: string }
+    >;
+
+    "Update(uint32,bytes32,bytes32,bytes)"(
+      homeDomain?: BigNumberish | null,
+      oldRoot?: BytesLike | null,
+      newRoot?: BytesLike | null,
+      signature?: null
+    ): TypedEventFilter<
+      [number, string, string, string],
+      {
+        homeDomain: number;
+        oldRoot: string;
+        newRoot: string;
+        signature: string;
+      }
     >;
 
     Update(
@@ -603,6 +731,14 @@ export class Home extends BaseContract {
         newRoot: string;
         signature: string;
       }
+    >;
+
+    "UpdaterSlashed(address,address)"(
+      updater?: string | null,
+      reporter?: string | null
+    ): TypedEventFilter<
+      [string, string],
+      { updater: string; reporter: string }
     >;
 
     UpdaterSlashed(

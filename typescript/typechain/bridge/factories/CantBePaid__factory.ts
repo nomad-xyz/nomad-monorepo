@@ -17,8 +17,14 @@ const _bytecode =
   "0x608060405234801561001057600080fd5b5060ac8061001f6000396000f3fe608060405236607157604080517f08c379a0000000000000000000000000000000000000000000000000000000008152602060048083019190915260248201527f4e4f504500000000000000000000000000000000000000000000000000000000604482015290519081900360640190fd5b600080fdfea26469706673582212203608017e8572b24a0e8e1375cce4a5bf9e0f646f1ccc051a37b945ceab89c31a64736f6c63430007060033";
 
 export class CantBePaid__factory extends ContractFactory {
-  constructor(signer?: Signer) {
-    super(_abi, _bytecode, signer);
+  constructor(
+    ...args: [signer: Signer] | ConstructorParameters<typeof ContractFactory>
+  ) {
+    if (args.length === 1) {
+      super(_abi, _bytecode, args[0]);
+    } else {
+      super(...args);
+    }
   }
 
   deploy(

@@ -245,8 +245,14 @@ const _bytecode =
   "0x608060405234801561001057600080fd5b506040516100833803806100838339818101604052602081101561003357600080fd5b50516040805162461bcd60e51b815260206004820152601b60248201527f6578616d706c6520784170702c20646f206e6f74206465706c6f790000000000604482015290519081900360640190fdfe";
 
 export class PingPongRouter__factory extends ContractFactory {
-  constructor(signer?: Signer) {
-    super(_abi, _bytecode, signer);
+  constructor(
+    ...args: [signer: Signer] | ConstructorParameters<typeof ContractFactory>
+  ) {
+    if (args.length === 1) {
+      super(_abi, _bytecode, args[0]);
+    } else {
+      super(...args);
+    }
   }
 
   deploy(
