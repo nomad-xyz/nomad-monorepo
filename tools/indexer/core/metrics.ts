@@ -10,6 +10,7 @@ export enum RpcRequestIdentificator {
   GetTx = 'get_transaction',
   GetTxReceipt = 'get_transaction_receipt',
   GetBlockNumber = 'get_block_number',
+  GetLogs = 'get_logs',
 };
 
 export enum DbRequestType {
@@ -65,7 +66,7 @@ export class MetricsCollector {
   }
 }
 
-const prefix = `fancy_monitor`;
+const prefix = `nomad_indexer`;
 
 export class IndexerCollector extends MetricsCollector {
   private numMessages: Gauge<string>;
@@ -78,6 +79,9 @@ export class IndexerCollector extends MetricsCollector {
 
   private dbRequests: Counter<string>;
   private rpcRequests: Counter<string>;
+  private rpcLatency: Histogram<string>;
+  private rpcErrors: Counter<string>;
+  
 
 
 
@@ -106,7 +110,20 @@ export class IndexerCollector extends MetricsCollector {
       labelNames: ["identificator", "network", "environment"],
     });
 
+    this.rpcLatency = new Histogram({
+      name: prefix + "_rpc_latency",
+      help: "Histogram that tracks latency of how long does it take to make request",
+      labelNames: ["identificator", "network", "environment"],
+      buckets,
+    });
 
+    this.rpcErrors = new Counter({
+      name: prefix + "_rpc_errors",
+      help: "Counter that tracks error codes from RPC endpoint",
+      labelNames: ["code", "identificator", "network", "environment"],
+    });
+
+    
 
     // Time Histograms
 
@@ -174,5 +191,13 @@ export class IndexerCollector extends MetricsCollector {
 
   incRpcRequests(identificator: RpcRequestIdentificator, network: string, req?: number) {
     this.rpcRequests.labels(identificator, network, this.environment).inc(req)
+  }
+
+  observeRpcLatency(identificator: RpcRequestIdentificator, network: string, ms: number) {
+    this.rpcLatency.labels(identificator, network, this.environment).observe(ms)
+  }
+
+  incRpcErrors(identificator: RpcRequestIdentificator, network: string, code: string) {
+    this.rpcErrors.labels(code, identificator, network, this.environment).inc()
   }
 }

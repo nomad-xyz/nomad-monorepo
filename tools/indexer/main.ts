@@ -13,7 +13,7 @@ const program = process.env.PROGRAM! as Program;
 (async () => {
   const logger = createLogger("indexer", environment);
   const m = new IndexerCollector(environment, logger);
-  m.startServer(3000);
+  
 
   const db = new DB(m);
   await db.connect();
@@ -22,6 +22,7 @@ const program = process.env.PROGRAM! as Program;
   if (program === "api") {
     await api.run(db, logger);
   } else if (program === "core") {
+    m.startServer(3000);
     await core.run(db, environment, logger, m);
   } else {
     logger.warn(`Started both indexer and api on the same process.`);
