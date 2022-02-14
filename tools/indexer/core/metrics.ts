@@ -4,6 +4,21 @@ import Logger from "bunyan";
 import { register } from "prom-client";
 import express, { Response } from "express";
 
+export enum RpcRequestIdentificator {
+  GetBlock = 'get_block',
+  GetBlockWithTxs = 'get_block_with_transactions',
+  GetTx = 'get_transaction',
+  GetTxReceipt = 'get_transaction_receipt',
+  GetBlockNumber = 'get_block_number',
+};
+
+export enum DbRequestType {
+  Select = 'select',
+  Insert = 'insert',
+  Update = 'update',
+  Upsert = 'upsert',
+};
+
 const buckets = [
   1 * 60, // 1 min
   5 * 60, // 5 min
@@ -61,7 +76,8 @@ export class IndexerCollector extends MetricsCollector {
 
   private gasUsage: Histogram<string>;
 
-  // private dbQueries: Histogram<string>;
+  private dbRequests: Counter<string>;
+  private rpcRequests: Counter<string>;
 
 
 
@@ -76,6 +92,18 @@ export class IndexerCollector extends MetricsCollector {
       name: prefix + "_number_messages",
       help: "Gauge that indicates how many messages are in dispatch, update, relay, receive or process stages",
       labelNames: ["stage", "network", "environment"],
+    });
+
+    this.dbRequests = new Counter({
+      name: prefix + "_db_requests",
+      help: "Count that indicates how many requests are coming to the db",
+      labelNames: ["type", "environment"],
+    });
+
+    this.rpcRequests = new Counter({
+      name: prefix + "_rpc_requests",
+      help: "Count that indicates how many PRC requests are made",
+      labelNames: ["identificator", "network", "environment"],
     });
 
 
@@ -138,5 +166,13 @@ export class IndexerCollector extends MetricsCollector {
 
   observeGasUsage(stage: string, home: string, replica: string, gas: number) {
     this.gasUsage.labels(stage, home, replica, this.environment).observe(gas)
+  }
+
+  incDbRequests(type: DbRequestType, req?: number) {
+    this.dbRequests.labels(type, this.environment).inc(req)
+  }
+
+  incRpcRequests(identificator: RpcRequestIdentificator, network: string, req?: number) {
+    this.rpcRequests.labels(identificator, network, this.environment).inc(req)
   }
 }

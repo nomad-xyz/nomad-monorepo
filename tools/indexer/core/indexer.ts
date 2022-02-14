@@ -7,6 +7,7 @@ import { ethers } from "ethers";
 import { KVCache, replacer, retry, reviver } from "./utils";
 import { BridgeRouter } from "@nomad-xyz/contract-interfaces/bridge";
 import pLimit from 'p-limit';
+import { RpcRequestIdentificator } from "./metrics";
 
 type ShortTx = {
   gasPrice?: ethers.BigNumber,
@@ -108,6 +109,10 @@ export class Indexer {
     return this.sdk.getProvider(this.domain)!;
   }
 
+  get network(): string {
+    return this.orchestrator.domain2name(this.domain);
+  }
+
   async getBlockInfoLegacy(
     blockNumber: number
   ): Promise<[number, Map<string, string>]> {
@@ -123,7 +128,10 @@ export class Indexer {
 
     const [block, error] = await retry(
       async () => {
-        return await this.limit(() => this.provider.getBlockWithTransactions(blockNumber))
+        return await this.limit(() => {
+          this.orchestrator.metrics.incRpcRequests(RpcRequestIdentificator.GetBlockWithTxs, this.network)
+          return this.provider.getBlockWithTransactions(blockNumber)
+        })
       },
       RETRIES,
       (error: any) =>
@@ -160,7 +168,10 @@ export class Indexer {
 
     const [block, error] = await retry(
       async () => {
-        return await this.limit(() => this.provider.getBlock(blockNumber))
+        return await this.limit(() => {
+          this.orchestrator.metrics.incRpcRequests(RpcRequestIdentificator.GetBlock, this.network)
+          return this.provider.getBlock(blockNumber)
+        })
       },
       RETRIES,
       (error: any) =>
@@ -197,7 +208,10 @@ export class Indexer {
 
     const [tx, error] = await retry(
       async () => {
-        return await this.limit(() => this.provider.getTransaction(hash))
+        return await this.limit(() => {
+          this.orchestrator.metrics.incRpcRequests(RpcRequestIdentificator.GetTx, this.network)
+          return this.provider.getTransaction(hash)
+        })
       },
       RETRIES,
       (error: any) =>
@@ -256,7 +270,10 @@ export class Indexer {
 
     const [receipt, error] = await retry(
       async () => {
-        return await this.limit(() => this.provider.getTransactionReceipt(hash))
+        return await this.limit(() => {
+          this.orchestrator.metrics.incRpcRequests(RpcRequestIdentificator.GetTxReceipt, this.network)
+          return this.provider.getTransactionReceipt(hash)
+        })
       },
       RETRIES,
       (error: any) =>
@@ -323,6 +340,7 @@ export class Indexer {
     );
     const [to, error] = await retry(
       async () => {
+        this.orchestrator.metrics.incRpcRequests(RpcRequestIdentificator.GetBlockNumber, this.network)
         return await this.provider.getBlockNumber()
       },
       RETRIES,

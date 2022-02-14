@@ -7,7 +7,7 @@ import { DB } from "./db";
 import Logger from "bunyan";
 dotenv.config({});
 
-export async function run(db: DB, environment: string, logger: Logger) {
+export async function run(db: DB, environment: string, logger: Logger, metrics: IndexerCollector) {
   let ctx: NomadContext;
   if (environment === "production") {
     ctx = mainnet;
@@ -32,11 +32,10 @@ export async function run(db: DB, environment: string, logger: Logger) {
     ctx.registerRpcProvider(domain, rpc);
   });
 
-  const m = new IndexerCollector(environment, logger);
   const c = new Processor(db, logger);
 
-  const o = new Orchestrator(ctx, c, ctx.domainNumbers[0], m, logger, db);
-  m.startServer(3000);
+  const o = new Orchestrator(ctx, c, ctx.domainNumbers[0], metrics, logger, db);
+  
   await o.init();
   await o.startConsuming();
 }
