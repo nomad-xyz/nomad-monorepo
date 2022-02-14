@@ -627,7 +627,9 @@ export class Processor extends Consumer {
 
     this.add(m);
     this.addToSyncQueue(m.messageHash);
-    this.emit(`dispatched`, m.origin, m.destination, e.gasUsed.toNumber())
+    const gas = e.gasUsed.toNumber();
+    // this.logger.warn(`!Gas for dispatched from ${m.origin, m.destination} to ${m.origin, m.destination} (${e.tx}) = ${gas} (${e.gasUsed})`);
+    this.emit(`dispatched`, m.origin, m.destination, gas)
 
     if (!this.domains.includes(e.domain)) this.domains.push(e.domain);
   }
@@ -641,7 +643,9 @@ export class Processor extends Consumer {
           m.timings.updated(e.ts);
           m.gasUsed.update = e.gasUsed;
           this.addToSyncQueue(m.messageHash);
-          this.emit(`updated`, m.origin, m.destination, m.timings.toUpdate(), e.gasUsed.toNumber());
+          const gas = e.gasUsed.toNumber();
+          // this.logger.warn(`!Gas for dispatched from ${m.origin, m.destination} to ${m.origin, m.destination} (${e.tx}) = ${gas} (${e.gasUsed})`);
+          this.emit(`updated`, m.origin, m.destination, m.timings.toUpdate(), gas);
         }
       });
   }
@@ -658,7 +662,9 @@ export class Processor extends Consumer {
           m.timings.relayed(e.ts);
           m.gasUsed.relay = e.gasUsed;
           this.addToSyncQueue(m.messageHash);
-          this.emit(`relayed`, m.origin, m.destination, m.timings.toRelay(), e.gasUsed.toNumber());
+          const gas = e.gasUsed.toNumber();
+          // this.logger.warn(`!Gas for dispatched from ${m.origin, m.destination} to ${m.origin, m.destination} (${e.tx}) = ${gas} (${e.gasUsed})`);
+          this.emit(`relayed`, m.origin, m.destination, m.timings.toRelay(), gas);
         }
       });
   }
@@ -671,7 +677,9 @@ export class Processor extends Consumer {
         m.timings.processed(e.ts);
         m.gasUsed.process = e.gasUsed;
         this.addToSyncQueue(m.messageHash);
-        this.emit(`processed`, m.origin, m.destination, m.timings.toProcess(), e.gasUsed.toNumber())
+        const gas = e.gasUsed.toNumber();
+        // this.logger.warn(`!Gas for dispatched from ${m.origin, m.destination} to ${m.origin, m.destination} (${e.tx}) = ${gas} (${e.gasUsed})`);
+        this.emit(`processed`, m.origin, m.destination, m.timings.toProcess(), gas)
       }
     }
   }
@@ -692,7 +700,9 @@ export class Processor extends Consumer {
         m.timings.received(e.ts);
         m.gasUsed.receive = e.gasUsed;
         this.addToSyncQueue(m.messageHash);
-        this.emit(`received`, m.timings.toReceive(), e.gasUsed.toNumber());
+        const gas = e.gasUsed.toNumber();
+        // this.logger.warn(`!Gas for dispatched from ${m.origin, m.destination} to ${m.origin, m.destination} (${e.tx}) = ${gas} (${e.gasUsed})`);
+        this.emit(`received`, m.origin, m.destination, m.timings.toReceive(), gas);
       }
     }
   }

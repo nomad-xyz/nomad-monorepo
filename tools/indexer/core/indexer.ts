@@ -1,6 +1,5 @@
 import { Orchestrator } from "./orchestrator";
 import { NomadContext } from "@nomad-xyz/sdk/dist";
-import { getEvents } from "@nomad-xyz/sdk/dist/nomad/events/fetch"
 import fs from "fs";
 import { ContractType, EventType, NomadEvent, EventSource } from "./event";
 import { Home, Replica } from "@nomad-xyz/contract-interfaces/core";
@@ -8,8 +7,6 @@ import { ethers } from "ethers";
 import { KVCache, replacer, retry, reviver } from "./utils";
 import { BridgeRouter } from "@nomad-xyz/contract-interfaces/bridge";
 import pLimit from 'p-limit';
-import { TypedEvent } from "@nomad-xyz/contract-interfaces/core/commons";
-import { Result } from "ethers/lib/utils";
 
 type ShortTx = {
   gasPrice?: ethers.BigNumber,
@@ -340,6 +337,13 @@ export class Indexer {
       );
     }
 
+    if (from === to) {
+      this.orchestrator.logger.info(
+        `Skipped fetching events for domain ${this.domain} from: ${from}, to: ${to}, because from and to are the same`
+      );
+      return [];
+    }
+
     this.orchestrator.logger.info(
       `Fetching events for domain ${this.domain} from: ${from}, to: ${to}`
     );
@@ -363,7 +367,7 @@ export class Indexer {
     let batchTo = Math.min(to, from + batchSize);
 
     while (true) {
-      const done = Math.floor((batchTo-from)/(to-from) * 100);
+      const done = Math.floor((batchTo-from+1)/(to-from+1) * 100);
       this.orchestrator.logger.debug(
         `Fetching batch of events for domain ${this.domain} from: ${batchFrom}, to: ${batchTo}, [${done}%]`
       );

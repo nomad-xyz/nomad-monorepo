@@ -81,7 +81,7 @@ export class Orchestrator {
     await this.initalFeedConsumer();
   }
 
-  async indexAll() {
+  async indexAll(): Promise<number> {
     const events = (
       await Promise.all(
         this.sdk.domainNumbers.map((domain: number) => this.index(domain))
@@ -90,6 +90,7 @@ export class Orchestrator {
     events.sort((a, b) => a.ts - b.ts);
     this.logger.info(`Received ${events.length} events after reindexing`);
     await this.consumer.consume(...events);
+    return events.length
   }
 
   async index(domain: number) {
@@ -105,21 +106,24 @@ export class Orchestrator {
     return await indexer.updateAll(replicas);
   }
 
-  async collectStatistics() {
+  collectStatistics() {
     const stats = this.consumer.stats();
 
-    await Promise.all(
-      this.sdk.domainNumbers.map(async (domain: number) => {
-        await this.checkHealth(domain);
-        const network = this.domain2name(domain);
-        const s = stats.forDomain(domain).counts;
-        this.metrics.setNumMessages('dispatched', network, s.dispatched);
-        this.metrics.setNumMessages('updated', network, s.updated);
-        this.metrics.setNumMessages('relayed', network, s.relayed);
-        this.metrics.setNumMessages('received', network, s.received);
-        this.metrics.setNumMessages('processed', network, s.processed);
-      })
-    );
+    this.sdk.domainNumbers.forEach(async (domain: number) => {
+      const network = this.domain2name(domain);
+      const s = stats.forDomain(domain).counts;
+      this.metrics.setNumMessages('dispatched', network, s.dispatched);
+      this.metrics.setNumMessages('updated', network, s.updated);
+      this.metrics.setNumMessages('relayed', network, s.relayed);
+      this.metrics.setNumMessages('received', network, s.received);
+      this.metrics.setNumMessages('processed', network, s.processed);
+    })
+  }
+
+  async checkAllHealth() {
+    await Promise.all(this.sdk.domainNumbers.map(async (domain: number) => {
+      await this.checkHealth(domain);
+    }))
   }
 
   async checkHealth(domain: number) {
@@ -178,7 +182,7 @@ export class Orchestrator {
       this.metrics.observeGasUsage('received', homeName, replicaName, gas);
     })
 
-    this.consumer.on('processed', (home: number, replica: number ,ms: number, e2e: number, gas: number) => {
+    this.consumer.on('processed', (home: number, replica: number, e2e: number, gas: number) => {
       const homeName = this.domain2name(home);
       const replicaName = this.domain2name(replica);
       this.metrics.observeLatency('processed', homeName, replicaName, e2e)
@@ -190,8 +194,12 @@ export class Orchestrator {
     while (!this.done) {
       this.logger.info(`Started to reindex`);
       const start = new Date().valueOf();
-      await this.indexAll();
-      await this.collectStatistics();
+      const eventsLength = await this.indexAll();
+      await this.checkAllHealth();
+      
+      if (eventsLength > 0) this.collectStatistics();
+
+      
       if (this.chaseMode) {
         this.chaseMode = false;
         this.subscribeStatisticEvents()
@@ -205,7 +213,7 @@ export class Orchestrator {
 
       this.reportAllMetrics();
 
-      await sleep(30000);
+      await sleep(5000);
     }
   }
 
