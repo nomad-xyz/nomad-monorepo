@@ -15,7 +15,7 @@ const program = process.env.PROGRAM! as Program;
   const m = new IndexerCollector(environment, logger);
   
 
-  const db = new DB(m);
+  const db = new DB(m, logger);
   await db.connect();
 
 

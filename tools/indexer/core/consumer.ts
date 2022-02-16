@@ -283,6 +283,7 @@ export class NomadMessage {
 
   timings: Timings;
   gasUsed: GasUsed;
+  logger: Logger;
 
   constructor(
     origin: number,
@@ -295,6 +296,7 @@ export class NomadMessage {
     body: string,
     dispatchedAt: number,
     dispatchBlock: number,
+    logger: Logger,
     gasUsed?: GasUsed,
   ) {
     this.origin = origin;
@@ -316,6 +318,7 @@ export class NomadMessage {
     this.timings = new Timings(dispatchedAt);
     this.dispatchBlock = dispatchBlock;
     this.gasUsed = gasUsed || new GasUsed();
+    this.logger = logger.child({messageHash});
   }
 
   // PADDED!
@@ -350,10 +353,56 @@ export class NomadMessage {
     return this.transferMessage ? this.transferMessage?.action.detailsHash : undefined
   }
 
-  
+  update(ts: number, gasUsed: BigNumber) {
+    if (this.state < MsgState.Updated) {
+      this.logger.debug(`Updated message from state ${this.state} to ${MsgState.Updated} (Updated)`);
+      this.state = MsgState.Updated;
+      this.timings.updated(ts);
+      this.gasUsed.update = gasUsed;
+      return true;
+    }
+    this.logger.debug(`The message is in the higher state for being Updated. Want < ${MsgState.Updated}, is ${this.state}`);
+    return false;
+    
+  }
 
+  relay(ts: number, gasUsed: BigNumber) {
+    if (this.state < MsgState.Relayed) {
+      this.logger.debug(`Updated message from state ${this.state} to ${MsgState.Relayed} (Relayed)`);
+      this.state = MsgState.Relayed;
+      this.timings.relayed(ts);
+      this.gasUsed.relay = gasUsed;
+      return true;
+    }
+    this.logger.debug(`The message is in the higher state for being Relayed. Want < ${MsgState.Relayed}, is ${this.state}`);
+    return false;
+  }
 
-  static deserialize(s: MinimumSerializedNomadMessage) {
+  receive(ts: number, gasUsed: BigNumber) {
+    if (this.state < MsgState.Received) {
+      this.logger.debug(`Updated message from state ${this.state} to ${MsgState.Received} (Received)`);
+      this.state = MsgState.Received;
+      this.timings.received(ts);
+      this.gasUsed.receive = gasUsed;
+      return true;
+    }
+    this.logger.debug(`The message is in the higher state for being Received. Want < ${MsgState.Received}, is ${this.state}`);
+    return false;
+  }
+
+  process(ts: number, gasUsed: BigNumber) {
+    if (this.state < MsgState.Processed) {
+      this.logger.debug(`Updated message from state ${this.state} to ${MsgState.Processed} (Processed)`);
+      this.state = MsgState.Processed;
+      this.timings.processed(ts);
+      this.gasUsed.process = gasUsed;
+      return true;
+    }
+    this.logger.debug(`The message is in the higher state for being Proce. Want < ${MsgState.Processed}, is ${this.state}`);
+    return false;
+  }
+
+  static deserialize(s: MinimumSerializedNomadMessage, logger: Logger) {
     const m = new NomadMessage(
           s.origin,
           s.destination,
@@ -363,7 +412,8 @@ export class NomadMessage {
           BigNumber.from(s.leafIndex),
           s.body,
           s.dispatchedAt*1000,
-          s.dispatchBlock
+          s.dispatchBlock,
+          logger.child({messageSource: 'deserialize'})
         );
         m.timings.updated(s.updatedAt*1000);
         m.timings.relayed(s.relayedAt*1000);
@@ -521,8 +571,10 @@ class SenderLostAndFound {
     if (m.hasMessage !== MessageType.TransferMessage) return false;
 
     if (this.findMatchingBRSendUpdateAndRemove(e, m)) {
+      m.logger.info(`SenderLostAndFound found existing Sent event`)
       return true;
     } else {
+      m.logger.info(`SenderLostAndFound haven't found existing Sent event, pushing to dispatched`)
       this.dispatchEventsWithMessages.push([e, m]);
       return false;
     }
@@ -551,7 +603,7 @@ export class Processor extends Consumer {
     this.senderRegistry = new SenderLostAndFound(this);
 
     this.db = db;
-    this.logger = logger;
+    this.logger = logger.child({span: 'consumer'});
   }
 
   async consume(...events: NomadEvent[]): Promise<void> {
@@ -619,91 +671,99 @@ export class Processor extends Consumer {
       e.eventData.leafIndex!,
       e.eventData.message!,
       e.ts,
-      e.block
+      e.block,
+      this.logger.child({messageSource: 'consumer'}),
     );
+
+    let logger = m.logger.child({eventName: 'Dispatched'});
+
     m.gasUsed.dispatch = e.gasUsed;
 
-    this.senderRegistry.dispatch(e, m);
+    this.senderRegistry.dispatch(e, m, );
 
     this.add(m);
     this.addToSyncQueue(m.messageHash);
     const gas = e.gasUsed.toNumber();
     // this.logger.warn(`!Gas for dispatched from ${m.origin, m.destination} to ${m.origin, m.destination} (${e.tx}) = ${gas} (${e.gasUsed})`);
     this.emit(`dispatched`, m.origin, m.destination, gas)
+    logger.debug(`Created message`);
 
     if (!this.domains.includes(e.domain)) this.domains.push(e.domain);
   }
 
   homeUpdate(e: NomadEvent) {
+    let logger = this.logger.child({stage: MsgState.Updated});
     const ms = this.getMsgsByOriginAndRoot(e.domain, e.eventData.oldRoot!);
-    if (ms.length)
+    if (ms.length) {
       ms.forEach((m) => {
-        if (m.state < MsgState.Updated) {
-          m.state = MsgState.Updated;
-          m.timings.updated(e.ts);
-          m.gasUsed.update = e.gasUsed;
+        if (m.update(e.ts, e.gasUsed)) {
           this.addToSyncQueue(m.messageHash);
-          const gas = e.gasUsed.toNumber();
-          // this.logger.warn(`!Gas for dispatched from ${m.origin, m.destination} to ${m.origin, m.destination} (${e.tx}) = ${gas} (${e.gasUsed})`);
-          this.emit(`updated`, m.origin, m.destination, m.timings.toUpdate(), gas);
+
+          this.emit(`updated`, m.origin, m.destination, m.timings.toUpdate(), e.gasUsed.toNumber());
         }
       });
+    } else {
+      logger.warn({origin: e.replicaOrigin, root: e.eventData.oldRoot!}, `Haven't found a message for Update event`)
+    }
   }
 
   replicaUpdate(e: NomadEvent) {
+    let logger = this.logger.child({eventName: 'Relayed'});
     const ms = this.getMsgsByOriginAndRoot(
       e.replicaOrigin,
       e.eventData.oldRoot!
     );
-    if (ms.length)
+    
+    if (ms.length) {
       ms.forEach((m) => {
-        if (m.state < MsgState.Relayed) {
-          m.state = MsgState.Relayed;
-          m.timings.relayed(e.ts);
-          m.gasUsed.relay = e.gasUsed;
+        if (m.relay(e.ts, e.gasUsed)) {
           this.addToSyncQueue(m.messageHash);
-          const gas = e.gasUsed.toNumber();
-          // this.logger.warn(`!Gas for dispatched from ${m.origin, m.destination} to ${m.origin, m.destination} (${e.tx}) = ${gas} (${e.gasUsed})`);
-          this.emit(`relayed`, m.origin, m.destination, m.timings.toRelay(), gas);
+          this.emit(`relayed`, m.origin, m.destination, m.timings.toRelay(), e.gasUsed.toNumber());
         }
       });
+    } else {
+      logger.warn({origin: e.replicaOrigin, root: e.eventData.oldRoot!}, `Haven't found a message for ReplicaUpdate event`)
+    }
   }
 
   process(e: NomadEvent) {
+    let logger = this.logger.child({eventName: 'Processed'});
     const m = this.getMsg(e.eventData.messageHash!);
     if (m) {
-      if (m.state < MsgState.Processed) {
-        m.state = MsgState.Processed;
-        m.timings.processed(e.ts);
-        m.gasUsed.process = e.gasUsed;
+      if (m.process(e.ts, e.gasUsed)) {
         this.addToSyncQueue(m.messageHash);
-        const gas = e.gasUsed.toNumber();
-        // this.logger.warn(`!Gas for dispatched from ${m.origin, m.destination} to ${m.origin, m.destination} (${e.tx}) = ${gas} (${e.gasUsed})`);
-        this.emit(`processed`, m.origin, m.destination, m.timings.toProcess(), gas)
+        this.emit(`processed`, m.origin, m.destination, m.timings.toProcess(), e.gasUsed.toNumber())
       }
+    } else {
+      logger.warn({messageHash: e.eventData.messageHash!}, `Haven't found a message for Processed event`)
     }
   }
 
   bridgeRouterSend(e: NomadEvent) {
+    let logger = this.logger.child({eventName: 'BridgeSent',});
     const hash = this.senderRegistry.bridgeRouterSend(e);
     if (hash) {
+      logger.child({messageHash: hash}).debug(`Found dispatched message`);
       this.addToSyncQueue(hash);
+    } else {
+      let [origin, nonce] = e.originAndNonce();
+      logger.warn({origin, nonce}, `Haven't found a message for BridgeReceived event`);
     }
   }
 
   bridgeRouterReceive(e: NomadEvent) {
     const m = this.getMsgsByOriginAndNonce(...e.originAndNonce());
+    let logger = this.logger.child({eventName: 'BridgeReceived'});
 
     if (m) {
-      if (m.state < MsgState.Received) {
-        m.state = MsgState.Received;
-        m.timings.received(e.ts);
-        m.gasUsed.receive = e.gasUsed;
+      if (m.receive(e.ts, e.gasUsed)) {
         this.addToSyncQueue(m.messageHash);
         const gas = e.gasUsed.toNumber();
-        // this.logger.warn(`!Gas for dispatched from ${m.origin, m.destination} to ${m.origin, m.destination} (${e.tx}) = ${gas} (${e.gasUsed})`);
         this.emit(`received`, m.origin, m.destination, m.timings.toReceive(), gas);
       }
+    } else {
+      let [origin, nonce] = e.originAndNonce();
+      logger.warn({origin, nonce}, `Haven't found a message for BridgeReceived event`)
     }
   }
 

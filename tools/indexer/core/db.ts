@@ -1,8 +1,8 @@
 import { NomadMessage } from "./consumer";
 
-import { messages, Prisma, PrismaClient } from '@prisma/client'
-import { BigNumber } from "ethers";
+import { Prisma, PrismaClient } from '@prisma/client'
 import { DbRequestType, IndexerCollector } from "./metrics";
+import Logger from "bunyan";
 
 // function fromDb(m: messages): NomadMessage {
 //   return 
@@ -53,11 +53,13 @@ export class DB {
   client: PrismaClient;
   syncedOnce: boolean;
   metrics: IndexerCollector;
+  logger: Logger;
 
-  constructor(metrics: IndexerCollector) {
+  constructor(metrics: IndexerCollector, logger: Logger) {
     this.syncedOnce = false;
     this.client = new PrismaClient();
     this.metrics = metrics;
+    this.logger = logger.child({span: 'DB'});
   }
 
   async connect() {
@@ -81,7 +83,7 @@ export class DB {
       }
     });
 
-    return messages.map(NomadMessage.deserialize)
+    return messages.map(m => NomadMessage.deserialize(m, this.logger))
   }
 
   async getMessageByHash(messageHash: string): Promise<NomadMessage | undefined> {
@@ -92,7 +94,7 @@ export class DB {
       }
     });
 
-    return message ? NomadMessage.deserialize(message) : undefined
+    return message ? NomadMessage.deserialize(message, this.logger) : undefined
   }
 
   async getMessages(req: MsgRequest): Promise<NomadMessage[]> {
@@ -112,7 +114,7 @@ export class DB {
       skip
     });
 
-    return messages.map(NomadMessage.deserialize)
+    return messages.map(m => NomadMessage.deserialize(m, this.logger))
   }
 
   async insertMessage(messages: NomadMessage[]) {
@@ -120,7 +122,10 @@ export class DB {
     
     this.metrics.incDbRequests(DbRequestType.Insert);
     await this.client.messages.createMany({
-      data: messages.map(message => message.serialize()),
+      data: messages.map(message => {
+        message.logger.debug(`Serializing message for insert`);
+        return message.serialize()
+      }),
       skipDuplicates: true,
     })
 
@@ -132,6 +137,7 @@ export class DB {
 
     await Promise.all(messages.map(m => {
       this.metrics.incDbRequests(DbRequestType.Update);
+      m.logger.debug(`Serializing message for update`);
       this.client.messages.update({
         where: {
           messageHash: m.messageHash
