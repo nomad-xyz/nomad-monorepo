@@ -3,6 +3,7 @@ import { NomadMessage } from "./consumer";
 import { Prisma, PrismaClient } from '@prisma/client'
 import { DbRequestType, IndexerCollector } from "./metrics";
 import Logger from "bunyan";
+import pLimit from 'p-limit';
 
 // function fromDb(m: messages): NomadMessage {
 //   return 
@@ -135,17 +136,21 @@ export class DB {
   async updateMessage(messages: NomadMessage[]) {
     if (!messages.length) return;
 
+    const limit = pLimit(10);
+
     await Promise.all(messages.map(async (m) => {
-      this.metrics.incDbRequests(DbRequestType.Update);
-      
-      const serialized = m.serialize();
-      await this.client.messages.update({
-        where: {
-          messageHash: m.messageHash
-        },
-        data: serialized,
-      });
-      m.logger.debug(`Message updated in DB. updated: ${serialized.updatedAt}, relayed: ${serialized.relayedAt}, received: ${serialized.receivedAt}, processed: ${serialized.processedAt}`);
+      return await limit(async () => {
+        this.metrics.incDbRequests(DbRequestType.Update);
+        
+        const serialized = m.serialize();
+        await this.client.messages.update({
+          where: {
+            messageHash: m.messageHash
+          },
+          data: serialized,
+        });
+        m.logger.debug(`Message updated in DB. updated: ${serialized.updatedAt}, relayed: ${serialized.relayedAt}, received: ${serialized.receivedAt}, processed: ${serialized.processedAt}`);
+      })
     }));
 
     return
