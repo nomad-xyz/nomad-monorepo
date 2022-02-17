@@ -123,7 +123,7 @@ export class DB {
     this.metrics.incDbRequests(DbRequestType.Insert);
     await this.client.messages.createMany({
       data: messages.map(message => {
-        message.logger.debug(`Serializing message for insert`);
+        message.logger.debug(`Message created in DB`);
         return message.serialize()
       }),
       skipDuplicates: true,
@@ -135,15 +135,17 @@ export class DB {
   async updateMessage(messages: NomadMessage[]) {
     if (!messages.length) return;
 
-    await Promise.all(messages.map(m => {
+    await Promise.all(messages.map(async (m) => {
       this.metrics.incDbRequests(DbRequestType.Update);
-      m.logger.debug(`Serializing message for update`);
-      this.client.messages.update({
+      
+      const serialized = m.serialize();
+      await this.client.messages.update({
         where: {
           messageHash: m.messageHash
         },
-        data: m.serialize(),
-      })
+        data: serialized,
+      });
+      m.logger.debug(`Message updated in DB. updated: ${serialized.updatedAt}, relayed: ${serialized.relayedAt}, received: ${serialized.receivedAt}, processed: ${serialized.processedAt}`);
     }));
 
     return
