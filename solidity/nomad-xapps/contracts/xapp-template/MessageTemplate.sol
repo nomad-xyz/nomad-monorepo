@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-pragma solidity >=0.6.11;
+pragma solidity >=0.6.11; // this contract must be <0.8, because of TypedMemView
 
 import "@summa-tx/memview-sol/contracts/TypedMemView.sol";
 
@@ -87,6 +87,7 @@ library Message {
             isTypeA(_view),
             "MessageTemplate/number: view must be of type A"
         );
+        // _view.index(n, m) might not work correctly with solidity >=0.8
         _number = uint256(_view.index(0, 32));
     }
 }
