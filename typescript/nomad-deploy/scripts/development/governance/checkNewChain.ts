@@ -1,5 +1,5 @@
 import * as rinkeby from '../../../config/testnets/rinkeby';
-import * as milkomedatestnet from '../../../config/testnets/milkomedatestnet';
+import * as evmostestnet from '../../../config/testnets/evmostestnet';
 import { ExistingCoreDeploy } from '../../../src/core/CoreDeploy';
 import { ExistingBridgeDeploy } from '../../../src/bridge/BridgeDeploy';
 import { getPathToDeployConfig } from '../../../src/verification/readDeployOutput';
@@ -23,25 +23,25 @@ const rinkebyBridgeDeploy = new ExistingBridgeDeploy(
 const rinkebyDomain = deploysToSDK(rinkebyCoreDeploy, rinkebyBridgeDeploy);
 
 // Enroll milkomedatestnet as spoke to Rinkeby hub
-const milkomedatestnetCoreDeploy = ExistingCoreDeploy.withPath(
-  milkomedatestnet.chain,
-  milkomedatestnet.devConfig,
+const evmostestnetCoreDeploy = ExistingCoreDeploy.withPath(
+  evmostestnet.chain,
+  evmostestnet.devConfig,
   path,
 );
-const milkomedatestnetBridgeDeploy = new ExistingBridgeDeploy(
-  milkomedatestnet.chain,
-  milkomedatestnet.bridgeConfig,
+const evmostestnetBridgeDeploy = new ExistingBridgeDeploy(
+  evmostestnet.chain,
+  evmostestnet.bridgeConfig,
   path,
 );
-const milkomedatestnetDomain = deploysToSDK(
-  milkomedatestnetCoreDeploy,
-  milkomedatestnetBridgeDeploy,
+const evmostestnetDomain = deploysToSDK(
+  evmostestnetCoreDeploy,
+  evmostestnetBridgeDeploy,
 );
 
 // setup SDK
-const sdkDomains = [rinkebyDomain, milkomedatestnetDomain];
+const sdkDomains = [rinkebyDomain, evmostestnetDomain];
 const sdk = NomadContext.fromDomains(sdkDomains);
-const sdkCores = [rinkebyCoreDeploy, milkomedatestnetCoreDeploy];
+const sdkCores = [rinkebyCoreDeploy, evmostestnetCoreDeploy];
 sdkCores.forEach((core) => {
   sdk.registerProvider(core.chain.domain, core.provider);
   sdk.registerSigner(core.chain.domain, core.deployer);
@@ -49,6 +49,6 @@ sdkCores.forEach((core) => {
 
 checkHubAndSpokeConnections(
   sdk,
-  milkomedatestnetDomain.id,
-  milkomedatestnet.devConfig.watchers,
+  evmostestnetDomain.id,
+  evmostestnet.devConfig.watchers,
 );

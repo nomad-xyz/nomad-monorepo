@@ -6,16 +6,16 @@ import { BridgeConfig } from '../../src/bridge/BridgeDeploy';
 
 dotenv.config();
 
-const rpc = process.env.MILKOMEDATESTNET_RPC;
+const rpc = process.env.EVMOSTESTNET_RPC;
 if (!rpc) {
   throw new Error('Missing RPC URI');
 }
 
 const chainJson: ChainJson = {
-  name: 'milkomedatestnet',
+  name: 'evmostestnet',
   rpc,
-  deployerKey: process.env.MILKOMEDATESTNET_DEPLOYER_KEY,
-  domain: 8000,
+  deployerKey: process.env.EVMOSTESTNET_DEPLOYER_KEY,
+  domain: 9000,
   gas: { price: '100000000000' },
   chunk: 2000,
   timelag: 5,
