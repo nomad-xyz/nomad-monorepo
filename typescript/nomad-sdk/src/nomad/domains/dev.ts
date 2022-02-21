@@ -92,4 +92,25 @@ export const milkomedatestnet: NomadDomain = {
   xAppConnectionManager: '0xf116142af150F8E2b939C14f746a67Ed6788266C',
 };
 
+export const evmostestnet: NomadDomain = {
+  name: "evmostestnet",
+  id: 9000,
+  paginate: {
+    from: 42494,
+    blocks: 2000
+  },
+  home: "0x0DAB5407446BFeBb16990C8F586A91Ba7bb2c189",
+  replicas: [
+    {
+      domain: 2000,
+      address: "0xE6034B2F02fFe38563c0F96252577ceeDB00B4f5"
+    }
+  ],
+  governanceRouter: "0x532814a2b5A5F4a30FD31D03aB32936D95A4E581",
+  bridgeRouter: "0xA77aF25f6a7f3D043394DFA96ac93565bE0CBe2d",
+  tokenRegistry: "0x9EEDb4E71296a17A52DBA260906394bC559E35E2",
+  ethHelper: "0xac3f0fB1De6A8C2d93471aE3A1F8bE6968B1FbcF",
+  xAppConnectionManager: "0xbDcFeDDD1d19bAE265592ddf3158E25dC1Af2956"
+}
+
 export const devDomains = [rinkeby, kovan, moonbasealpha, milkomedatestnet];
