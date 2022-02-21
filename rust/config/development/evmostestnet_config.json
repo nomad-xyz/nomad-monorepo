@@ -1,0 +1,46 @@
+{
+  "environment": "dev",
+  "signers": {
+    "evmostestnet": {
+      "key": "",
+      "type": "hexKey"
+    },
+    "rinkeby": {
+      "key": "",
+      "type": "hexKey"
+    }
+  },
+  "replicas": {
+    "rinkeby": {
+      "address": "0xbEba49276B473C1d0A7E6b37EBf24B84893C6b0C",
+      "domain": "2000",
+      "name": "rinkeby",
+      "rpcStyle": "ethereum",
+      "timelag": 100,
+      "connection": {
+        "type": "http",
+        "url": ""
+      }
+    }
+  },
+  "home": {
+    "address": "0x0DAB5407446BFeBb16990C8F586A91Ba7bb2c189",
+    "domain": "9000",
+    "name": "evmostestnet",
+    "rpcStyle": "ethereum",
+    "timelag": 5,
+    "connection": {
+      "type": "http",
+      "url": ""
+    }
+  },
+  "tracing": {
+    "level": "debug",
+    "fmt": "json"
+  },
+  "db": "db_path",
+  "index": {
+    "from": "42494",
+    "chunk": "2000"
+  }
+}

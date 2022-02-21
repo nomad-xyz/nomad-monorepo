@@ -16,10 +16,10 @@
         "url": ""
       }
     },
-    "kovan": {
-      "address": "0xE469D8587D45BF85297BD924b159E726E7CA5408",
-      "domain": "3000",
-      "name": "kovan",
+    "evmostestnet": {
+      "address": "0xbDcFeDDD1d19bAE265592ddf3158E25dC1Af2956",
+      "domain": "9000",
+      "name": "evmostestnet",
       "rpcStyle": "ethereum",
       "timelag": 5,
       "connection": {
@@ -31,6 +31,17 @@
       "address": "0xD99E2c5eD0AacE4c459A850bd2DE0b1c0De12bfD",
       "domain": "5000",
       "name": "moonbasealpha",
+      "rpcStyle": "ethereum",
+      "timelag": 5,
+      "connection": {
+        "type": "http",
+        "url": ""
+      }
+    },
+    "kovan": {
+      "address": "0xE469D8587D45BF85297BD924b159E726E7CA5408",
+      "domain": "3000",
+      "name": "kovan",
       "rpcStyle": "ethereum",
       "timelag": 5,
       "connection": {
