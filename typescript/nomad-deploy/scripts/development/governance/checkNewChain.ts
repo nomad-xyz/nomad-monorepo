@@ -22,7 +22,7 @@ const rinkebyBridgeDeploy = new ExistingBridgeDeploy(
 );
 const rinkebyDomain = deploysToSDK(rinkebyCoreDeploy, rinkebyBridgeDeploy);
 
-// Enroll milkomedatestnet as spoke to Rinkeby hub
+// Enroll evmostestnet as spoke to Rinkeby hub
 const evmostestnetCoreDeploy = ExistingCoreDeploy.withPath(
   evmostestnet.chain,
   evmostestnet.devConfig,

@@ -41,7 +41,7 @@ const evmostestnetCoreDeploy = new CoreDeploy(
   evmostestnet.devConfig,
 );
 
-// deploy Milkomeda core
+// deploy evmostestnet core
 deployNewChain(evmostestnetCoreDeploy, rinkebyCoreDeploy, [
   moonbaseAlphaCoreDeploy,
   kovanCoreDeploy,
