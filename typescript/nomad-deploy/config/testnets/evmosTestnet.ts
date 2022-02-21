@@ -46,5 +46,5 @@ export const stagingConfig: CoreConfig = {
 };
 
 export const bridgeConfig: BridgeConfig = {
-  weth: '0x6942F4eD908bF1F294e25497624ad228d178D54C',
+  weth: '0xEE8003bdB024a4195D433c555d55AA663B8C022C',
 };
