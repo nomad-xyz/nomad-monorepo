@@ -5,7 +5,7 @@
       "key": "",
       "type": "hexKey"
     },
-    "milkomedatestnet": {
+    "evmostestnet": {
       "key": "",
       "type": "hexKey"
     },
@@ -16,13 +16,17 @@
     "kovan": {
       "key": "",
       "type": "hexKey"
+    },
+    "milkomedatestnet": {
+      "key": "",
+      "type": "hexKey"
     }
   },
   "replicas": {
-    "milkomedatestnet": {
-      "address": "0x53E7F6AFbECBB18a8E4989b89ADB1f0ce85272F5",
-      "domain": "8000",
-      "name": "milkomedatestnet",
+    "evmostestnet": {
+      "address": "0xE6034B2F02fFe38563c0F96252577ceeDB00B4f5",
+      "domain": "9000",
+      "name": "evmostestnet",
       "rpcStyle": "ethereum",
       "timelag": 5,
       "connection": {
@@ -51,6 +55,17 @@
         "type": "http",
         "url": ""
       }
+    },
+    "milkomedatestnet": {
+      "address": "0x53E7F6AFbECBB18a8E4989b89ADB1f0ce85272F5",
+      "domain": "8000",
+      "name": "milkomedatestnet",
+      "rpcStyle": "ethereum",
+      "timelag": 5,
+      "connection": {
+        "type": "http",
+        "url": ""
+      }
     }
   },
   "home": {
@@ -70,7 +85,7 @@
   },
   "db": "db_path",
   "index": {
-    "from": "10024912",
+    "from": "0",
     "chunk": "2000"
   }
 }

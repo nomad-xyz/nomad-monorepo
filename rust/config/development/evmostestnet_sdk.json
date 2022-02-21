@@ -1,0 +1,19 @@
+{
+  "name": "evmostestnet",
+  "id": 9000,
+  "paginate": {
+    "from": 42494,
+    "blocks": 2000
+  },
+  "home": "0x0DAB5407446BFeBb16990C8F586A91Ba7bb2c189",
+  "replicas": [
+    {
+      "domain": 2000,
+      "address": "0xE6034B2F02fFe38563c0F96252577ceeDB00B4f5"
+    }
+  ],
+  "governanceRouter": "0x532814a2b5A5F4a30FD31D03aB32936D95A4E581",
+  "bridgeRouter": "n/a",
+  "tokenRegistry": "n/a",
+  "xAppConnectionManager": "0xbDcFeDDD1d19bAE265592ddf3158E25dC1Af2956"
+}
