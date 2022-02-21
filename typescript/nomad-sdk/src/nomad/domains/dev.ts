@@ -113,4 +113,4 @@ export const evmostestnet: NomadDomain = {
   xAppConnectionManager: "0xbDcFeDDD1d19bAE265592ddf3158E25dC1Af2956"
 }
 
-export const devDomains = [rinkeby, kovan, moonbasealpha, milkomedatestnet];
+export const devDomains = [rinkeby, kovan, moonbasealpha, milkomedatestnet, evmostestnet];
