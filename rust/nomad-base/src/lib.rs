@@ -16,9 +16,6 @@ pub use settings::*;
 mod agent;
 pub use agent::*;
 
-mod channel;
-pub use channel::*;
-
 #[doc(hidden)]
 #[cfg_attr(tarpaulin, skip)]
 #[macro_use]

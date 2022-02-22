@@ -2,8 +2,7 @@ use crate::{
     cancel_task,
     metrics::CoreMetrics,
     settings::{IndexSettings, Settings},
-    BaseError, CachingHome, CachingReplica, ChannelBase, ContractSyncMetrics, IndexDataTypes,
-    NomadDB,
+    BaseError, CachingHome, CachingReplica, ContractSyncMetrics, IndexDataTypes, NomadDB,
 };
 use async_trait::async_trait;
 use color_eyre::{eyre::WrapErr, Result};
@@ -34,6 +33,17 @@ pub struct AgentCore {
     pub indexer: IndexSettings,
     /// Settings this agent was created with
     pub settings: crate::settings::Settings,
+}
+
+#[derive(Debug, Clone)]
+/// Commmon data needed for a single agent channel
+pub struct ChannelBase {
+    /// Home
+    pub home: Arc<CachingHome>,
+    /// Replica
+    pub replica: Arc<CachingReplica>,
+    /// NomadDB keyed by home
+    pub db: NomadDB,
 }
 
 /// A trait for an application:
