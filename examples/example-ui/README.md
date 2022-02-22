@@ -2,7 +2,7 @@
 
 This is an example bridge ui integration using the [Nomad SDK](https://www.npmjs.com/package/@nomad-xyz/sdk).
 
-Further documentation available [here](https://docs.nomad.xyz/bridge).
+Further documentation available [here](https://docs.nomad.xyz/bridge/).
 
 ## Project setup
 
