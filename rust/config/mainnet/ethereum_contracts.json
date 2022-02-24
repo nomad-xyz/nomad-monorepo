@@ -13,6 +13,11 @@
     "beacon": "0x063e871f8DB991CEAd34B557A00B157B360084cc"
   },
   "replicas": {
+    "25393": {
+      "implementation": "0x7F58bb8311DB968AB110889F2Dfa04ab7E8E831B",
+      "proxy": "0xEf989866b66a491e7B6c7473D73b589450D0f766",
+      "beacon": "0x0876dFe4AcAe0e1c0a43302716483f5752298b71"
+    },
     "1650811245": {
       "implementation": "0x7F58bb8311DB968AB110889F2Dfa04ab7E8E831B",
       "proxy": "0x049b51e531Fd8f90da6d92EA83dC4125002F20EF",
