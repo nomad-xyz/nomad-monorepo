@@ -15,7 +15,7 @@ export const chainJson: ChainJson = {
   rpc,
   deployerKey: process.env.MILKOMEDA_DEPLOYER_KEY,
   domain: 0x6331, // b'c1' interpreted as an int
-  gas: { price: '150000000000' }, // milkomeda set minimum gas to 100 gwei; we will default to 150 gwei
+  gas: { price: '150000000000' }, // default minimum to 150 gwei
   chunk: 2000,
   timelag: 20,
 };
