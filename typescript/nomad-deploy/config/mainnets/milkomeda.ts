@@ -11,10 +11,10 @@ if (!rpc) {
 }
 
 export const chainJson: ChainJson = {
-  name: 'milkomeda',
+  name: 'milkomedaC1',
   rpc,
   deployerKey: process.env.MILKOMEDA_DEPLOYER_KEY,
-  domain: 0x6d696c6b, // b'milk' interpreted as an int
+  domain: 0x6331, // b'c1' interpreted as an int
   gas: { price: '150000000000' }, // milkomeda set minimum gas to 100 gwei; we will default to 150 gwei
   chunk: 2000,
   timelag: 20,
@@ -34,5 +34,5 @@ export const config: CoreConfig = {
 };
 
 export const bridgeConfig: BridgeConfig = {
-  weth: '0xAeaaf0e2c81Af264101B9129C00F4440cCF0F720',
+  weth: '0xAE83571000aF4499798d1e3b0fA0070EB3A3E3F9',
 };
