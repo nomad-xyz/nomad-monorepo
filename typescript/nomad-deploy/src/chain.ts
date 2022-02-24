@@ -103,7 +103,7 @@ export function parseGas(config: GasJson): Gas {
 
   let limit;
   if (config.limit !== undefined) {
-    limit = BigNumber.from(config.price);
+    limit = BigNumber.from(config.limit);
   }
 
   return {

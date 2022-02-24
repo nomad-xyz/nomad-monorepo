@@ -20,6 +20,7 @@ export const chainJson: ChainJson = {
       maxFeePerGas: '400000000000', // 400 gwei
       maxPriorityFeePerGas: '4000000000', // 4 gwei
     },
+    limit: '1000000'
   },
   chunk: 2000,
   timelag: 20,
