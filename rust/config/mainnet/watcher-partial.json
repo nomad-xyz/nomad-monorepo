@@ -4,30 +4,28 @@
     "key": "",
     "type": "hexKey"
   },
-  "connectionManagers": [
-    {
-      "address": "0x0000000000000000000000000000000000000000",
-      "domain": "60",
+  "connectionManagers": {
+    "ethereum": {
+      "address": "0xFe8874778f946Ac2990A29eba3CFd50760593B2F",
+      "domain": "6648936",
       "name": "ethereum",
       "rpcStyle": "ethereum",
-      "config": {
-        "connection": {
-          "type": "ws",
-          "url": "ws://localhost:8545"
-        }
+      "timelag": 20,
+      "connection": {
+        "type": "http",
+        "url": ""
       }
     },
-    {
-      "address": "0x0000000000000000000000000000000000000000",
-      "domain": "61",
-      "name": "eth-classic",
+    "moonbeam": {
+      "address": "0xdB378579c2Af11817EEA21474A39F95B5b9DfD7e",
+      "domain": "1650811245",
+      "name": "moonbeam",
       "rpcStyle": "ethereum",
-      "config": {
-        "connection": {
-          "type": "ws",
-          "url": "ws://localhost:8545"
-        }
+      "timelag": 20,
+      "connection": {
+        "type": "http",
+        "url": ""
       }
     }
-  ]
+  }
 }
