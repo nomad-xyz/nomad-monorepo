@@ -59,7 +59,7 @@ networks = {
         "ethereum",
         "moonbeam",
         "evmos",
-        "milkomeda"
+        "milkomeda-c1"
     ],
     "staging": [
         "moonbasealpha",
