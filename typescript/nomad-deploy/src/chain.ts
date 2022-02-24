@@ -48,7 +48,7 @@ export interface ChainJson {
 }
 
 export interface Gas {
-  limit: ethers.BigNumber;
+  limit: ethers.BigNumber | undefined;
   price: ethers.BigNumber | Eip1559Pricing;
 }
 
@@ -101,8 +101,13 @@ export function parseGas(config: GasJson): Gas {
     }
   }
 
+  let limit;
+  if (config.limit !== undefined) {
+    limit = BigNumber.from(config.price);
+  }
+
   return {
-    limit: DEFAULT_GAS.limit,
+    limit,
     price,
   };
 }
