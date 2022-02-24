@@ -5,7 +5,7 @@ import { CoreDeploy, ExistingCoreDeploy } from '../../../src/core/CoreDeploy';
 import { deployNewChain } from '../../../src/core';
 import { getPathToDeployConfig } from '../../../src/verification/readDeployOutput';
 
-const path = getPathToDeployConfig('dev');
+const path = getPathToDeployConfig('prod');
 
 // Instantiate existing governor deploy on Rinkeby
 const governorDeploy = ExistingCoreDeploy.withPath(

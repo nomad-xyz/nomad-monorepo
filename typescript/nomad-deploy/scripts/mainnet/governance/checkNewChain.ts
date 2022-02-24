@@ -7,7 +7,7 @@ import { deploysToSDK } from '../../../src/incremental/utils';
 import { checkHubAndSpokeConnections } from '../../../src/incremental/checks';
 import { NomadContext } from '@nomad-xyz/sdk';
 
-const path = getPathToDeployConfig('dev');
+const path = getPathToDeployConfig('prod');
 
 // Instantiate existing governor deploys
 const governorCore = ExistingCoreDeploy.withPath(
