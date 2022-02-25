@@ -58,7 +58,8 @@ networks = {
     "production": [
         "ethereum",
         "moonbeam",
-        "evmos"
+        "evmos",
+        "milkomeda-c1"
     ],
     "staging": [
         "moonbasealpha",
@@ -68,8 +69,8 @@ networks = {
 
 # nAgentKeys * nEnvironments
 environments = [
-    "staging",
-    "production"
+    "production",
+    "staging"
 ]
 
 # AWS Region where we should provison keys

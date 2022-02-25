@@ -1,0 +1,46 @@
+{
+  "environment": "prod",
+  "signers": {
+    "milkomedaC1": {
+      "key": "",
+      "type": "hexKey"
+    },
+    "ethereum": {
+      "key": "",
+      "type": "hexKey"
+    }
+  },
+  "replicas": {
+    "ethereum": {
+      "address": "0xEf989866b66a491e7B6c7473D73b589450D0f766",
+      "domain": "6648936",
+      "name": "ethereum",
+      "rpcStyle": "ethereum",
+      "timelag": 20,
+      "connection": {
+        "type": "http",
+        "url": ""
+      }
+    }
+  },
+  "home": {
+    "address": "0x1458a68793Bc6a51c40f15e1b92217D98456db13",
+    "domain": "25393",
+    "name": "milkomedaC1",
+    "rpcStyle": "ethereum",
+    "timelag": 20,
+    "connection": {
+      "type": "http",
+      "url": ""
+    }
+  },
+  "tracing": {
+    "level": "debug",
+    "fmt": "json"
+  },
+  "db": "db_path",
+  "index": {
+    "from": "1356181",
+    "chunk": "2000"
+  }
+}
