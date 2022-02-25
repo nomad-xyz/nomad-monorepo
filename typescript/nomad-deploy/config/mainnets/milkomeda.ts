@@ -17,7 +17,7 @@ export const chainJson: ChainJson = {
   domain: 0x6331, // b'c1' interpreted as an int
   gas: {
     price: '150000000000',
-    limit: '4000000'
+    limit: '6000000'
   }, // default minimum to 150 gwei
   chunk: 2000,
   timelag: 20,
