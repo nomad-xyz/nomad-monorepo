@@ -7,9 +7,17 @@ import {
 import { Deploy } from '../deploy';
 import { ethers } from 'ethers';
 
+export type CustomTokenSpecifier = {
+  id: string;
+  domain: number;
+  name: string;
+  symbol: string;
+  decimals: number;
+};
+
 export type BridgeConfig = {
   weth?: string;
-  customs?: ReadonlyArray<{ id: string; domain: number }>;
+  customs?: ReadonlyArray<CustomTokenSpecifier>;
 };
 
 export class BridgeDeploy extends Deploy<BridgeContracts> {

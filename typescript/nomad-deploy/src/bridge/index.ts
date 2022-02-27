@@ -414,7 +414,24 @@ export async function deployCustoms(local: AnyBridgeDeploy): Promise<void> {
     );
     await relinquish.wait(local.chain.confirmations);
 
-    const enroll = await local.contracts.bridgeRouter?.proxy.enrollCustom(
+    const tokenProxy = xAppContracts.BridgeToken__factory.connect(
+      proxy.address,
+      local.deployer,
+    );
+    // set initial details
+    await (
+      await tokenProxy.setDetails(custom.name, custom.symbol, custom.decimals)
+    ).wait(local.chain.confirmations);
+
+    // transfer ownership to the bridge router
+    await (
+      await tokenProxy.transferOwnership(
+        local.contracts.bridgeRouter.proxy.address,
+      )
+    ).wait(local.chain.confirmations);
+
+    // enroll the custom representation
+    const enroll = await local.contracts.bridgeRouter.proxy.enrollCustom(
       custom.domain,
       canonizeId(custom.id),
       proxy.address,
