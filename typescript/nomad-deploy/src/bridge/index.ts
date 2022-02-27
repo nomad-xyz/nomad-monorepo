@@ -361,7 +361,7 @@ export async function enrollBridgeRouter(
  *  tokens
  */
 export async function deployCustoms(local: AnyBridgeDeploy): Promise<void> {
-  local.contracts.customs = [];
+  if (!local.contracts.customs) local.contracts.customs = [];
 
   // skip altogether if no customs in the config
   const customs = local.config.customs;
