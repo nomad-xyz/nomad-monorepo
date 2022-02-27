@@ -6,11 +6,19 @@ import * as contracts from '@nomad-xyz/contract-interfaces/core';
 
 type SignerOrProvider = ethers.ethers.providers.Provider | ethers.ethers.Signer;
 
+export interface DeployedCustomToken {
+  id: string;
+  domain: number;
+  controller: string;
+  addresses: ProxyAddresses;
+}
+
 export type BridgeContractAddresses = {
   bridgeRouter: ProxyAddresses;
   tokenRegistry: ProxyAddresses;
   bridgeToken: ProxyAddresses;
   ethHelper?: string;
+  customs?: Array<DeployedCustomToken>;
 };
 
 export class BridgeContracts extends Contracts {
@@ -18,6 +26,7 @@ export class BridgeContracts extends Contracts {
   tokenRegistry?: BeaconProxy<xAppContracts.TokenRegistry>;
   bridgeToken?: BeaconProxy<xAppContracts.BridgeToken>;
   ethHelper?: xAppContracts.ETHHelper;
+  customs?: Array<DeployedCustomToken>;
 
   constructor() {
     super();
@@ -29,6 +38,7 @@ export class BridgeContracts extends Contracts {
       tokenRegistry: this.tokenRegistry?.toObject(),
       bridgeToken: this.bridgeToken?.toObject(),
       ethHelper: this.ethHelper?.address,
+      customs: this.customs,
     };
   }
 
@@ -37,6 +47,8 @@ export class BridgeContracts extends Contracts {
     signerOrProvider: SignerOrProvider,
   ): BridgeContracts {
     const b = new BridgeContracts();
+
+    b.customs = addresses.customs;
 
     // TODO: needs type magic for turning governance, home and replicas to BeaconProxy contracts
     const routerImplementation = xAppContracts.BridgeRouter__factory.connect(

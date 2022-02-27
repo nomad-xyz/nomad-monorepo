@@ -9,6 +9,7 @@ import { ethers } from 'ethers';
 
 export type BridgeConfig = {
   weth?: string;
+  customs?: ReadonlyArray<{ id: string; domain: number }>;
 };
 
 export class BridgeDeploy extends Deploy<BridgeContracts> {
@@ -44,8 +45,13 @@ export class BridgeDeploy extends Deploy<BridgeContracts> {
   static freshFromConfig(
     config: ChainJson,
     coreDeployPath: string,
+    bridgeConfig?: BridgeConfig,
   ): BridgeDeploy {
-    return new BridgeDeploy(toChain(config), {}, coreDeployPath);
+    return new BridgeDeploy(
+      toChain(config),
+      bridgeConfig ?? {},
+      coreDeployPath,
+    );
   }
 }
 
