@@ -9,6 +9,9 @@ type SignerOrProvider = ethers.ethers.providers.Provider | ethers.ethers.Signer;
 export interface DeployedCustomToken {
   id: string;
   domain: number;
+  name: string;
+  symbol: string;
+  decimals: number;
   controller: string;
   addresses: ProxyAddresses;
 }

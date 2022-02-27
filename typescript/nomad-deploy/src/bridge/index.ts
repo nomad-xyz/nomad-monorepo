@@ -440,8 +440,7 @@ export async function deployCustoms(local: AnyBridgeDeploy): Promise<void> {
     await enroll.wait(local.chain.confirmations);
 
     local.contracts.customs.push({
-      id: custom.id,
-      domain: custom.domain,
+      ...custom,
       controller: controller.address,
       addresses: {
         implementation: implementationAddress,
