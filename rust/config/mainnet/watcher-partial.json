@@ -16,10 +16,10 @@
         "url": ""
       }
     },
-    "milkomedaC1": {
+    "milkomedac1": {
       "address": "0x2EFF94F8c56C20f85D45e9752bfec3c0522c55c7",
       "domain": "25393",
-      "name": "milkomedaC1",
+      "name": "milkomedac1",
       "rpcStyle": "ethereum",
       "timelag": 20,
       "connection": {

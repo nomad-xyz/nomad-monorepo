@@ -1,7 +1,7 @@
 {
   "environment": "prod",
   "signers": {
-    "milkomedaC1": {
+    "milkomedac1": {
       "key": "",
       "type": "hexKey"
     },
@@ -26,7 +26,7 @@
   "home": {
     "address": "0x1458a68793Bc6a51c40f15e1b92217D98456db13",
     "domain": "25393",
-    "name": "milkomedaC1",
+    "name": "milkomedac1",
     "rpcStyle": "ethereum",
     "timelag": 20,
     "connection": {
