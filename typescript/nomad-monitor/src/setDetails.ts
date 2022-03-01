@@ -25,6 +25,9 @@ function getRpcProviderFromNetwork(
     case 'moonbasealpha':
       rpcUrl = process.env.MOONBASEALPHA_RPC!;
       break;
+    case 'milkomedaC1':
+        rpcUrl = process.env.MILKOMEDAC1_RPC!;
+        break;
     default:
       throw new Error(`No RPC url for network ${network}`);
   }
