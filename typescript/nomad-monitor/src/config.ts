@@ -94,7 +94,7 @@ function getNetworks() {
       break;
     
     default:
-      networks = ['kovan', 'moonbasealpha', 'rinkeby', 'milkomedatestnet'];
+      networks = ['kovan', 'moonbasealpha', 'rinkeby', 'milkomedatestnet', 'evmostestnet'];
       break;
   }
 
@@ -147,8 +147,11 @@ function getReplicas(origin: string) {
         case 'moonbasealpha':
           replicas = ['rinkeby']
           break;
+        case 'evmostestnet':
+            replicas = ['rinkeby']
+            break;
         case 'rinkeby':
-            replicas = ['kovan', 'moonbasealpha', 'milkomedatestnet']
+            replicas = ['kovan', 'moonbasealpha', 'milkomedatestnet', 'evmostestnet']
             break;
         default: 
           throw new Error(`Invalid Origin, no replicas available for ${origin}`)
@@ -171,6 +174,7 @@ export function getRpcsFromEnv() {
     moonbeamRpc: process.env.MOONBEAM_RPC ?? '',
     milkomedatestnetRpc: process.env.MILKOMEDATESTNET_RPC ?? '',
     milkomedaC1Rpc: process.env.MILKOMEDAC1_RPC ?? '',
+    evmostestnetRpc: process.env.EVMOSTESTNET_RPC ?? '',
   };
 }
 

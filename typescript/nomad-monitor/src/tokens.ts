@@ -40,11 +40,12 @@ export async function getDomainDeployedTokens(
     registry.filters.TokenDeployed(),
     context.mustGetDomain(domain).paginate?.from,
   );
-
+  console.log(`processing ${domain}, events: ${annotated.length}`)
   return await Promise.all(
     annotated.map(async (e: AnnotatedTokenDeployed) => {
       const deploy = e as any;
-
+      console.log(`processing ${domain}, token deployed from ${deploy.event.args.domain}`)
+      //console.log(context)
       const erc20 = await context.resolveCanonicalToken(
         domain,
         deploy.event.args.representation,
@@ -59,6 +60,7 @@ export async function getDomainDeployedTokens(
       deploy.token.name = name;
       deploy.token.symbol = symbol;
       deploy.token.decimals = decimals;
+      console.log(`return from processing ${domain}, token deployed from ${deploy.event.args.domain}`)
       return deploy as Deploy;
     }),
   );
