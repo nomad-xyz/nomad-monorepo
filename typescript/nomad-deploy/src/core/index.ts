@@ -202,7 +202,10 @@ export async function deployUnenrolledReplica(
 
   // deploy the new Replica with the remote Home's current committedRoot
   const currentRoot = await remote.contracts.home?.proxy.committedRoot();
-
+  if (!currentRoot) {
+    throw new Error(`current root not defined for ${remote.chain.name}`);
+  }
+  
   let initData = replica.createInterface().encodeFunctionData('initialize', [
     remote.chain.domain,
     remote.config.updater,
