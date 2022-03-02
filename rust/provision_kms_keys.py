@@ -63,7 +63,8 @@ networks = {
     ],
     "staging": [
         "moonbasealpha",
-        "kovan"    
+        "kovan",
+        "rinkeby"    
     ]
 }
 

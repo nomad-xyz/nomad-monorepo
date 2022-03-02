@@ -26,7 +26,7 @@ export class MonitorConfig {
     const environment = process.env.ENVIRONMENT ?? 'development';
 
     this.origin = origin;
-    this.remotes = getNetworks().filter((m) => m != origin);
+    this.remotes = getReplicas(origin)
     switch(environment){
       case 'production': {
         this.context = contexts.mainnet
@@ -86,19 +86,83 @@ function getNetworks() {
   let networks = [];
   switch (environment) {
     case 'production':
-      networks = ['ethereum', 'moonbeam'];
+      networks = ['milkomedac1', 'moonbeam', 'ethereum', 'evmos'];
       break;
 
     case 'staging':
-      networks = ['kovan', 'moonbasealpha'];
+      networks = ['kovan', 'moonbasealpha', 'rinkeby'];
       break;
     
     default:
-      networks = ['kovan', 'moonbasealpha'];
+      networks = ['kovan', 'moonbasealpha', 'rinkeby', 'milkomedatestnet', 'evmostestnet'];
       break;
   }
 
   return networks;
+}
+
+function getReplicas(origin: string) {
+  let replicas: string[] = [];
+  switch (environment) {
+    case 'production':
+      switch(origin){
+        case 'ethereum':
+          replicas = ['moonbeam', 'milkomedac1', 'evmos']
+          break;
+        case 'moonbeam':
+          replicas = ['ethereum']
+          break;
+        case 'milkomedac1':
+            replicas = ['ethereum']
+            break;
+        case 'evmos':
+              replicas = ['ethereum']
+              break;
+        default: 
+          throw new Error(`Invalid Origin, no replicas available for ${origin}`)
+      }
+      break;
+
+    case 'staging':
+      switch(origin){
+        case 'kovan':
+          replicas = ['rinkeby']
+          break;
+        case 'moonbasealpha':
+          replicas = ['rinkeby']
+          break;
+        case 'rinkeby':
+            replicas = ['kovan', 'moonbasealpha']
+            break;
+        default: 
+          throw new Error(`Invalid Origin, no replicas available for ${origin}`)
+      }
+      break;
+    
+    default:
+      switch(origin){
+        case 'kovan':
+          replicas = ['rinkeby']
+          break;
+        case 'milkomedatestnet':
+            replicas = ['rinkeby']
+            break;
+        case 'moonbasealpha':
+          replicas = ['rinkeby']
+          break;
+        case 'evmostestnet':
+            replicas = ['rinkeby']
+            break;
+        case 'rinkeby':
+            replicas = ['kovan', 'moonbasealpha', 'milkomedatestnet', 'evmostestnet']
+            break;
+        default: 
+          throw new Error(`Invalid Origin, no replicas available for ${origin}`)
+      }
+      break;
+  }
+
+  return replicas;
 }
 
 export function getRpcsFromEnv() {
@@ -110,7 +174,11 @@ export function getRpcsFromEnv() {
     kovanRpc: process.env.KOVAN_RPC ?? '',
     rinkebyRpc: process.env.RINKEBY_RPC ?? '',
     moonbasealphaRpc: process.env.MOONBASEALPHA_RPC ?? '',
-    moonbeamRpc: process.env.MOONBEAM_RPC ?? ''
+    moonbeamRpc: process.env.MOONBEAM_RPC ?? '',
+    milkomedatestnetRpc: process.env.MILKOMEDATESTNET_RPC ?? '',
+    milkomedac1Rpc: process.env.MILKOMEDAC1_RPC ?? '',
+    evmostestnetRpc: process.env.EVMOSTESTNET_RPC ?? '',
+    evmosRpc: process.env.EVMOS_RPC ?? '',
   };
 }
 
