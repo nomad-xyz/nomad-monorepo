@@ -4,6 +4,8 @@ import {
   checkBridgeConnections,
   checkHubAndSpokeBridgeConnections,
 } from './checks';
+
+import * as coreContracts from '@nomad-xyz/contract-interfaces/core';
 import * as xAppContracts from '@nomad-xyz/contract-interfaces/bridge';
 import fs from 'fs';
 import { BridgeDeploy } from './BridgeDeploy';
@@ -37,6 +39,7 @@ export async function deployBridgesComplete(deploys: AnyBridgeDeploy[]) {
       await deployTokenRegistry(deploy);
       await deployBridgeRouter(deploy);
       await deployEthHelper(deploy);
+      await deployCustoms(deploy);
     }),
   );
 
@@ -348,6 +351,137 @@ export async function enrollBridgeRouter(
   console.log(
     `enrolled ${remote.chain.name} BridgeRouter on ${local.chain.name}`,
   );
+}
+
+/**
+ * Deploy any preconfigured custom tokens. These tokens should be specified by
+ * ID in the configuration block
+ *
+ * @param local - The deploy instance for the chain on which to deploy custom
+ *  tokens
+ */
+export async function deployCustoms(local: AnyBridgeDeploy): Promise<void> {
+  if (!local.contracts.customs) local.contracts.customs = [];
+
+  // skip altogether if no customs in the config
+  const customs = local.config.customs;
+  if (!customs) return;
+
+  console.log(
+    `deploying ${customs.length} Custom Tokens for ${local.chain.name}`,
+  );
+
+  // preconditions
+  const implementationAddress =
+    local.contracts.bridgeToken?.implementation.address;
+  if (!implementationAddress)
+    throw new Error('need bridge token implementation');
+  if (!local.contracts.bridgeRouter)
+    throw new Error('need bridge router deployed');
+
+  // factories
+  const ubcFactory = new coreContracts.UpgradeBeaconController__factory(
+    local.deployer,
+  );
+  const beaconFactory = new coreContracts.UpgradeBeacon__factory(
+    local.deployer,
+  );
+  const proxyFactory = new coreContracts.UpgradeBeaconProxy__factory(
+    local.deployer,
+  );
+
+  for (const custom of customs) {
+    console.log(
+      `deploying ${custom.name} Custom Token for ${local.chain.name}`,
+    );
+
+    // deploy a custom upgrade beacon controller
+    console.log(
+      `   deploying ${custom.name} Upgrade Beacon Controller on ${local.chain.name}`,
+    );
+    const controller = await ubcFactory.deploy(local.overrides);
+    await controller.deployTransaction.wait(local.chain.confirmations);
+
+    // pre-emptively transfer ownership of controller to governance
+    const relinquish = await controller.transferOwnership(
+      local.coreContractAddresses.governance.proxy,
+      local.overrides,
+    );
+    await relinquish.wait(local.chain.confirmations);
+    console.log(
+      `   deployed ${custom.name} Upgrade Beacon Controller on ${local.chain.name}`,
+    );
+
+    // deploy a custom beacon
+    console.log(
+      `   deploying ${custom.name} Upgrade Beacon on ${local.chain.name}`,
+    );
+    const beacon = await beaconFactory.deploy(
+      implementationAddress,
+      controller.address,
+      local.overrides,
+    );
+    await beacon.deployTransaction.wait(local.chain.confirmations);
+    console.log(
+      `   deployed ${custom.name} Upgrade Beacon on ${local.chain.name}`,
+    );
+
+    // deploy a proxy
+    console.log(`   deploying ${custom.name} Proxy on ${local.chain.name}`);
+    const proxy = await proxyFactory.deploy(
+      beacon.address,
+      '0x',
+      local.overrides,
+    );
+    await proxy.deployTransaction.wait(local.chain.confirmations);
+    console.log(`   deployed ${custom.name} Proxy on ${local.chain.name}`);
+
+    console.log(
+      `   configure and enroll ${custom.name} Token Proxy on ${local.chain.name}`,
+    );
+    const tokenProxy = xAppContracts.BridgeToken__factory.connect(
+      proxy.address,
+      local.deployer,
+    );
+
+    // initialize the token proxy
+    await tokenProxy.initialize(local.overrides);
+
+    // set initial details
+    await (
+      await tokenProxy.setDetails(custom.name, custom.symbol, custom.decimals)
+    ).wait(local.chain.confirmations);
+
+    // transfer ownership to the bridge router
+    await (
+      await tokenProxy.transferOwnership(
+        local.contracts.bridgeRouter.proxy.address,
+      )
+    ).wait(local.chain.confirmations);
+
+    // enroll the custom representation
+    const enroll = await local.contracts.tokenRegistry!.proxy.enrollCustom(
+      custom.domain,
+      canonizeId(custom.id),
+      proxy.address,
+      local.overrides,
+    );
+    await enroll.wait(local.chain.confirmations);
+    console.log(
+      `   configured and enrolled ${custom.name} Token Proxy on ${local.chain.name}`,
+    );
+
+    local.contracts.customs.push({
+      ...custom,
+      controller: controller.address,
+      addresses: {
+        implementation: implementationAddress,
+        proxy: proxy.address,
+        beacon: beacon.address,
+      },
+    });
+    console.log(`deployed ${custom.name} Custom Token for ${local.chain.name}`);
+  }
 }
 
 /**

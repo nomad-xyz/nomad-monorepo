@@ -7,8 +7,17 @@ import {
 import { Deploy } from '../deploy';
 import { ethers } from 'ethers';
 
+export type CustomTokenSpecifier = {
+  id: string;
+  domain: number;
+  name: string;
+  symbol: string;
+  decimals: number;
+};
+
 export type BridgeConfig = {
   weth?: string;
+  customs?: ReadonlyArray<CustomTokenSpecifier>;
 };
 
 export class BridgeDeploy extends Deploy<BridgeContracts> {
@@ -44,8 +53,13 @@ export class BridgeDeploy extends Deploy<BridgeContracts> {
   static freshFromConfig(
     config: ChainJson,
     coreDeployPath: string,
+    bridgeConfig?: BridgeConfig,
   ): BridgeDeploy {
-    return new BridgeDeploy(toChain(config), {}, coreDeployPath);
+    return new BridgeDeploy(
+      toChain(config),
+      bridgeConfig ?? {},
+      coreDeployPath,
+    );
   }
 }
 

@@ -168,7 +168,7 @@ export default class TestBridgeDeploy {
     return {};
   }
   get config() {
-    return { weth: this.mockWeth.address };
+    return { weth: this.mockWeth.address, customs: [] };
   }
 
   get bridgeRouter(): BridgeRouter | undefined {
