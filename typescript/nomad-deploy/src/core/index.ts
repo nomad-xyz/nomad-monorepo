@@ -1,6 +1,5 @@
 import { assert } from 'console';
 import fs from 'fs';
-import { ethers } from 'ethers';
 import * as proxyUtils from '../proxyUtils';
 import { CoreDeploy } from './CoreDeploy';
 import * as contracts from '@nomad-xyz/contract-interfaces/core';
