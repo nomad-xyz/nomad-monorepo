@@ -1,6 +1,5 @@
 import { assert } from 'console';
 import fs from 'fs';
-import { ethers } from 'ethers';
 import * as proxyUtils from '../proxyUtils';
 import { CoreDeploy } from './CoreDeploy';
 import * as contracts from '@nomad-xyz/contract-interfaces/core';
@@ -201,10 +200,16 @@ export async function deployUnenrolledReplica(
     ? contracts.TestReplica__factory
     : contracts.Replica__factory;
 
+  // deploy the new Replica with the remote Home's current committedRoot
+  const currentRoot = await remote.contracts.home?.proxy.committedRoot();
+  if (!currentRoot) {
+    throw new Error(`current root not defined for ${remote.chain.name}`);
+  }
+  
   let initData = replica.createInterface().encodeFunctionData('initialize', [
     remote.chain.domain,
     remote.config.updater,
-    ethers.constants.HashZero, // TODO: allow configuration in case of recovery
+    currentRoot,
     remote.config.optimisticSeconds,
   ]);
 
