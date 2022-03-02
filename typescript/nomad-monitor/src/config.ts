@@ -27,17 +27,17 @@ export class MonitorConfig {
 
     this.origin = origin;
     this.remotes = getNetworks().filter((m) => m != origin);
-    switch(environment){
+    switch (environment) {
       case 'production': {
-        this.context = contexts.mainnet
+        this.context = contexts.mainnet;
         break;
       }
       case 'staging': {
-        this.context = contexts.staging
+        this.context = contexts.staging;
         break;
       }
       default: {
-        this.context = contexts.dev
+        this.context = contexts.dev;
         break;
       }
     }
@@ -86,13 +86,13 @@ function getNetworks() {
   let networks = [];
   switch (environment) {
     case 'production':
-      networks = ['ethereum', 'moonbeam'];
+      networks = ['ethereum', 'moonbeam', 'milkomedaC1'];
       break;
 
     case 'staging':
       networks = ['kovan', 'moonbasealpha'];
       break;
-    
+
     default:
       networks = ['kovan', 'moonbasealpha'];
       break;
@@ -110,7 +110,8 @@ export function getRpcsFromEnv() {
     kovanRpc: process.env.KOVAN_RPC ?? '',
     rinkebyRpc: process.env.RINKEBY_RPC ?? '',
     moonbasealphaRpc: process.env.MOONBASEALPHA_RPC ?? '',
-    moonbeamRpc: process.env.MOONBEAM_RPC ?? ''
+    moonbeamRpc: process.env.MOONBEAM_RPC ?? '',
+    milkomedac1Rpc: process.env.MILKOMEDAC1_RPC ?? '',
   };
 }
 
