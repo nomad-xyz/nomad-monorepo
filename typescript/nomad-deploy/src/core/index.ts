@@ -201,10 +201,13 @@ export async function deployUnenrolledReplica(
     ? contracts.TestReplica__factory
     : contracts.Replica__factory;
 
+  // deploy the new Replica with the remote Home's current committedRoot
+  const currentRoot = await remote.contracts.home?.proxy.committedRoot();
+
   let initData = replica.createInterface().encodeFunctionData('initialize', [
     remote.chain.domain,
     remote.config.updater,
-    ethers.constants.HashZero, // TODO: allow configuration in case of recovery
+    currentRoot,
     remote.config.optimisticSeconds,
   ]);
 
