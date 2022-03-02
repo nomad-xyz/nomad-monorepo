@@ -1,10 +1,10 @@
-import * as ethereum from '../../../config/mainnets/ethereum';
-import * as milkomeda from '../../../config/mainnets/milkomeda';
-import { ExistingCoreDeploy } from '../../../src/core/CoreDeploy';
-import { ExistingBridgeDeploy } from '../../../src/bridge/BridgeDeploy';
-import { getPathToDeployConfig } from '../../../src/verification/readDeployOutput';
-import { deploysToSDK } from '../../../src/incremental/utils';
-import { checkHubAndSpokeConnections } from '../../../src/incremental/checks';
+import * as ethereum from '../../../../config/mainnets/ethereum';
+import * as milkomeda from '../../../../config/mainnets/milkomeda';
+import { ExistingCoreDeploy } from '../../../../src/core/CoreDeploy';
+import { ExistingBridgeDeploy } from '../../../../src/bridge/BridgeDeploy';
+import { getPathToDeployConfig } from '../../../../src/verification/readDeployOutput';
+import { deploysToSDK } from '../../../../src/incremental/utils';
+import { checkHubAndSpokeConnections } from '../../../../src/incremental/checks';
 import { NomadContext } from '@nomad-xyz/sdk';
 
 const path = getPathToDeployConfig('prod');

@@ -1,9 +1,9 @@
-import * as ethereum from '../../../config/mainnets/ethereum';
-import * as moonbeam from '../../../config/mainnets/moonbeam';
-import * as milkomeda from '../../../config/mainnets/milkomeda';
-import { CoreDeploy, ExistingCoreDeploy } from '../../../src/core/CoreDeploy';
-import { deployNewChain } from '../../../src/core';
-import { getPathToDeployConfig } from '../../../src/verification/readDeployOutput';
+import * as ethereum from '../../../../config/mainnets/ethereum';
+import * as moonbeam from '../../../../config/mainnets/moonbeam';
+import * as milkomeda from '../../../../config/mainnets/milkomeda';
+import { CoreDeploy, ExistingCoreDeploy } from '../../../../src/core/CoreDeploy';
+import { deployNewChain } from '../../../../src/core';
+import { getPathToDeployConfig } from '../../../../src/verification/readDeployOutput';
 
 const path = getPathToDeployConfig('prod');
 
