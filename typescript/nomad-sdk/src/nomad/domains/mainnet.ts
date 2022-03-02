@@ -13,6 +13,10 @@ export const ethereum: NomadDomain = {
       domain: 1650811245,
       address: '0x049b51e531Fd8f90da6d92EA83dC4125002F20EF',
     },
+    {
+      domain: 25393,
+      address: '0xEf989866b66a491e7B6c7473D73b589450D0f766',
+    },
   ],
   governanceRouter: '0x3009C99D370B780304D2098196f1EBF779a4777a',
   xAppConnectionManager: '0xFe8874778f946Ac2990A29eba3CFd50760593B2F',
