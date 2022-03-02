@@ -13,7 +13,6 @@ const blockTimesSeconds: Map<string, number> = new Map([
   ['moonbasealpha', 14],
   ['moonbeam', 14],
   ['evmos', 14],
-  ['astar', 14],
 ]);
 
 const fraudWindowSeconds: Map<string, number> = new Map([
@@ -26,7 +25,6 @@ const fraudWindowSeconds: Map<string, number> = new Map([
   ['moonbasealpha', 10],
   ['moonbeam', 10],
   ['evmos', 10],
-  ['astar', 10],
 ]);
 
 // timelag_blocks * block_time
@@ -40,7 +38,6 @@ const timelagsSeconds: Map<string, number> = new Map([
   ['moonbasealpha', 5 * 15],
   ['moonbeam', 5 * 15],
   ['evmos', 5 * 15],
-  ['astar', 5 * 15],
 ]);
 
 export function getFraudWindowSeconds(network: string): number {
