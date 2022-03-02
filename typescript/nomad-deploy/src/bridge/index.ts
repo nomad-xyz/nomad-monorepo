@@ -460,7 +460,7 @@ export async function deployCustoms(local: AnyBridgeDeploy): Promise<void> {
     ).wait(local.chain.confirmations);
 
     // enroll the custom representation
-    const enroll = await local.contracts.bridgeRouter.proxy.enrollCustom(
+    const enroll = await local.contracts.tokenRegistry!.proxy.enrollCustom(
       custom.domain,
       canonizeId(custom.id),
       proxy.address,
