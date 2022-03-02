@@ -418,6 +418,10 @@ export async function deployCustoms(local: AnyBridgeDeploy): Promise<void> {
       proxy.address,
       local.deployer,
     );
+
+    // initialize the token proxy
+    await tokenProxy.initialize(local.overrides);
+
     // set initial details
     await (
       await tokenProxy.setDetails(custom.name, custom.symbol, custom.decimals)
