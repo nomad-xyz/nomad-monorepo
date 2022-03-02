@@ -4,7 +4,7 @@ export function setRpcProviders(rpcs: any) {
   // register mainnet
   mainnet.registerRpcProvider('ethereum', rpcs.ethereumRpc);
   mainnet.registerRpcProvider('moonbeam', rpcs.moonbeamRpc);
-  mainnet.registerRpcProvider('milkomedaC1', rpcs.milkomedaC1Rpc);
+  mainnet.registerRpcProvider('milkomedac1', rpcs.milkomedac1Rpc);
   mainnet.registerRpcProvider('evmos', rpcs.evmosRpc);
 
   // register staging
