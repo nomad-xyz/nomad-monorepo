@@ -3,6 +3,8 @@ import Logger from "bunyan";
 
 import { register } from "prom-client";
 import express, { Response } from "express";
+export const prefix = `nomad_indexer`;
+
 
 export enum RpcRequestIdentificator {
   GetBlock = 'get_block',
@@ -51,6 +53,7 @@ export class MetricsCollector {
       throw Error(`Invalid PrometheusPort value: ${port}`);
     }
     const server = express();
+
     server.get("/metrics", async (_, res: Response) => {
       res.set("Content-Type", register.contentType);
       res.end(await register.metrics());
@@ -66,7 +69,6 @@ export class MetricsCollector {
   }
 }
 
-const prefix = `nomad_indexer`;
 
 export class IndexerCollector extends MetricsCollector {
   private numMessages: Gauge<string>;

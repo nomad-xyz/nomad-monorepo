@@ -69,7 +69,7 @@ class StatisticsCollector {
 }
 
 export abstract class Consumer extends EventEmitter {
-  abstract consume(...evens: NomadEvent[]): Promise<void>;
+  abstract consume(evens: NomadEvent[]): Promise<void>;
   abstract stats(): Statistics;
 }
 
@@ -606,7 +606,7 @@ export class Processor extends Consumer {
     this.logger = logger.child({span: 'consumer'});
   }
 
-  async consume(...events: NomadEvent[]): Promise<void> {
+  async consume(events: NomadEvent[]): Promise<void> {
     for (const event of events) {
       if (event.eventType === EventType.HomeDispatch) {
         this.dispatched(event);
@@ -675,7 +675,7 @@ export class Processor extends Consumer {
       this.logger.child({messageSource: 'consumer'}),
     );
 
-    let logger = m.logger.child({eventName: 'Dispatched'});
+    let logger = m.logger.child({eventName: "dispatched"});
 
     m.gasUsed.dispatch = e.gasUsed;
 
@@ -685,21 +685,21 @@ export class Processor extends Consumer {
     this.addToSyncQueue(m.messageHash);
     const gas = e.gasUsed.toNumber();
     // this.logger.warn(`!Gas for dispatched from ${m.origin, m.destination} to ${m.origin, m.destination} (${e.tx}) = ${gas} (${e.gasUsed})`);
-    this.emit(`dispatched`, m.origin, m.destination, gas)
+    this.emit("dispatched", m.origin, m.destination, gas)
     logger.debug(`Created message`);
 
     if (!this.domains.includes(e.domain)) this.domains.push(e.domain);
   }
 
   homeUpdate(e: NomadEvent) {
-    let logger = this.logger.child({stage: MsgState.Updated});
+    let logger = this.logger.child({eventName: "updated"});
     const ms = this.getMsgsByOriginAndRoot(e.domain, e.eventData.oldRoot!);
     if (ms.length) {
       ms.forEach((m) => {
         if (m.update(e.ts, e.gasUsed)) {
           this.addToSyncQueue(m.messageHash);
 
-          this.emit(`updated`, m.origin, m.destination, m.timings.toUpdate(), e.gasUsed.toNumber());
+          this.emit("updated", m.origin, m.destination, m.timings.toUpdate(), e.gasUsed.toNumber());
         }
       });
     } else {
@@ -708,7 +708,7 @@ export class Processor extends Consumer {
   }
 
   replicaUpdate(e: NomadEvent) {
-    let logger = this.logger.child({eventName: 'Relayed'});
+    let logger = this.logger.child({eventName: "relayed"});
     const ms = this.getMsgsByOriginAndRoot(
       e.replicaOrigin,
       e.eventData.oldRoot!
@@ -718,7 +718,7 @@ export class Processor extends Consumer {
       ms.forEach((m) => {
         if (m.relay(e.ts, e.gasUsed)) {
           this.addToSyncQueue(m.messageHash);
-          this.emit(`relayed`, m.origin, m.destination, m.timings.toRelay(), e.gasUsed.toNumber());
+          this.emit("relayed", m.origin, m.destination, m.timings.toRelay(), e.gasUsed.toNumber());
         }
       });
     } else {
@@ -727,12 +727,12 @@ export class Processor extends Consumer {
   }
 
   process(e: NomadEvent) {
-    let logger = this.logger.child({eventName: 'Processed'});
+    let logger = this.logger.child({eventName: "processed"});
     const m = this.getMsg(e.eventData.messageHash!);
     if (m) {
       if (m.process(e.ts, e.gasUsed)) {
         this.addToSyncQueue(m.messageHash);
-        this.emit(`processed`, m.origin, m.destination, m.timings.toProcess(), e.gasUsed.toNumber())
+        this.emit("processed", m.origin, m.destination, m.timings.toProcess(), e.gasUsed.toNumber())
       }
     } else {
       logger.warn({messageHash: e.eventData.messageHash!}, `Haven't found a message for Processed event`)
@@ -740,7 +740,7 @@ export class Processor extends Consumer {
   }
 
   bridgeRouterSend(e: NomadEvent) {
-    let logger = this.logger.child({eventName: 'BridgeSent',});
+    let logger = this.logger.child({eventName: "bridgeSent",});
     const hash = this.senderRegistry.bridgeRouterSend(e);
     if (hash) {
       logger.child({messageHash: hash}).debug(`Found dispatched message`);
@@ -753,13 +753,13 @@ export class Processor extends Consumer {
 
   bridgeRouterReceive(e: NomadEvent) {
     const m = this.getMsgsByOriginAndNonce(...e.originAndNonce());
-    let logger = this.logger.child({eventName: 'BridgeReceived'});
+    let logger = this.logger.child({eventName: "bridgeReceived"});
 
     if (m) {
       if (m.receive(e.ts, e.gasUsed)) {
         this.addToSyncQueue(m.messageHash);
         const gas = e.gasUsed.toNumber();
-        this.emit(`received`, m.origin, m.destination, m.timings.toReceive(), gas);
+        this.emit("received", m.origin, m.destination, m.timings.toReceive(), gas);
       }
     } else {
       let [origin, nonce] = e.originAndNonce();

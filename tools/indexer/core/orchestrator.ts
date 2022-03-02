@@ -89,7 +89,7 @@ export class Orchestrator {
     ).flat();
     events.sort((a, b) => a.ts - b.ts);
     this.logger.info(`Received ${events.length} events after reindexing`);
-    await this.consumer.consume(...events);
+    await this.consumer.consume(events);
     return events.length
   }
 
@@ -112,11 +112,11 @@ export class Orchestrator {
     this.sdk.domainNumbers.forEach(async (domain: number) => {
       const network = this.domain2name(domain);
       const s = stats.forDomain(domain).counts;
-      this.metrics.setNumMessages('dispatched', network, s.dispatched);
-      this.metrics.setNumMessages('updated', network, s.updated);
-      this.metrics.setNumMessages('relayed', network, s.relayed);
-      this.metrics.setNumMessages('received', network, s.received);
-      this.metrics.setNumMessages('processed', network, s.processed);
+      this.metrics.setNumMessages("dispatched", network, s.dispatched);
+      this.metrics.setNumMessages("updated", network, s.updated);
+      this.metrics.setNumMessages("relayed", network, s.relayed);
+      this.metrics.setNumMessages("received", network, s.received);
+      this.metrics.setNumMessages("processed", network, s.processed);
     })
   }
 
@@ -135,7 +135,7 @@ export class Orchestrator {
       .map((indexer) => indexer.persistance.allEvents())
       .flat();
     events.sort((a, b) => a.ts - b.ts);
-    await this.consumer.consume(...events);
+    await this.consumer.consume(events);
   }
 
   async initIndexers() {
@@ -155,38 +155,38 @@ export class Orchestrator {
 
   subscribeStatisticEvents() {
 
-    this.consumer.on('dispatched', (home: number, replica: number, gas: number) => {
+    this.consumer.on("dispatched", (home: number, replica: number, gas: number) => {
       const homeName = this.domain2name(home);
       const replicaName = this.domain2name(replica);
-      this.metrics.observeGasUsage('dispatched', homeName, replicaName, gas);
+      this.metrics.observeGasUsage("dispatched", homeName, replicaName, gas);
     })
 
-    this.consumer.on('updated', (home: number, replica: number ,ms: number, gas: number) => {
+    this.consumer.on("updated", (home: number, replica: number ,ms: number, gas: number) => {
       const homeName = this.domain2name(home);
       const replicaName = this.domain2name(replica);
-      this.metrics.observeLatency('updated', homeName, replicaName, ms)
-      this.metrics.observeGasUsage('updated', homeName, replicaName, gas);
+      this.metrics.observeLatency("updated", homeName, replicaName, ms)
+      this.metrics.observeGasUsage("updated", homeName, replicaName, gas);
     })
 
-    this.consumer.on('relayed', (home: number, replica: number ,ms: number, gas: number) => {
+    this.consumer.on("relayed", (home: number, replica: number ,ms: number, gas: number) => {
       const homeName = this.domain2name(home);
       const replicaName = this.domain2name(replica);
-      this.metrics.observeLatency('relayed', homeName, replicaName, ms)
-      this.metrics.observeGasUsage('relayed', homeName, replicaName, gas);
+      this.metrics.observeLatency("relayed", homeName, replicaName, ms)
+      this.metrics.observeGasUsage("relayed", homeName, replicaName, gas);
     })
 
-    this.consumer.on('received', (home: number, replica: number, ms: number,  gas: number) => {
+    this.consumer.on("received", (home: number, replica: number, ms: number,  gas: number) => {
       const homeName = this.domain2name(home);
       const replicaName = this.domain2name(replica);
-      this.metrics.observeLatency('received', homeName, replicaName, ms)
-      this.metrics.observeGasUsage('received', homeName, replicaName, gas);
+      this.metrics.observeLatency("received", homeName, replicaName, ms)
+      this.metrics.observeGasUsage("received", homeName, replicaName, gas);
     })
 
-    this.consumer.on('processed', (home: number, replica: number, e2e: number, gas: number) => {
+    this.consumer.on("processed", (home: number, replica: number, e2e: number, gas: number) => {
       const homeName = this.domain2name(home);
       const replicaName = this.domain2name(replica);
-      this.metrics.observeLatency('processed', homeName, replicaName, e2e)
-      this.metrics.observeGasUsage('processed', homeName, replicaName, gas);
+      this.metrics.observeLatency("processed", homeName, replicaName, e2e)
+      this.metrics.observeGasUsage("processed", homeName, replicaName, gas);
     })
   }
 

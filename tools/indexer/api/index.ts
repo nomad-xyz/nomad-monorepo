@@ -2,6 +2,9 @@ import express from "express";
 import { DB, MsgRequest } from "../core/db";
 import * as dotenv from "dotenv";
 import Logger from "bunyan";
+import promBundle from 'express-prom-bundle';
+import { prefix } from "../core/metrics";
+
 dotenv.config({});
 
 function fail(res: any, code: number, reason: string) {
@@ -21,6 +24,26 @@ export async function run(db: DB, logger: Logger) {
     logger.info(`request to ${req.url}`);
     next();
   };
+
+  const metricsMiddleware = promBundle({
+    httpDurationMetricName: prefix + '_api',
+    buckets: [0.1, 0.3, 0.6, 1, 1.5, 2.5, 5],
+    includeMethod: true,
+    includePath: true,
+    metricsPath: '/metrics',
+  });
+  metricsMiddleware
+
+  app.use(metricsMiddleware)
+
+  // app.use(promMid({
+  //   metricsPath: '/metrics',
+  //   collectDefaultMetrics: true,
+  //   requestDurationBuckets: [0.1, 0.5, 1, 1.5],
+  //   requestLengthBuckets: [512, 1024, 5120, 10240, 51200, 102400],
+  //   responseLengthBuckets: [512, 1024, 5120, 10240, 51200, 102400],
+  //   prefix: prefix + '_api',
+  // }));
 
   app.get("/healthcheck", log, (req, res) => {
     res.send("OK!");

@@ -5,7 +5,7 @@ import * as dotenv from "dotenv";
 import { IndexerCollector } from "./metrics";
 import { DB } from "./db";
 import Logger from "bunyan";
-import {run as runDebugApi} from "./debugApi";
+import {run as runApi} from "./api";
 dotenv.config({});
 
 export async function run(db: DB, environment: string, logger: Logger, metrics: IndexerCollector) {
@@ -37,7 +37,7 @@ export async function run(db: DB, environment: string, logger: Logger, metrics: 
 
   const o = new Orchestrator(ctx, c, ctx.domainNumbers[0], metrics, logger, db);
 
-  if (!!process.env.DEBUG_PORT) runDebugApi(o, logger.child({span: 'debugApi'}));
+  if (!!process.env.DEBUG_PORT) runApi(o, logger.child({span: 'debugApi'}));
   
   await o.init();
   await o.startConsuming();

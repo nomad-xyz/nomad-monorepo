@@ -1,9 +1,10 @@
 import express from "express";
-import { DB, MsgRequest } from "../core/db";
+import { DB, MsgRequest } from "./db";
 import * as dotenv from "dotenv";
 import Logger from "bunyan";
 import { Orchestrator } from "./orchestrator";
 import { Processor } from "./consumer";
+import { replacer } from "./utils";
 dotenv.config({});
 
 function fail(res: any, code: number, reason: string) {
@@ -47,6 +48,32 @@ export async function run(o: Orchestrator, logger: Logger) {
         return res.status(404).json({});
     }
   });
+
+  app.get("/status", log, async (req, res) => {
+    const promises: Promise<[number, {
+      lastIndexed: number;
+      numMessages: number;
+      numRpcFailures: number;
+    }]>[] = Array.from(o.indexers.entries()).map(async ([domain, indexer]): Promise<[number, {
+      lastIndexed: number;
+      numMessages: number;
+      numRpcFailures: number;
+    }]> => {
+      return [domain, {
+        lastIndexed: indexer.lastIndexed.valueOf(),
+        numMessages: await o.db.getMessageCount(domain),
+        numRpcFailures: indexer.failureCounter.num()
+      }]
+    });
+    const entries = await Promise.all(
+      promises
+    );
+    
+    const x = new Map(
+      entries
+    );
+    return res.json(JSON.stringify(x, replacer));
+  })
 
   app.get("/msg/:origin/:state", log, async (req, res) => {
 

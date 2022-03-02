@@ -131,3 +131,22 @@ export class Padded {
     return this.s;
   }
 }
+
+
+export class FailureCounter {
+  container: Date[];
+  period: number;
+  constructor(periodMins=60) {
+    this.container = [];
+    this.period = periodMins;
+  }
+  add() {
+    this.container.push(new Date());
+  }
+  num(): number {
+    let now = new Date();
+    const cleanDates = this.container.filter(d => (now.valueOf() - d.valueOf()) <= 1000 * 60 * this.period); // millisec * 60 sec * period in mins
+    this.container = cleanDates;
+    return cleanDates.length;
+  }
+}

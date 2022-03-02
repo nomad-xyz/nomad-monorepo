@@ -118,6 +118,15 @@ export class DB {
     return messages.map(m => NomadMessage.deserialize(m, this.logger))
   }
 
+  async getMessageCount(origin: number): Promise<number> {
+    this.metrics.incDbRequests(DbRequestType.Select);
+    return await this.client.messages.count({
+      where: {
+        origin
+      }
+    });
+  }
+
   async insertMessage(messages: NomadMessage[]) {
     if (!messages.length) return;
     
