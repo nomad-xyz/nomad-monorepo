@@ -86,7 +86,7 @@ function getNetworks() {
   let networks = [];
   switch (environment) {
     case 'production':
-      networks = ['milkomedaC1', 'moonbeam', 'ethereum'];
+      networks = ['milkomedaC1', 'moonbeam', 'ethereum', 'evmos'];
       break;
 
     case 'staging':
@@ -107,7 +107,7 @@ function getReplicas(origin: string) {
     case 'production':
       switch(origin){
         case 'ethereum':
-          replicas = ['moonbeam', 'milkomedaC1']
+          replicas = ['moonbeam', 'milkomedaC1', 'evmos']
           break;
         case 'moonbeam':
           replicas = ['ethereum']
@@ -115,6 +115,9 @@ function getReplicas(origin: string) {
         case 'milkomedaC1':
             replicas = ['ethereum']
             break;
+        case 'evmos':
+              replicas = ['ethereum']
+              break;
         default: 
           throw new Error(`Invalid Origin, no replicas available for ${origin}`)
       }
@@ -175,6 +178,7 @@ export function getRpcsFromEnv() {
     milkomedatestnetRpc: process.env.MILKOMEDATESTNET_RPC ?? '',
     milkomedaC1Rpc: process.env.MILKOMEDAC1_RPC ?? '',
     evmostestnetRpc: process.env.EVMOSTESTNET_RPC ?? '',
+    evmosRpc: process.env.EVMOS_RPC ?? '',
   };
 }
 

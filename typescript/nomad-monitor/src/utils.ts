@@ -12,6 +12,7 @@ const blockTimesSeconds: Map<string, number> = new Map([
   ['kovan', 4],
   ['moonbasealpha', 14],
   ['moonbeam', 14],
+  ['evmos', 14],
   ['astar', 14],
 ]);
 
@@ -24,6 +25,7 @@ const fraudWindowSeconds: Map<string, number> = new Map([
   ['kovan', 10],
   ['moonbasealpha', 10],
   ['moonbeam', 10],
+  ['evmos', 10],
   ['astar', 10],
 ]);
 
@@ -37,6 +39,7 @@ const timelagsSeconds: Map<string, number> = new Map([
   ['kovan', 5 * 4],
   ['moonbasealpha', 5 * 15],
   ['moonbeam', 5 * 15],
+  ['evmos', 5 * 15],
   ['astar', 5 * 15],
 ]);
 

@@ -28,6 +28,9 @@ function getRpcProviderFromNetwork(
     case 'milkomedaC1':
         rpcUrl = process.env.MILKOMEDAC1_RPC!;
         break;
+    case 'evmos':
+        rpcUrl = process.env.EVMOS_RPC!;
+        break;
     default:
       throw new Error(`No RPC url for network ${network}`);
   }
