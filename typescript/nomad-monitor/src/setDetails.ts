@@ -25,7 +25,7 @@ function getRpcProviderFromNetwork(
     case 'moonbasealpha':
       rpcUrl = process.env.MOONBASEALPHA_RPC!;
       break;
-    case 'milkomedac1':
+    case 'milkomedaC1':
         rpcUrl = process.env.MILKOMEDAC1_RPC!;
         break;
     case 'evmos':

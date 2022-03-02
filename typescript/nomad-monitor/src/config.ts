@@ -86,7 +86,7 @@ function getNetworks() {
   let networks = [];
   switch (environment) {
     case 'production':
-      networks = ['milkomedac1', 'moonbeam', 'ethereum', 'evmos'];
+      networks = ['milkomedaC1', 'moonbeam', 'ethereum', 'evmos'];
       break;
 
     case 'staging':
@@ -107,12 +107,12 @@ function getReplicas(origin: string) {
     case 'production':
       switch(origin){
         case 'ethereum':
-          replicas = ['moonbeam', 'milkomedac1', 'evmos']
+          replicas = ['moonbeam', 'milkomedaC1', 'evmos']
           break;
         case 'moonbeam':
           replicas = ['ethereum']
           break;
-        case 'milkomedac1':
+        case 'milkomedaC1':
             replicas = ['ethereum']
             break;
         case 'evmos':
@@ -176,7 +176,7 @@ export function getRpcsFromEnv() {
     moonbasealphaRpc: process.env.MOONBASEALPHA_RPC ?? '',
     moonbeamRpc: process.env.MOONBEAM_RPC ?? '',
     milkomedatestnetRpc: process.env.MILKOMEDATESTNET_RPC ?? '',
-    milkomedac1Rpc: process.env.MILKOMEDAC1_RPC ?? '',
+    milkomedaC1Rpc: process.env.MILKOMEDAC1_RPC ?? '',
     evmostestnetRpc: process.env.EVMOSTESTNET_RPC ?? '',
     evmosRpc: process.env.EVMOS_RPC ?? '',
   };
