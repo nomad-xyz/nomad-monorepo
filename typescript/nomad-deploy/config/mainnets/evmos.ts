@@ -14,7 +14,7 @@ export const chainJson: ChainJson = {
   name: 'evmos',
   rpc,
   deployerKey: process.env.EVMOS_DEPLOYER_KEY,
-  domain: 0x65766d6f73, // b'evmos' interpreted as an int
+  domain: 0x65766d73, // b'evms' interpreted as an int
   gas: { price: '150000000000' }, // evmos set minimum gas to 100 gwei; we will default to 150 gwei
   chunk: 2000,
   timelag: 20,
