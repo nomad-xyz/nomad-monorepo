@@ -43,24 +43,24 @@ export const moonbeam: NomadDomain = {
 };
 
 export const milkomedaC1: NomadDomain = {
-  "name": "milkomedaC1",
-  "id": 25393,
-  "paginate": {
-    "from": 1356181,
-    "blocks": 2000,
+  name: 'milkomedaC1',
+  id: 25393,
+  paginate: {
+    from: 1356181,
+    blocks: 2000,
   },
-  "home": "0x1458a68793Bc6a51c40f15e1b92217D98456db13",
-  "replicas": [
+  home: '0x1458a68793Bc6a51c40f15e1b92217D98456db13',
+  replicas: [
     {
-      "domain": 6648936,
-      "address": "0x5D94309E5a0090b165FA4181519701637B6DAEBA",
+      domain: 6648936,
+      address: '0x5D94309E5a0090b165FA4181519701637B6DAEBA',
     },
   ],
-  "governanceRouter": "0x0a627A6398F429b62969Cd475FB5Ba8e04a4EB70",
-  "bridgeRouter": "0x9faF7f27c46ACdeCEe58Eb4B0Ab6489E603EC251",
-  "tokenRegistry": "0x19d4b0F5871913c714554Bbb457F2a1549f52E04",
-  "ethHelper": "0x0cB0D686278aE02Fc9fD50480212d1F08D986A31",
-  "xAppConnectionManager": "0x2EFF94F8c56C20f85D45e9752bfec3c0522c55c7",
+  governanceRouter: '0x0a627A6398F429b62969Cd475FB5Ba8e04a4EB70',
+  bridgeRouter: '0x9faF7f27c46ACdeCEe58Eb4B0Ab6489E603EC251',
+  tokenRegistry: '0x19d4b0F5871913c714554Bbb457F2a1549f52E04',
+  ethHelper: '0x0cB0D686278aE02Fc9fD50480212d1F08D986A31',
+  xAppConnectionManager: '0x2EFF94F8c56C20f85D45e9752bfec3c0522c55c7',
 };
 
 export const mainnetDomains = [ethereum, moonbeam, milkomedaC1];

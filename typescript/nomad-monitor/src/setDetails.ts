@@ -16,14 +16,31 @@ function getRpcProviderFromNetwork(
 ): ethers.providers.JsonRpcProvider {
   let rpcUrl: string;
   switch (network) {
+    // Mainnet
     case 'ethereum':
       rpcUrl = process.env.ETHEREUM_RPC!;
       break;
     case 'moonbeam':
       rpcUrl = process.env.MOONBEAM_RPC!;
       break;
+    case 'milkomedaC1':
+      rpcUrl = process.env.MILKOMEDAC1_RPC!;
+      break;
+    case 'evmos':
+      rpcUrl = process.env.EVMOS_RPC!;
+      break;
+    // Dev
+    case 'rinkeby':
+      rpcUrl = process.env.RINKEBY_RPC!;
+      break;
     case 'moonbasealpha':
       rpcUrl = process.env.MOONBASEALPHA_RPC!;
+      break;
+    case 'milkomedatestnet':
+      rpcUrl = process.env.MILKOMEDATESTNET_RPC!;
+      break;
+    case 'evmostestnet':
+      rpcUrl = process.env.EVMOSTESTNET_RPC!;
       break;
     default:
       throw new Error(`No RPC url for network ${network}`);
