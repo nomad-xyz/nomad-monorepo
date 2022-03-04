@@ -105,7 +105,13 @@ function getNetworks() {
       break;
 
     default:
-      networks = ['rinkeby', 'kovan', 'moonbasealpha', 'milkomedatestnet'];
+      networks = [
+        'rinkeby',
+        'kovan',
+        'moonbasealpha',
+        'milkomedatestnet',
+        'evmostestnet',
+      ];
       break;
   }
 
@@ -124,6 +130,7 @@ export function getRpcsFromEnv() {
     moonbeamRpc: process.env.MOONBEAM_RPC ?? '',
     milkomedac1Rpc: process.env.MILKOMEDAC1_RPC ?? '',
     milkomedatestnetRpc: process.env.MILKOMEDA_TESTNET_RPC ?? '',
+    evmostestnetRpc: process.env.EVMOS_TESTNET_RPC ?? '',
   };
 }
 

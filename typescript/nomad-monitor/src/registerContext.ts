@@ -16,6 +16,7 @@ export function setRpcProviders(rpcs: any) {
   dev.registerRpcProvider('kovan', rpcs.kovanRpc);
   dev.registerRpcProvider('moonbasealpha', rpcs.moonbasealphaRpc);
   dev.registerRpcProvider('milkomedatestnet', rpcs.milkomedatestnetRpc);
+  dev.registerRpcProvider('evmostestnet', rpcs.evmostestnetRpc);
 }
 
 export { mainnet, staging, dev };
