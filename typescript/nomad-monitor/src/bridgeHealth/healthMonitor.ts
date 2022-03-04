@@ -4,8 +4,14 @@ import { EventType, IndexType, MonitorSingle } from '../monitorSingle';
 import { MonitorConfig } from '../config';
 
 export class BridgeHealthMonitor extends MonitorSingle {
+  dispatchLogs: any[];
+  processLogs: any[];
+
   constructor(config: MonitorConfig) {
     super(config);
+
+    this.dispatchLogs = [];
+    this.processLogs = [];
   }
 
   async start(): Promise<void> {
@@ -15,12 +21,12 @@ export class BridgeHealthMonitor extends MonitorSingle {
   async reportHealth() {
     super.logInfo(`Checking ${this.origin}`);
     super.logInfo(`Get Dispatch logs from ${this.origin}`);
-    let dispatchLogs, processLogs;
+    let dispatchLogs;
     try {
       dispatchLogs = await super.query(
         this.origin,
         EventType.Dispatch,
-        IndexType.FromZero,
+        IndexType.Incremental,
       );
     } catch (e) {
       super.logError(
@@ -28,20 +34,16 @@ export class BridgeHealthMonitor extends MonitorSingle {
       );
       return;
     }
+    this.dispatchLogs.push(...dispatchLogs);
 
-    const processedLogs = [];
     for (const remote of this.remotes) {
       super.logInfo(`Get Process logs from ${remote} for ${this.origin}`);
-      processLogs = await super.query(
-        remote,
-        EventType.Process,
-        IndexType.FromZero,
-      );
+      let processLogs;
       try {
-        dispatchLogs = await super.query(
-          this.origin,
-          EventType.Dispatch,
-          IndexType.FromZero,
+        processLogs = await super.query(
+          remote,
+          EventType.Process,
+          IndexType.Incremental,
         );
       } catch (e) {
         super.logError(
@@ -49,27 +51,27 @@ export class BridgeHealthMonitor extends MonitorSingle {
         );
         return;
       }
-      processedLogs.push(...processLogs);
+      this.processLogs.push(...processLogs);
     }
 
     const unprocessedDetails = await this.getUnprocessedDetails(
       this.origin,
-      dispatchLogs,
-      processedLogs,
+      this.dispatchLogs,
+      this.processLogs,
     );
 
     const summary = getMonitorMetrics(
       this.origin,
-      dispatchLogs,
-      processedLogs,
+      this.dispatchLogs,
+      this.processLogs,
       unprocessedDetails,
     );
     super.logInfo(`${JSON.stringify(summary)}\n ${this.origin} Summary`);
 
     (this.metrics as HealthMetricsCollector).setBridgeState(
       this.origin,
-      dispatchLogs.length,
-      processedLogs.length,
+      this.dispatchLogs.length,
+      this.processLogs.length,
       unprocessedDetails.length,
     );
 

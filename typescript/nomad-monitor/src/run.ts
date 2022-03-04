@@ -3,6 +3,7 @@ import { RelayLatencyMonitor } from './latencies/relayer/relayerMonitor';
 import { ProcessorLatencyMonitor } from './latencies/processor/processorMonitor';
 import { BridgeHealthMonitor } from './bridgeHealth/healthMonitor';
 import { E2ELatencyMonitor } from './latencies/e2e/e2eMonitor';
+import { FromBlock } from './monitorSingle';
 
 export enum Script {
   Health = 'health',
@@ -19,16 +20,18 @@ const origin = args[1];
   const config = new MonitorConfig(script, origin);
   switch (script) {
     case Script.Health:
-      await new BridgeHealthMonitor(config).main();
+      await new BridgeHealthMonitor(config).main(FromBlock.Zero);
       break;
     case Script.E2E:
-      await new E2ELatencyMonitor(config).main();
+      await new E2ELatencyMonitor(config).main(FromBlock.ThousandBehindTip);
       break;
     case Script.Relayer:
-      await new RelayLatencyMonitor(config).main();
+      await new RelayLatencyMonitor(config).main(FromBlock.ThousandBehindTip);
       break;
     case Script.Processor:
-      await new ProcessorLatencyMonitor(config).main();
+      await new ProcessorLatencyMonitor(config).main(
+        FromBlock.ThousandBehindTip,
+      );
       break;
     default:
       throw new Error(`Undefined script found: ${script}`);
