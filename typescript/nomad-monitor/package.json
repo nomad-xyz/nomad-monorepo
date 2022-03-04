@@ -15,6 +15,7 @@
     "monitor-once": "ts-node src/bridgeHealth/monitor.ts once | ./node_modules/.bin/bunyan",
     "monitor-all": "ts-node src/runAll.ts | ./node_modules/.bin/bunyan",
     "set-details": "ts-node src/setDetails.ts",
+    "update-tokens": "npx ts-node src/tokens.ts",
     "value": "ts-node src/value.ts | ./node_modules/.bin/bunyan",
     "trace": "ts-node src/trace.ts",
     "gas": "ts-node src/gas.ts",
