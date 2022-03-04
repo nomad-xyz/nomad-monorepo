@@ -1,4 +1,4 @@
-import { dev } from './registerContext';
+import { dev, staging, mainnet } from './registerContext';
 import { buildConfig } from './config';
 
 import {
@@ -7,10 +7,7 @@ import {
   TokenDeployedArgs,
   TokenDeployedTypes,
 } from '@nomad-xyz/sdk/nomad/events/bridgeEvents';
-import {
-  NomadContext,
-  queryAnnotatedEvents,
-} from '@nomad-xyz/sdk/nomad';
+import { NomadContext, queryAnnotatedEvents } from '@nomad-xyz/sdk/nomad';
 import { TSContract } from '@nomad-xyz/sdk/nomad/events/fetch';
 import { uploadDeployedTokens } from './googleSheets';
 
@@ -69,7 +66,11 @@ export async function getDeployedTokens(
 ): Promise<Map<number, Deploy[]>> {
   const events = new Map();
   for (const domain of context.domainNumbers) {
-    events.set(domain, await getDomainDeployedTokens(context, domain));
+    // kludge: Moonbeam rate limiting causing error out when indexing, skip
+    // Moonbeam
+    if (domain != 1650811245) {
+      events.set(domain, await getDomainDeployedTokens(context, domain));
+    }
   }
   return events;
 }
@@ -99,17 +100,41 @@ export async function printDeployedTokens(
 
 export async function persistDeployedTokens(
   context: NomadContext,
-  credentials: string
-): Promise <void> {
+  credentials: string,
+): Promise<void> {
   const deployed = await getDeployedTokens(context);
-  for(let domain of deployed.keys()){
-    let domainName = context.resolveDomainName(domain)
-    const tokens = deployed.get(domain)
-    uploadDeployedTokens(domainName!, tokens!, credentials)
+  for (let domain of deployed.keys()) {
+    let domainName = context.resolveDomainName(domain);
+    const tokens = deployed.get(domain);
+    uploadDeployedTokens(domainName!, tokens!, credentials);
   }
 }
 
+function getContextFromEnvironment(environment: String): NomadContext {
+  let context: NomadContext;
+  switch (environment) {
+    case 'dev':
+      context = dev;
+      break;
+    case 'staging':
+      context = staging;
+      break;
+    case 'mainnet':
+      context = mainnet;
+      break;
+    default:
+      throw new Error(`${environment} not a recognized environment!`);
+  }
+
+  return context;
+}
+
+// Usage: npm run update-tokens <environment>
 (async function main() {
-  const config = buildConfig("tokens")
-  await persistDeployedTokens(dev, config.googleCredentialsFile)
+  const args = process.argv.slice(2);
+  const environment = args[0];
+  const context = getContextFromEnvironment(environment);
+
+  const config = buildConfig('tokens');
+  await persistDeployedTokens(context, config.googleCredentialsFile);
 })();
