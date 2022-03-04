@@ -7,7 +7,7 @@ import { ethers } from "ethers";
 import { FailureCounter, KVCache, replacer, retry, reviver } from "./utils";
 import { BridgeRouter } from "@nomad-xyz/contract-interfaces/bridge";
 import pLimit from 'p-limit';
-import { RpcRequestIdentificator } from "./metrics";
+import { RpcRequestMethod } from "./metrics";
 import Logger from "bunyan";
 
 type ShortTx = {
@@ -136,17 +136,17 @@ export class Indexer {
     const [block, error] = await retry(
       async () => {
         return await this.limit(async () => {
-          this.orchestrator.metrics.incRpcRequests(RpcRequestIdentificator.GetBlockWithTxs, this.network);
+          this.orchestrator.metrics.incRpcRequests(RpcRequestMethod.GetBlockWithTxs, this.network);
           const start = new Date().valueOf();
           const r = await this.provider.getBlockWithTransactions(blockNumber);
-          this.orchestrator.metrics.observeRpcLatency(RpcRequestIdentificator.GetBlockWithTxs, this.network, new Date().valueOf() - start);
+          this.orchestrator.metrics.observeRpcLatency(RpcRequestMethod.GetBlockWithTxs, this.network, new Date().valueOf() - start);
           return r;
         })
       },
       RETRIES,
       (error: any) =>
         {
-          this.orchestrator.metrics.incRpcErrors(RpcRequestIdentificator.GetBlockWithTxs, this.network, error.code);
+          this.orchestrator.metrics.incRpcErrors(RpcRequestMethod.GetBlockWithTxs, this.network, error.code);
           this.logger.warn(
           `Retrying after RPC Error... Block: ${blockNumber}, Error: ${error.code}`
         );
@@ -182,17 +182,17 @@ export class Indexer {
     const [block, error] = await retry(
       async () => {
         return await this.limit(async () => {
-          this.orchestrator.metrics.incRpcRequests(RpcRequestIdentificator.GetBlock, this.network);
+          this.orchestrator.metrics.incRpcRequests(RpcRequestMethod.GetBlock, this.network);
           const start = new Date().valueOf();
           const r = await this.provider.getBlock(blockNumber)
-          this.orchestrator.metrics.observeRpcLatency(RpcRequestIdentificator.GetBlock, this.network, new Date().valueOf() - start);
+          this.orchestrator.metrics.observeRpcLatency(RpcRequestMethod.GetBlock, this.network, new Date().valueOf() - start);
           return r;
         })
       },
       RETRIES,
       (error: any) =>
         {
-          this.orchestrator.metrics.incRpcErrors(RpcRequestIdentificator.GetBlock, this.network, error.code);
+          this.orchestrator.metrics.incRpcErrors(RpcRequestMethod.GetBlock, this.network, error.code);
           this.logger.warn(
           `Retrying after RPC Error... Block number: ${blockNumber}, Error: ${error.code}`
         )
@@ -226,17 +226,17 @@ export class Indexer {
     const [tx, error] = await retry(
       async () => {
         return await this.limit(async () => {
-          this.orchestrator.metrics.incRpcRequests(RpcRequestIdentificator.GetTx, this.network);
+          this.orchestrator.metrics.incRpcRequests(RpcRequestMethod.GetTx, this.network);
           const start = new Date().valueOf();
           const r = await this.provider.getTransaction(hash)
-          this.orchestrator.metrics.observeRpcLatency(RpcRequestIdentificator.GetTx, this.network, new Date().valueOf() - start);
+          this.orchestrator.metrics.observeRpcLatency(RpcRequestMethod.GetTx, this.network, new Date().valueOf() - start);
           return r;
         })
       },
       RETRIES,
       (error: any) =>
         {
-          this.orchestrator.metrics.incRpcErrors(RpcRequestIdentificator.GetTx, this.network, error.code);
+          this.orchestrator.metrics.incRpcErrors(RpcRequestMethod.GetTx, this.network, error.code);
           this.logger.warn(
           `Retrying after RPC Error... TX hash: ${hash}, Error: ${error.code}`
         )
@@ -292,17 +292,17 @@ export class Indexer {
     const [receipt, error] = await retry(
       async () => {
         return await this.limit(async () => {
-          this.orchestrator.metrics.incRpcRequests(RpcRequestIdentificator.GetTxReceipt, this.network);
+          this.orchestrator.metrics.incRpcRequests(RpcRequestMethod.GetTxReceipt, this.network);
           const start = new Date().valueOf();
           const r = await this.provider.getTransactionReceipt(hash)
-          this.orchestrator.metrics.observeRpcLatency(RpcRequestIdentificator.GetTxReceipt, this.network, new Date().valueOf() - start);
+          this.orchestrator.metrics.observeRpcLatency(RpcRequestMethod.GetTxReceipt, this.network, new Date().valueOf() - start);
           return r;
         })
       },
       RETRIES,
       (error: any) =>
        {
-        this.orchestrator.metrics.incRpcErrors(RpcRequestIdentificator.GetTxReceipt, this.network, error.code) 
+        this.orchestrator.metrics.incRpcErrors(RpcRequestMethod.GetTxReceipt, this.network, error.code) 
         this.logger.warn(
           `Retrying after RPC Error... , Error: ${error.code}`
         )
@@ -364,16 +364,16 @@ export class Indexer {
     );
     const [to, error] = await retry(
       async () => {
-        this.orchestrator.metrics.incRpcRequests(RpcRequestIdentificator.GetBlockNumber, this.network);
+        this.orchestrator.metrics.incRpcRequests(RpcRequestMethod.GetBlockNumber, this.network);
         const start = new Date().valueOf();
         const r = await this.provider.getBlockNumber()
-        this.orchestrator.metrics.observeRpcLatency(RpcRequestIdentificator.GetBlockNumber, this.network, new Date().valueOf() - start);
+        this.orchestrator.metrics.observeRpcLatency(RpcRequestMethod.GetBlockNumber, this.network, new Date().valueOf() - start);
         return r;
       },
       RETRIES,
       (error: any) =>
         {
-          this.orchestrator.metrics.incRpcErrors(RpcRequestIdentificator.GetBlockNumber, this.network, error.code)
+          this.orchestrator.metrics.incRpcErrors(RpcRequestMethod.GetBlockNumber, this.network, error.code)
           this.logger.warn(
             `Retrying after RPC Error on .getBlockNumber() method... Error: ${error}`
           )
@@ -530,13 +530,13 @@ export class Indexer {
     const allEvents = [];
     {
       const [events, error] = await retry(async () => {
-        this.orchestrator.metrics.incRpcRequests(RpcRequestIdentificator.GetLogs, this.network);
+        this.orchestrator.metrics.incRpcRequests(RpcRequestMethod.GetLogs, this.network);
         const start = new Date().valueOf();
         const r = await br.queryFilter(br.filters.Send(), from, to);
-        this.orchestrator.metrics.observeRpcLatency(RpcRequestIdentificator.GetLogs, this.network, new Date().valueOf() - start);
+        this.orchestrator.metrics.observeRpcLatency(RpcRequestMethod.GetLogs, this.network, new Date().valueOf() - start);
         return r;
       }, RETRIES, (e) => {
-        this.orchestrator.metrics.incRpcErrors(RpcRequestIdentificator.GetBlockNumber, this.network, e.code)
+        this.orchestrator.metrics.incRpcErrors(RpcRequestMethod.GetBlockNumber, this.network, e.code)
         this.logger.warn(`Some error happened at retrying getting logs between blocks ${from} and ${to}, error: ${e.message}`)
         this.failureCounter.add();
       })
@@ -578,13 +578,13 @@ export class Indexer {
 
     {
       const [events, error] = await retry(async () => {
-        this.orchestrator.metrics.incRpcRequests(RpcRequestIdentificator.GetLogs, this.network);
+        this.orchestrator.metrics.incRpcRequests(RpcRequestMethod.GetLogs, this.network);
         const start = new Date().valueOf();
         const r = await br.queryFilter(br.filters.Receive(), from, to);
-        this.orchestrator.metrics.observeRpcLatency(RpcRequestIdentificator.GetLogs, this.network, new Date().valueOf() - start);
+        this.orchestrator.metrics.observeRpcLatency(RpcRequestMethod.GetLogs, this.network, new Date().valueOf() - start);
         return r;
       }, RETRIES, (e) => {
-        this.orchestrator.metrics.incRpcErrors(RpcRequestIdentificator.GetLogs, this.network, e.code);
+        this.orchestrator.metrics.incRpcErrors(RpcRequestMethod.GetLogs, this.network, e.code);
         this.logger.warn(`Some error happened at retrying getting logs between blocks ${from} and ${to}, error: ${e.message}`)
         this.failureCounter.add();
       })
@@ -634,13 +634,13 @@ export class Indexer {
     const home = this.home();
     {
       const [events, error] = await retry(async () => {
-        this.orchestrator.metrics.incRpcRequests(RpcRequestIdentificator.GetLogs, this.network);
+        this.orchestrator.metrics.incRpcRequests(RpcRequestMethod.GetLogs, this.network);
         const start = new Date().valueOf();
         const r = await home.queryFilter(home.filters.Dispatch(), from, to);
-        this.orchestrator.metrics.observeRpcLatency(RpcRequestIdentificator.GetLogs, this.network, new Date().valueOf() - start);
+        this.orchestrator.metrics.observeRpcLatency(RpcRequestMethod.GetLogs, this.network, new Date().valueOf() - start);
         return r;
       }, RETRIES, (e) => {
-        this.orchestrator.metrics.incRpcErrors(RpcRequestIdentificator.GetLogs, this.network, e.code)
+        this.orchestrator.metrics.incRpcErrors(RpcRequestMethod.GetLogs, this.network, e.code)
         this.logger.warn(`Some error happened at retrying getting logs between blocks ${from} and ${to}, error: ${e.message}`)
         this.failureCounter.add();
       })
@@ -685,13 +685,13 @@ export class Indexer {
 
     {
       const [events, error] = await retry(async () => {
-        this.orchestrator.metrics.incRpcRequests(RpcRequestIdentificator.GetLogs, this.network);
+        this.orchestrator.metrics.incRpcRequests(RpcRequestMethod.GetLogs, this.network);
         const start = new Date().valueOf();
         const r = await home.queryFilter(home.filters.Update(), from, to);
-        this.orchestrator.metrics.observeRpcLatency(RpcRequestIdentificator.GetLogs, this.network, new Date().valueOf() - start);
+        this.orchestrator.metrics.observeRpcLatency(RpcRequestMethod.GetLogs, this.network, new Date().valueOf() - start);
         return r;
       }, RETRIES, (e) => {
-        this.orchestrator.metrics.incRpcErrors(RpcRequestIdentificator.GetLogs, this.network, e.code)
+        this.orchestrator.metrics.incRpcErrors(RpcRequestMethod.GetLogs, this.network, e.code)
         this.logger.warn(`Some error happened at retrying getting logs between blocks ${from} and ${to}, error: ${e.message}`)
         this.failureCounter.add();
       })
@@ -739,17 +739,17 @@ export class Indexer {
     const replica = this.replicaForDomain(domain);
     {
       const [events, error] = await retry(async () => {
-        this.orchestrator.metrics.incRpcRequests(RpcRequestIdentificator.GetLogs, this.network);
+        this.orchestrator.metrics.incRpcRequests(RpcRequestMethod.GetLogs, this.network);
         const start = new Date().valueOf();
         const r = await replica.queryFilter(
                   replica.filters.Update(),
                   from,
                   to
                 );
-        this.orchestrator.metrics.observeRpcLatency(RpcRequestIdentificator.GetLogs, this.network, new Date().valueOf() - start);
+        this.orchestrator.metrics.observeRpcLatency(RpcRequestMethod.GetLogs, this.network, new Date().valueOf() - start);
         return r;
       }, RETRIES, (e) => {
-        this.orchestrator.metrics.incRpcErrors(RpcRequestIdentificator.GetLogs, this.network, e.code)
+        this.orchestrator.metrics.incRpcErrors(RpcRequestMethod.GetLogs, this.network, e.code)
         this.logger.warn(`Some error happened at retrying getting logs between blocks ${from} and ${to}, error: ${e.message}`)
         this.failureCounter.add();
       })
@@ -790,19 +790,19 @@ export class Indexer {
 
     {
       const [events, error] = await retry(async () => {
-        this.orchestrator.metrics.incRpcRequests(RpcRequestIdentificator.GetLogs, this.network);
+        this.orchestrator.metrics.incRpcRequests(RpcRequestMethod.GetLogs, this.network);
         const start = new Date().valueOf();
         const r = await replica.queryFilter(
           replica.filters.Process(),
           from,
           to
         );
-        this.orchestrator.metrics.observeRpcLatency(RpcRequestIdentificator.GetLogs, this.network, new Date().valueOf() - start);
+        this.orchestrator.metrics.observeRpcLatency(RpcRequestMethod.GetLogs, this.network, new Date().valueOf() - start);
 
         return r
 
       }, RETRIES, (e) => {
-        this.orchestrator.metrics.incRpcErrors(RpcRequestIdentificator.GetLogs, this.network, e.code)
+        this.orchestrator.metrics.incRpcErrors(RpcRequestMethod.GetLogs, this.network, e.code)
         this.logger.warn(`Some error happened at retrying getting logs between blocks ${from} and ${to}, error: ${e.message}`)
         this.failureCounter.add();
       })
