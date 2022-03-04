@@ -6,13 +6,13 @@ import express, { Response } from "express";
 export const prefix = `nomad_indexer`;
 
 
-export enum RpcRequestIdentificator {
-  GetBlock = 'get_block',
-  GetBlockWithTxs = 'get_block_with_transactions',
-  GetTx = 'get_transaction',
-  GetTxReceipt = 'get_transaction_receipt',
-  GetBlockNumber = 'get_block_number',
-  GetLogs = 'get_logs',
+export enum RpcRequestMethod {
+  GetBlock = 'eth_getBlock',
+  GetBlockWithTxs = 'eth_getBlockWithTransactions',
+  GetTx = 'eth_getTransaction',
+  GetTxReceipt = 'eth_getTransactionReceipt',
+  GetBlockNumber = 'eth_getBlockNumber',
+  GetLogs = 'eth_getLogs',
 };
 
 export enum DbRequestType {
@@ -109,20 +109,20 @@ export class IndexerCollector extends MetricsCollector {
     this.rpcRequests = new Counter({
       name: prefix + "_rpc_requests",
       help: "Count that indicates how many PRC requests are made",
-      labelNames: ["identificator", "network", "environment"],
+      labelNames: ["method", "network", "environment"],
     });
 
     this.rpcLatency = new Histogram({
       name: prefix + "_rpc_latency",
-      help: "Histogram that tracks latency of how long does it take to make request",
-      labelNames: ["identificator", "network", "environment"],
+      help: "Histogram that tracks latency of how long does it take to make request in ms",
+      labelNames: ["method", "network", "environment"],
       buckets,
     });
 
     this.rpcErrors = new Counter({
       name: prefix + "_rpc_errors",
       help: "Counter that tracks error codes from RPC endpoint",
-      labelNames: ["code", "identificator", "network", "environment"],
+      labelNames: ["code", "method", "network", "environment"],
     });
 
     
@@ -131,7 +131,7 @@ export class IndexerCollector extends MetricsCollector {
 
     this.latency = new Histogram({
       name: prefix + "_latency",
-      help: "Histogram that tracks latency of how long does it take to move between dispatch, update, relay, receive or process stages.",
+      help: "Histogram that tracks latency of how long does it take to move between dispatch, update, relay, receive or process stages in ms",
       labelNames: ["stage", "home", "replica", "environment"],
       buckets,
     });
@@ -140,7 +140,7 @@ export class IndexerCollector extends MetricsCollector {
 
     this.gasUsage = new Histogram({
       name: prefix + "_gas_usage",
-      help: "Histogram that tracks gas usage of a transaction that initiated at dispatch, update, relay, receive or process stages.",
+      help: "Histogram that tracks gas usage in wei of a transaction that initiated at dispatch, update, relay, receive or process stages.",
       labelNames: ["stage", "home", "replica", "environment"],
       buckets,
     });
@@ -191,15 +191,15 @@ export class IndexerCollector extends MetricsCollector {
     this.dbRequests.labels(type, this.environment).inc(req)
   }
 
-  incRpcRequests(identificator: RpcRequestIdentificator, network: string, req?: number) {
-    this.rpcRequests.labels(identificator, network, this.environment).inc(req)
+  incRpcRequests(method: RpcRequestMethod, network: string, req?: number) {
+    this.rpcRequests.labels(method, network, this.environment).inc(req)
   }
 
-  observeRpcLatency(identificator: RpcRequestIdentificator, network: string, ms: number) {
-    this.rpcLatency.labels(identificator, network, this.environment).observe(ms)
+  observeRpcLatency(method: RpcRequestMethod, network: string, ms: number) {
+    this.rpcLatency.labels(method, network, this.environment).observe(ms)
   }
 
-  incRpcErrors(identificator: RpcRequestIdentificator, network: string, code: string) {
-    this.rpcErrors.labels(code, identificator, network, this.environment).inc()
+  incRpcErrors(method: RpcRequestMethod, network: string, code: string) {
+    this.rpcErrors.labels(code, method, network, this.environment).inc()
   }
 }
