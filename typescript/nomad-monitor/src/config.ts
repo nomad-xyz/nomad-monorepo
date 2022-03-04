@@ -26,17 +26,28 @@ export class MonitorConfig {
     const environment = process.env.ENVIRONMENT ?? 'development';
 
     this.origin = origin;
-    this.remotes = getNetworks().filter((m) => m != origin);
     switch (environment) {
       case 'production': {
+        const hub = origin == 'ethereum';
+        this.remotes = hub
+          ? getNetworks().filter((m) => m != origin)
+          : ['ethereum'];
         this.context = contexts.mainnet;
         break;
       }
       case 'staging': {
+        const hub = origin == 'rinkeby';
+        this.remotes = hub
+          ? getNetworks().filter((m) => m != origin)
+          : ['rinkeby'];
         this.context = contexts.staging;
         break;
       }
       default: {
+        const hub = origin == 'rinkeby';
+        this.remotes = hub
+          ? getNetworks().filter((m) => m != origin)
+          : ['rinkeby'];
         this.context = contexts.dev;
         break;
       }
@@ -90,11 +101,11 @@ function getNetworks() {
       break;
 
     case 'staging':
-      networks = ['kovan', 'moonbasealpha'];
+      networks = ['rinkeby', 'kovan', 'moonbasealpha'];
       break;
 
     default:
-      networks = ['kovan', 'moonbasealpha'];
+      networks = ['rinkeby', 'kovan', 'moonbasealpha', 'milkomedatestnet'];
       break;
   }
 
@@ -112,6 +123,7 @@ export function getRpcsFromEnv() {
     moonbasealphaRpc: process.env.MOONBASEALPHA_RPC ?? '',
     moonbeamRpc: process.env.MOONBEAM_RPC ?? '',
     milkomedac1Rpc: process.env.MILKOMEDAC1_RPC ?? '',
+    milkomedatestnetRpc: process.env.MILKOMEDA_TESTNET_RPC ?? '',
   };
 }
 
