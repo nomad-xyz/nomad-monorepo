@@ -26,6 +26,11 @@ export enum IndexType {
   FromZero,
 }
 
+export enum FromBlock {
+  Zero,
+  ThousandBehindTip,
+}
+
 export abstract class MonitorSingle {
   origin: string;
   remotes: string[];
@@ -56,9 +61,9 @@ export abstract class MonitorSingle {
 
   abstract start(): Promise<void>;
 
-  public async main() {
+  public async main(fromBlock: FromBlock) {
     this.metrics.startServer(9090);
-    await this.initializeStartBlocks();
+    if (fromBlock != FromBlock.Zero) await this.initializeStartBlocks();
     await this.start();
   }
 
@@ -125,6 +130,47 @@ export abstract class MonitorSingle {
     }
   }
 
+  async largeQueryInChunks(
+    network: string,
+    eventType: EventType,
+    from: number,
+    to: number,
+    chunkSize: number,
+  ): Promise<TypedEvent<Result>[]> {
+    let events: TypedEvent<Result>[] = [];
+
+    const contract =
+      network == this.origin ? this.home : this.replicas.get(network)!;
+    const filter = this.getFilter(network, eventType);
+
+    while (from < to) {
+      let finalTo = Math.min(from + chunkSize, to);
+      try {
+        this.logInfo(
+          `[Large Fetch] Fetching ${eventType} for ${network} at blocks ${from}..${finalTo}`,
+        );
+        const events = await getEvents(
+          this.context,
+          network,
+          contract,
+          filter,
+          from,
+          finalTo,
+        );
+
+        this.lastSeenBlocks.set(network + eventType, finalTo);
+        from = finalTo;
+        events.push(...events);
+      } catch (e) {
+        this.logger.error(`Error querying data: ${e}`);
+        // bubble this up for next layer to deal with
+        throw e;
+      }
+    }
+
+    return events;
+  }
+
   async query(
     network: string,
     eventType: EventType,
@@ -159,14 +205,27 @@ export abstract class MonitorSingle {
             from ?? 0
           }..${latestBlock}`,
         );
-        const events = await getEvents(
-          this.context,
-          network,
-          contract,
-          filter,
-          from,
-          latestBlock,
-        );
+
+        let events;
+        if (from == undefined) {
+          this.logInfo('Fetching in large chunks...');
+          events = this.largeQueryInChunks(
+            network,
+            eventType,
+            0,
+            latestBlock,
+            2000,
+          );
+        } else {
+          events = await getEvents(
+            this.context,
+            network,
+            contract,
+            filter,
+            from,
+            latestBlock,
+          );
+        }
 
         this.lastSeenBlocks.set(network + eventType, latestBlock);
         return events;
