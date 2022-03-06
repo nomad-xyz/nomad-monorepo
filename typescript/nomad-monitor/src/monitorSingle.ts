@@ -26,11 +26,6 @@ export enum IndexType {
   FromZero,
 }
 
-export enum FromBlock {
-  Zero,
-  ThousandBehindTip,
-}
-
 export abstract class MonitorSingle {
   origin: string;
   remotes: string[];
@@ -61,19 +56,19 @@ export abstract class MonitorSingle {
 
   abstract start(): Promise<void>;
 
-  public async main(fromBlock: FromBlock) {
+  public async main(blocksBehindTip: number) {
     this.metrics.startServer(9090);
-    if (fromBlock != FromBlock.Zero) await this.initializeStartBlocks();
+    await this.initializeStartBlocks(blocksBehindTip);
     await this.start();
   }
 
-  private async initializeStartBlocks() {
+  private async initializeStartBlocks(blocksBehindTip: number) {
     const originProvider = this.networkToProvider(this.origin);
     const latestOriginBlock = await originProvider.getBlockNumber();
     Object.values(EventType).forEach((eventType) => {
       this.lastSeenBlocks.set(
         this.origin + eventType,
-        latestOriginBlock - 1000,
+        latestOriginBlock - blocksBehindTip,
       );
     });
 
