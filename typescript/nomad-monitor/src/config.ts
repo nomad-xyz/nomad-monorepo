@@ -129,8 +129,8 @@ export function getRpcsFromEnv() {
     moonbasealphaRpc: process.env.MOONBASEALPHA_RPC ?? '',
     moonbeamRpc: process.env.MOONBEAM_RPC ?? '',
     milkomedac1Rpc: process.env.MILKOMEDAC1_RPC ?? '',
-    milkomedatestnetRpc: process.env.MILKOMEDA_TESTNET_RPC ?? '',
-    evmostestnetRpc: process.env.EVMOS_TESTNET_RPC ?? '',
+    milkomedatestnetRpc: process.env.MILKOMEDATESTNET_RPC ?? '',
+    evmostestnetRpc: process.env.EVMOSTESTNET_RPC ?? '',
   };
 }
 

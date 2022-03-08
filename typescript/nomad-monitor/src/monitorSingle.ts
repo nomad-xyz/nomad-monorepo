@@ -26,11 +26,6 @@ export enum IndexType {
   FromZero,
 }
 
-export enum FromBlock {
-  Zero,
-  ThousandBehindTip,
-}
-
 export abstract class MonitorSingle {
   origin: string;
   remotes: string[];
@@ -61,19 +56,19 @@ export abstract class MonitorSingle {
 
   abstract start(): Promise<void>;
 
-  public async main(fromBlock: FromBlock) {
+  public async main(blocksBehindTip: number) {
     this.metrics.startServer(9090);
-    if (fromBlock != FromBlock.Zero) await this.initializeStartBlocks();
+    await this.initializeStartBlocks(blocksBehindTip);
     await this.start();
   }
 
-  private async initializeStartBlocks() {
+  private async initializeStartBlocks(blocksBehindTip: number) {
     const originProvider = this.networkToProvider(this.origin);
     const latestOriginBlock = await originProvider.getBlockNumber();
     Object.values(EventType).forEach((eventType) => {
       this.lastSeenBlocks.set(
         this.origin + eventType,
-        latestOriginBlock - 1000,
+        latestOriginBlock - blocksBehindTip,
       );
     });
 
@@ -81,7 +76,10 @@ export abstract class MonitorSingle {
       const remoteProvider = this.networkToProvider(remote);
       const latestRemoteBlock = await remoteProvider.getBlockNumber();
       Object.values(EventType).forEach((eventType) => {
-        this.lastSeenBlocks.set(remote + eventType, latestRemoteBlock - 1000);
+        this.lastSeenBlocks.set(
+          remote + eventType,
+          latestRemoteBlock - blocksBehindTip,
+        );
       });
     });
   }
@@ -143,6 +141,10 @@ export abstract class MonitorSingle {
       network == this.origin ? this.home : this.replicas.get(network)!;
     const filter = this.getFilter(network, eventType);
 
+    this.logInfo(
+      `Starting in large fetch for blocks ${from}..${to} for ${network}.`,
+    );
+
     while (from < to) {
       let finalTo = Math.min(from + chunkSize, to);
       try {
@@ -168,6 +170,9 @@ export abstract class MonitorSingle {
       }
     }
 
+    this.logInfo(
+      `Finished large fetch for blocks ${from}..${to} for ${network}.`,
+    );
     return events;
   }
 
@@ -207,12 +212,11 @@ export abstract class MonitorSingle {
         );
 
         let events;
-        if (from == undefined) {
-          this.logInfo('Fetching in large chunks...');
+        if (from == undefined || latestBlock - from >= 10_000) {
           events = this.largeQueryInChunks(
             network,
             eventType,
-            0,
+            from ?? 0,
             latestBlock,
             2000,
           );
