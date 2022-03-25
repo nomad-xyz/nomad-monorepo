@@ -1,5 +1,23 @@
 # Nomad
 
+> **Important!**
+>
+> This repository has been deprecated and moved to the following repositories:
+>
+> **[monorepo](https://github.com/nomad-xyz/monorepo)**
+>   - Core contracts
+>   - Token bridge contracts
+>   - Multi-provider
+>   - Nomad SDK
+>
+> **[rust](https://github.com/nomad-xyz/rust)**
+>   - Off-chain agents
+>   - configuration data
+>
+> **[examples](https://github.com/nomad-xyz/examples)**
+>   - Counter xApp
+>   - Example bridge UI
+
 Nomad is an implementation and extension of the [Optics protocol](https://github.com/celo-org/celo-monorepo) (OPTimistic Interchain Communication).
 
 ## Overview
