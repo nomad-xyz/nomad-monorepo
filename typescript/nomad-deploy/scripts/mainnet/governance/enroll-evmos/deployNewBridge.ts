@@ -1,11 +1,11 @@
-import * as ethereum from '../../../config/mainnets/ethereum';
-import * as milkomeda from '../../../config/mainnets/milkomeda';
+import * as ethereum from '../../../../config/mainnets/ethereum';
+import * as evmos from '../../../../config/mainnets/evmos';
 import {
   BridgeDeploy,
   ExistingBridgeDeploy,
-} from '../../../src/bridge/BridgeDeploy';
-import { deployNewChainBridge } from '../../../src/bridge';
-import { getPathToDeployConfig } from '../../../src/verification/readDeployOutput';
+} from '../../../../src/bridge/BridgeDeploy';
+import { deployNewChainBridge } from '../../../../src/bridge';
+import { getPathToDeployConfig } from '../../../../src/verification/readDeployOutput';
 
 const path = getPathToDeployConfig('prod');
 
@@ -18,8 +18,8 @@ const governorDeploy = new ExistingBridgeDeploy(
 
 // make new bridge Deploy
 const newDeploy = new BridgeDeploy(
-  milkomeda.chain,
-  milkomeda.bridgeConfig,
+  evmos.chain,
+  evmos.bridgeConfig,
   path,
 );
 

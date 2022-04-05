@@ -1,15 +1,15 @@
-import * as ethereum from '../../../config/mainnets/ethereum';
-import * as milkomeda from '../../../config/mainnets/milkomeda';
-import { ExistingCoreDeploy } from '../../../src/core/CoreDeploy';
-import { ExistingBridgeDeploy } from '../../../src/bridge/BridgeDeploy';
-import { getPathToDeployConfig } from '../../../src/verification/readDeployOutput';
-import { deploysToSDK } from '../../../src/incremental/utils';
-import { enrollSpoke } from '../../../src/incremental';
+import * as ethereum from '../../../../config/mainnets/ethereum';
+import * as evmos from '../../../../config/mainnets/evmos';
+import { ExistingCoreDeploy } from '../../../../src/core/CoreDeploy';
+import { ExistingBridgeDeploy } from '../../../../src/bridge/BridgeDeploy';
+import { getPathToDeployConfig } from '../../../../src/verification/readDeployOutput';
+import { deploysToSDK } from '../../../../src/incremental/utils';
+import { checkHubAndSpokeConnections } from '../../../../src/incremental/checks';
 import { NomadContext } from '@nomad-xyz/sdk';
 
 const path = getPathToDeployConfig('prod');
 
-// Instantiate existing governor deploy
+// Instantiate existing governor deploys
 const governorCore = ExistingCoreDeploy.withPath(
   ethereum.chain,
   ethereum.config,
@@ -24,13 +24,13 @@ const governorDomain = deploysToSDK(governorCore, governorBridge);
 
 // Enroll new chain as spoke with governing hub
 const newCore = ExistingCoreDeploy.withPath(
-  milkomeda.chain,
-  milkomeda.config,
+  evmos.chain,
+  evmos.config,
   path,
 );
 const newBridge = new ExistingBridgeDeploy(
-  milkomeda.chain,
-  milkomeda.bridgeConfig,
+  evmos.chain,
+  evmos.bridgeConfig,
   path,
 );
 const newDomain = deploysToSDK(
@@ -47,5 +47,8 @@ sdkCores.forEach((core) => {
   sdk.registerSigner(core.chain.domain, core.deployer);
 });
 
-// enroll spoke then check enrollment
-enrollSpoke(sdk, newDomain.id, milkomeda.config);
+checkHubAndSpokeConnections(
+  sdk,
+  newDomain.id,
+  evmos.config.watchers,
+);
