@@ -12,15 +12,24 @@ dotenv.config();
 const etherscanKey = process.env.ETHERSCAN_API_KEY;
 const infuraKey = process.env.INFURA_API_KEY;
 
-task(
-  "verify-deploy",
-  "Verifies the source code of the contract deploy"
-).addParam("environment", "dev, staging or prod").setAction(async (args: any, hre: any) => {
-  if (!etherscanKey) {
-    throw new Error("set ETHERSCAN_API_KEY");
-  }
-  await verifyBridgeDeploy(hre, etherscanKey, args.environment);
-});
+task("verify-deploy", "Verifies the source code of the contract deploy")
+  .addParam("environment", "dev, staging or prod")
+  .setAction(async (args: any, hre: any) => {
+    if (!etherscanKey) {
+      throw new Error("set ETHERSCAN_API_KEY");
+    }
+    await verifyBridgeDeploy(hre, etherscanKey, args.environment);
+  });
+
+task("verify-token", "Verifies a token contract")
+  .addParam("contractAddress", "address of token contract")
+  .addParam("tokenBeacon", "address of token beacon")
+  .setAction(async (args: any, hre: any) => {
+    await hre.run("verify:verify", {
+      address: args.contractAddress,
+      constructorArguments: [args.tokenBeacon, Buffer.from("", "utf8")],
+    });
+  });
 
 /**
  * @type import('hardhat/config').HardhatUserConfig
@@ -52,7 +61,10 @@ module.exports = {
     },
     mainnet: {
       url: `https://mainnet.infura.io/v3/${infuraKey}`,
-    }
+    },
+    moonbeam: {
+      url: process.env.MOONBEAM_RPC,
+    },
   },
 
   typechain: {
@@ -62,6 +74,9 @@ module.exports = {
   },
 
   etherscan: {
-    apiKey: etherscanKey,
+    apiKey: {
+      mainnet: process.env.ETHERSCAN_API_KEY,
+      moonbeam: process.env.MOONBEAM_MOONSCAN_API_KEY,
+    },
   },
 };
